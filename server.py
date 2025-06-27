@@ -2,6 +2,7 @@
 """
 简单的HTTP服务器用于运行Arpeggiator应用
 支持HTTPS以便摄像头访问正常工作
+支持网络访问，允许手机等设备通过WiFi连接
 """
 
 import http.server
@@ -9,6 +10,7 @@ import socketserver
 import ssl
 import os
 import sys
+import socket
 from pathlib import Path
 
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
@@ -21,6 +23,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         super().end_headers()
 
+def get_local_ip():
+    """获取本机在局域网中的IP地址"""
+    try:
+        # 连接到一个远程地址来获取本机IP
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+
 def create_self_signed_cert():
     """创建自签名证书用于HTTPS"""
     try:
@@ -30,6 +42,7 @@ def create_self_signed_cert():
         from cryptography.hazmat.primitives.asymmetric import rsa
         from cryptography.hazmat.primitives import serialization
         import datetime
+        import ipaddress
         
         # 生成私钥
         private_key = rsa.generate_private_key(
@@ -41,6 +54,9 @@ def create_self_signed_cert():
         subject = issuer = x509.Name([
             x509.NameAttribute(NameOID.COMMON_NAME, u"localhost"),
         ])
+        
+        # 获取本机IP地址
+        local_ip = get_local_ip()
         
         cert = x509.CertificateBuilder().subject_name(
             subject
@@ -58,6 +74,7 @@ def create_self_signed_cert():
             x509.SubjectAlternativeName([
                 x509.DNSName(u"localhost"),
                 x509.IPAddress(ipaddress.IPv4Address(u"127.0.0.1")),
+                x509.IPAddress(ipaddress.IPv4Address(local_ip)),
             ]),
             critical=False,
         ).sign(private_key, hashes.SHA256())
@@ -81,6 +98,10 @@ def create_self_signed_cert():
 
 def run_server():
     PORT = 8000
+    HOST = "0.0.0.0"  # 绑定到所有网络接口
+    
+    # 获取本机IP地址
+    local_ip = get_local_ip()
     
     # 检查是否存在证书文件
     cert_exists = os.path.exists("server.crt") and os.path.exists("server.key")
@@ -98,7 +119,7 @@ def run_server():
         print("使用现有HTTPS证书")
     
     # 创建服务器
-    with socketserver.TCPServer(("", PORT), CustomHTTPRequestHandler) as httpd:
+    with socketserver.TCPServer((HOST, PORT), CustomHTTPRequestHandler) as httpd:
         if use_https:
             try:
                 # 配置SSL
@@ -106,9 +127,10 @@ def run_server():
                 context.load_cert_chain("server.crt", "server.key")
                 httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
                 
-                print(f"🚀 HTTPS服务器运行在: https://localhost:{PORT}")
-                print("💡 在浏览器中访问以下地址:")
-                print(f"   https://localhost:{PORT}")
+                print(f"🚀 HTTPS服务器运行在端口 {PORT}")
+                print("💡 在设备上访问以下地址:")
+                print(f"   📱 手机访问: https://{local_ip}:{PORT}")
+                print(f"   💻 本机访问: https://localhost:{PORT}")
                 print("📹 摄像头权限需要HTTPS才能正常工作")
                 print("⚠️  浏览器可能显示安全警告，点击'高级'->继续访问即可")
                 
@@ -118,11 +140,14 @@ def run_server():
                 use_https = False
         
         if not use_https:
-            print(f"🚀 HTTP服务器运行在: http://localhost:{PORT}")
-            print("💡 在浏览器中访问以下地址:")
-            print(f"   http://localhost:{PORT}")
+            print(f"🚀 HTTP服务器运行在端口 {PORT}")
+            print("💡 在设备上访问以下地址:")
+            print(f"   📱 手机访问: http://{local_ip}:{PORT}")
+            print(f"   💻 本机访问: http://localhost:{PORT}")
             print("⚠️  摄像头功能需要HTTPS，建议安装cryptography库并重新运行")
         
+        print(f"\n🌐 确保设备连接到同一WiFi网络")
+        print(f"📍 服务器IP地址: {local_ip}")
         print("\n按 Ctrl+C 停止服务器")
         
         try:
@@ -136,7 +161,7 @@ if __name__ == "__main__":
     os.chdir(script_dir)
     
     print("=" * 50)
-    print("🎵 Arpeggiator 本地服务器")
+    print("🎵 Arpeggiator 网络服务器")
     print("=" * 50)
     
     run_server() 
