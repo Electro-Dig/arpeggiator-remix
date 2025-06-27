@@ -62,6 +62,280 @@
             </div>
 
         </div>
+
+        <!-- 操作指南 -->
+        <div class="controls-guide">
+            <div class="guide-header">
+                <h3>🎮 操作指南</h3>
+                <button class="collapse-btn" onclick="toggleGuide()">−</button>
+            </div>
+            <div class="guide-content">
+                <div class="guide-section">
+                    <h4>🤚 左手控制 (琶音)</h4>
+                    <ul>
+                        <li>上下移动：控制音高</li>
+                        <li>拇指食指距离：控制音量</li>
+                        <li>握拳：切换音色</li>
+                    </ul>
+                </div>
+                <div class="guide-section">
+                    <h4>🤚 右手控制 (鼓组)</h4>
+                    <ul>
+                        <li>食指：Kick 鼓</li>
+                        <li>中指：Snare 鼓</li>
+                        <li>无名指：Hi-hat</li>
+                        <li>小指：Clap</li>
+                        <li>全部张开：切换音乐预设</li>
+                        <li>握拳：切换鼓组预设</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 预设选择器 -->
+        <div class="preset-selector">
+            <div class="preset-header">
+                <h3>🎵 预设选择</h3>
+                <button class="collapse-btn" onclick="togglePresets()">−</button>
+            </div>
+            <div class="preset-content">
+                <div class="preset-section">
+                    <h4>音乐预设</h4>
+                    <select id="music-preset-select">
+                        <option value="0">C Minor Pentatonic</option>
+                        <option value="1">G Major Pentatonic</option>
+                        <option value="2">E Minor Blues</option>
+                        <option value="3">A Dorian Mode</option>
+                        <option value="4">Japanese Pentatonic</option>
+                    </select>
+                </div>
+                <div class="preset-section">
+                    <h4>鼓组预设</h4>
+                    <select id="drum-preset-select">
+                        <option value="0">Hip Hop</option>
+                        <option value="1">House</option>
+                        <option value="2">Techno</option>
+                        <option value="3">Funk</option>
+                        <option value="4">Reggae</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 自定义编辑器按钮 -->
+        <div class="editor-buttons">
+            <button id="open-arpeggio-editor" class="editor-btn">
+                <span>🎹</span>
+                <span>自定义琶音</span>
+            </button>
+            <button id="open-drum-editor" class="editor-btn">
+                <span>🥁</span>
+                <span>自定义鼓组</span>
+            </button>
+        </div>
+
+        <!-- 琶音编辑器弹窗 -->
+        <div id="arpeggio-editor-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🎹 琶音编辑器</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <!-- 预设选择 -->
+                    <div class="editor-section">
+                        <h3>选择基础预设</h3>
+                        <select id="arpeggio-base-preset">
+                            <option value="0">C Minor Pentatonic</option>
+                            <option value="1">G Major Pentatonic</option>
+                            <option value="2">E Minor Blues</option>
+                            <option value="3">A Dorian Mode</option>
+                            <option value="4">Japanese Pentatonic</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+
+                    <!-- 音阶编辑 -->
+                    <div class="editor-section">
+                        <h3>音阶设置</h3>
+                        <div class="note-grid">
+                            <!-- 音符选择器将通过JavaScript生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 和弦间隔编辑 -->
+                    <div class="editor-section">
+                        <h3>和弦间隔</h3>
+                        <div class="interval-inputs">
+                            <input type="number" class="interval-input" placeholder="0" min="0" max="24">
+                            <input type="number" class="interval-input" placeholder="3" min="0" max="24">
+                            <input type="number" class="interval-input" placeholder="5" min="0" max="24">
+                            <input type="number" class="interval-input" placeholder="7" min="0" max="24">
+                            <input type="number" class="interval-input" placeholder="10" min="0" max="24">
+                            <input type="number" class="interval-input" placeholder="12" min="0" max="24">
+                        </div>
+                    </div>
+
+                    <!-- 琶音模式 -->
+                    <div class="editor-section">
+                        <h3>琶音模式</h3>
+                        <div class="pattern-selector">
+                            <label><input type="radio" name="arpeggio-pattern" value="up"> 上行</label>
+                            <label><input type="radio" name="arpeggio-pattern" value="down"> 下行</label>
+                            <label><input type="radio" name="arpeggio-pattern" value="upDown" checked> 上下循环</label>
+                        </div>
+                    </div>
+
+                    <!-- 速度控制 -->
+                    <div class="editor-section">
+                        <h3>速度 (BPM)</h3>
+                        <input type="range" id="arpeggio-tempo" min="60" max="180" value="100">
+                        <span id="tempo-value">100</span>
+                    </div>
+
+                    <!-- 预览和保存 -->
+                    <div class="editor-actions">
+                        <button id="preview-arpeggio" class="action-btn preview-btn">🔊 预览</button>
+                        <button id="save-arpeggio" class="action-btn save-btn">💾 保存预设</button>
+                        <button id="apply-arpeggio" class="action-btn apply-btn">✅ 应用</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 鼓组编辑器弹窗 -->
+        <div id="drum-editor-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🥁 鼓组编辑器</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <!-- 预设选择 -->
+                    <div class="editor-section">
+                        <h3>选择基础预设</h3>
+                        <select id="drum-base-preset">
+                            <option value="0">Hip Hop</option>
+                            <option value="1">House</option>
+                            <option value="2">Techno</option>
+                            <option value="3">Funk</option>
+                            <option value="4">Reggae</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                    </div>
+
+                    <!-- 16步音序器 -->
+                    <div class="editor-section">
+                        <h3>音序器模式</h3>
+                        <div class="sequencer">
+                            <!-- Kick -->
+                            <div class="drum-row">
+                                <div class="drum-label">Kick 🥁</div>
+                                <div class="step-row" data-drum="kick">
+                                    <!-- 16个步骤将通过JavaScript生成 -->
+                                </div>
+                            </div>
+                            
+                            <!-- Snare -->
+                            <div class="drum-row">
+                                <div class="drum-label">Snare 🥢</div>
+                                <div class="step-row" data-drum="snare">
+                                    <!-- 16个步骤将通过JavaScript生成 -->
+                                </div>
+                            </div>
+                            
+                            <!-- Hi-hat -->
+                            <div class="drum-row">
+                                <div class="drum-label">Hi-hat 🎩</div>
+                                <div class="step-row" data-drum="hihat">
+                                    <!-- 16个步骤将通过JavaScript生成 -->
+                                </div>
+                            </div>
+                            
+                            <!-- Clap -->
+                            <div class="drum-row">
+                                <div class="drum-label">Clap 👏</div>
+                                <div class="step-row" data-drum="clap">
+                                    <!-- 16个步骤将通过JavaScript生成 -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 播放位置指示器 -->
+                        <div class="playhead" id="drum-playhead"></div>
+                    </div>
+
+                    <!-- 快速操作 -->
+                    <div class="editor-section">
+                        <h3>快速操作</h3>
+                        <div class="quick-actions">
+                            <button class="quick-btn" onclick="clearAllDrums()">🗑️ 清空全部</button>
+                            <button class="quick-btn" onclick="randomizeDrums()">🎲 随机生成</button>
+                            <button class="quick-btn" onclick="copyPattern()">📋 复制模式</button>
+                            <button class="quick-btn" onclick="pastePattern()">📁 粘贴模式</button>
+                        </div>
+                    </div>
+
+                    <!-- 预览和保存 -->
+                    <div class="editor-actions">
+                        <button id="preview-drum" class="action-btn preview-btn">🔊 预览</button>
+                        <button id="save-drum" class="action-btn save-btn">💾 保存预设</button>
+                        <button id="apply-drum" class="action-btn apply-btn">✅ 应用</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 保存预设弹窗 -->
+        <div id="save-preset-modal" class="modal">
+            <div class="modal-content small">
+                <div class="modal-header">
+                    <h2>💾 保存预设</h2>
+                    <span class="close">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input type="text" id="preset-name" placeholder="输入预设名称..." maxlength="20">
+                    <div class="modal-actions">
+                        <button id="confirm-save" class="action-btn save-btn">保存</button>
+                        <button id="cancel-save" class="action-btn cancel-btn">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- ... existing code ... -->
+        </div>
+        
+        <script>
+            // 全局功能函数
+            function toggleGuide() {
+                const content = document.querySelector('.guide-content');
+                const btn = document.querySelector('.controls-guide .collapse-btn');
+                
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    btn.textContent = '−';
+                } else {
+                    content.style.display = 'none';
+                    btn.textContent = '+';
+                }
+            }
+            
+            function togglePresets() {
+                const content = document.querySelector('.preset-content');
+                const btn = document.querySelector('.preset-selector .collapse-btn');
+                
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    btn.textContent = '−';
+                } else {
+                    content.style.display = 'none';
+                    btn.textContent = '+';
+                }
+            }
+        </script>
+        
         <script type="module" src="main.js"></script>
     </body>
 </html>

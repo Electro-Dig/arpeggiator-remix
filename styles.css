@@ -66,3 +66,483 @@
 #logo {
     font-size: 2em;
 }
+
+/* ===== 自定义编辑器样式 ===== */
+
+/* 编辑器按钮 */
+.editor-buttons {
+    position: fixed;
+    top: 120px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+}
+
+.editor-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(25, 25, 25, 0.9);
+    border: 2px solid #00ffff;
+    border-radius: 8px;
+    color: #ffffff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    min-width: 120px;
+}
+
+.editor-btn:hover {
+    background: rgba(0, 255, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 255, 255, 0.3);
+}
+
+.editor-btn span:first-child {
+    font-size: 18px;
+}
+
+/* 弹窗样式 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    border: 2px solid #00ffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 255, 255, 0.3);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideIn 0.4s ease;
+}
+
+.modal-content.small {
+    width: 400px;
+    max-width: 90vw;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -60%);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 2px solid #333;
+    background: rgba(0, 255, 255, 0.1);
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #00ffff;
+    font-size: 24px;
+}
+
+.close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: #ff6b6b;
+}
+
+.modal-body {
+    padding: 25px;
+    max-height: calc(90vh - 100px);
+    overflow-y: auto;
+}
+
+/* 编辑器区块 */
+.editor-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.editor-section h3 {
+    margin: 0 0 15px 0;
+    color: #00ffff;
+    font-size: 18px;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+    padding-bottom: 8px;
+}
+
+/* 音符网格 */
+.note-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.note-btn {
+    padding: 10px 5px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 12px;
+    text-align: center;
+}
+
+.note-btn:hover {
+    background: rgba(0, 255, 255, 0.3);
+    border-color: #00ffff;
+}
+
+.note-btn.active {
+    background: #00ffff;
+    color: #000;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.note-btn.black-key {
+    background: rgba(0, 0, 0, 0.7);
+    border-color: #333;
+}
+
+.note-btn.black-key.active {
+    background: #ff6b6b;
+}
+
+/* 和弦间隔输入 */
+.interval-inputs {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.interval-input {
+    width: 60px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    text-align: center;
+}
+
+.interval-input:focus {
+    border-color: #00ffff;
+    outline: none;
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+/* 模式选择器 */
+.pattern-selector {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.pattern-selector label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.pattern-selector label:hover {
+    background: rgba(0, 255, 255, 0.1);
+}
+
+.pattern-selector input[type="radio"] {
+    accent-color: #00ffff;
+}
+
+/* 速度控制 */
+#arpeggio-tempo {
+    width: 100%;
+    margin: 10px 0;
+    accent-color: #00ffff;
+}
+
+#tempo-value {
+    color: #00ffff;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+/* 音序器界面 */
+.sequencer {
+    position: relative;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid #333;
+}
+
+.drum-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.drum-label {
+    width: 100px;
+    color: #00ffff;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.step-row {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+    margin-left: 15px;
+}
+
+.step-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.step-btn:hover {
+    border-color: #00ffff;
+    transform: scale(1.1);
+}
+
+.step-btn.active {
+    background: #00ffff;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.step-btn.current {
+    border-color: #ff6b6b;
+    border-width: 2px;
+}
+
+/* 播放头 */
+.playhead {
+    position: absolute;
+    top: 15px;
+    left: 130px;
+    width: 2px;
+    height: calc(100% - 30px);
+    background: #ff6b6b;
+    transition: transform 0.1s ease;
+    opacity: 0.8;
+    z-index: 10;
+}
+
+/* 快速操作按钮 */
+.quick-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.quick-btn {
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 12px;
+}
+
+.quick-btn:hover {
+    background: rgba(0, 255, 255, 0.2);
+    border-color: #00ffff;
+}
+
+/* 操作按钮 */
+.editor-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #333;
+}
+
+.action-btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    min-width: 100px;
+}
+
+.preview-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.save-btn {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+.apply-btn {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.cancel-btn {
+    background: linear-gradient(135deg, #666 0%, #999 100%);
+    color: white;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* 保存预设弹窗 */
+#preset-name {
+    width: 100%;
+    padding: 12px;
+    margin: 15px 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid #555;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 16px;
+}
+
+#preset-name:focus {
+    border-color: #00ffff;
+    outline: none;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .editor-buttons {
+        top: 80px;
+        left: 10px;
+    }
+    
+    .editor-btn {
+        padding: 10px 12px;
+        font-size: 12px;
+        min-width: 100px;
+    }
+    
+    .modal-content {
+        width: 95vw;
+        max-height: 95vh;
+    }
+    
+    .modal-header {
+        padding: 15px 20px;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .note-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+    
+    .interval-inputs {
+        justify-content: center;
+    }
+    
+    .step-btn {
+        width: 25px;
+        height: 25px;
+    }
+    
+    .drum-label {
+        width: 80px;
+        font-size: 12px;
+    }
+    
+    .editor-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .quick-actions {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .editor-btn span:last-child {
+        display: none;
+    }
+    
+    .note-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .pattern-selector {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .step-btn {
+        width: 20px;
+        height: 20px;
+    }
+}

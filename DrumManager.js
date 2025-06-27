@@ -128,6 +128,9 @@ var fingerToDrumMap = {
     'ring': 'hihat',
     'pinky': 'clap'
 };
+// 自定义预设支持
+var customDrumPreset = null;
+var isUsingCustomPreset = false;
 // --- Exported Functions ---
 /**
  * Loads all drum samples and returns a promise that resolves when loading is complete
@@ -238,6 +241,9 @@ var fingerToDrumMap = {
  * Returns the master drum pattern object.
  * @returns {object} The drum pattern.
  */ export function getDrumPattern() {
+    if (isUsingCustomPreset && customDrumPreset) {
+        return customDrumPreset.patterns;
+    }
     return drumPattern;
 }
 /**
@@ -259,5 +265,39 @@ export function getCurrentDrumPreset() {
  * 获取所有鼓组预设
  */
 export function getAllDrumPresets() {
-    return drumPresets;
+    const builtinPresets = drumPresets.map((preset, index) => ({
+        ...preset,
+        index: index,
+        custom: false
+    }));
+    
+    const customPresets = JSON.parse(localStorage.getItem('custom-drum-presets') || '[]');
+    
+    return [...builtinPresets, ...customPresets];
 }
+/**
+ * 应用自定义鼓组预设
+ */
+export function applyCustomPreset(preset) {
+    customDrumPreset = preset;
+    isUsingCustomPreset = true;
+    
+    // 更新当前模式
+    drumPattern = preset.patterns;
+    
+    console.log("Applied custom drum preset:", preset.name);
+}
+/**
+ * 切换回内置预设
+ */
+export function useBuiltinPreset(index) {
+    isUsingCustomPreset = false;
+    currentDrumPresetIndex = index;
+    drumPattern = drumPresets[index].patterns;
+    
+    console.log("Switched to builtin drum preset:", drumPresets[index].name);
+}
+/**
+ * 导出drumPresets以供编辑器使用
+ */
+export { drumPresets };
