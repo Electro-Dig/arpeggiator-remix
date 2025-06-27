@@ -21,14 +21,21 @@ export class CustomEditor {
     }
 
     setupEventListeners() {
-        // 编辑器按钮
-        document.getElementById('open-arpeggio-editor').addEventListener('click', () => {
-            this.openArpeggioEditor();
-        });
+        // 更新为新的按钮ID
+        const arpeggioBtn = document.getElementById('open-arpeggio-editor');
+        const drumBtn = document.getElementById('open-drum-editor');
         
-        document.getElementById('open-drum-editor').addEventListener('click', () => {
-            this.openDrumEditor();
-        });
+        if (arpeggioBtn) {
+            arpeggioBtn.addEventListener('click', () => {
+                this.openArpeggioEditor();
+            });
+        }
+        
+        if (drumBtn) {
+            drumBtn.addEventListener('click', () => {
+                this.openDrumEditor();
+            });
+        }
 
         // 弹窗关闭
         document.querySelectorAll('.close').forEach(closeBtn => {
@@ -52,21 +59,55 @@ export class CustomEditor {
         
         // 保存预设事件
         this.setupSavePresetEvents();
+        
+        // 预设选择器事件
+        this.setupPresetSelectorEvents();
+    }
+
+    setupPresetSelectorEvents() {
+        // 音乐预设选择器
+        const musicSelect = document.getElementById('music-preset-select');
+        if (musicSelect) {
+            musicSelect.addEventListener('change', (e) => {
+                const presetIndex = parseInt(e.target.value);
+                if (window.musicManager) {
+                    window.musicManager.useBuiltinPreset(presetIndex);
+                    window.game._updatePresetDisplay();
+                }
+            });
+        }
+        
+        // 鼓组预设选择器
+        const drumSelect = document.getElementById('drum-preset-select');
+        if (drumSelect) {
+            drumSelect.addEventListener('change', (e) => {
+                const presetIndex = parseInt(e.target.value);
+                if (window.drumManager) {
+                    window.drumManager.useBuiltinPreset(presetIndex);
+                    window.game._updatePresetDisplay();
+                }
+            });
+        }
     }
 
     setupArpeggioEditorEvents() {
         // 基础预设选择
-        document.getElementById('arpeggio-base-preset').addEventListener('change', (e) => {
-            this.loadArpeggioPreset(e.target.value);
-        });
+        const basePresetSelect = document.getElementById('arpeggio-base-preset');
+        if (basePresetSelect) {
+            basePresetSelect.addEventListener('change', (e) => {
+                this.loadArpeggioPreset(e.target.value);
+            });
+        }
 
         // 速度控制
         const tempoSlider = document.getElementById('arpeggio-tempo');
         const tempoValue = document.getElementById('tempo-value');
         
-        tempoSlider.addEventListener('input', (e) => {
-            tempoValue.textContent = e.target.value;
-        });
+        if (tempoSlider && tempoValue) {
+            tempoSlider.addEventListener('input', (e) => {
+                tempoValue.textContent = e.target.value;
+            });
+        }
 
         // 和弦间隔输入
         document.querySelectorAll('.interval-input').forEach(input => {
@@ -83,51 +124,83 @@ export class CustomEditor {
         });
 
         // 按钮事件
-        document.getElementById('preview-arpeggio').addEventListener('click', () => {
-            this.previewArpeggio();
-        });
+        const previewBtn = document.getElementById('preview-arpeggio');
+        const saveBtn = document.getElementById('save-arpeggio');
+        const applyBtn = document.getElementById('apply-arpeggio');
         
-        document.getElementById('save-arpeggio').addEventListener('click', () => {
-            this.openSavePresetModal('arpeggio');
-        });
+        if (previewBtn) {
+            previewBtn.addEventListener('click', () => {
+                this.previewArpeggio();
+            });
+        }
         
-        document.getElementById('apply-arpeggio').addEventListener('click', () => {
-            this.applyArpeggioChanges();
-        });
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                this.openSavePresetModal('arpeggio');
+            });
+        }
+        
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+                this.applyArpeggioChanges();
+            });
+        }
     }
 
     setupDrumEditorEvents() {
         // 基础预设选择
-        document.getElementById('drum-base-preset').addEventListener('change', (e) => {
-            this.loadDrumPreset(e.target.value);
-        });
+        const basePresetSelect = document.getElementById('drum-base-preset');
+        if (basePresetSelect) {
+            basePresetSelect.addEventListener('change', (e) => {
+                this.loadDrumPreset(e.target.value);
+            });
+        }
 
         // 按钮事件
-        document.getElementById('preview-drum').addEventListener('click', () => {
-            this.previewDrum();
-        });
+        const previewBtn = document.getElementById('preview-drum');
+        const saveBtn = document.getElementById('save-drum');
+        const applyBtn = document.getElementById('apply-drum');
         
-        document.getElementById('save-drum').addEventListener('click', () => {
-            this.openSavePresetModal('drum');
-        });
+        if (previewBtn) {
+            previewBtn.addEventListener('click', () => {
+                this.previewDrum();
+            });
+        }
         
-        document.getElementById('apply-drum').addEventListener('click', () => {
-            this.applyDrumChanges();
-        });
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => {
+                this.openSavePresetModal('drum');
+            });
+        }
+        
+        if (applyBtn) {
+            applyBtn.addEventListener('click', () => {
+                this.applyDrumChanges();
+            });
+        }
     }
 
     setupSavePresetEvents() {
-        document.getElementById('confirm-save').addEventListener('click', () => {
-            this.savePreset();
-        });
+        const confirmBtn = document.getElementById('confirm-save');
+        const cancelBtn = document.getElementById('cancel-save');
         
-        document.getElementById('cancel-save').addEventListener('click', () => {
-            this.closeModal(document.getElementById('save-preset-modal'));
-        });
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                this.savePreset();
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                this.closeModal(document.getElementById('save-preset-modal'));
+            });
+        }
     }
 
     generateNoteGrid() {
         const noteGrid = document.querySelector('.note-grid');
+        if (!noteGrid) return;
+        
         const chromatic = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const blackKeys = ['C#', 'D#', 'F#', 'G#', 'A#'];
         
@@ -153,6 +226,8 @@ export class CustomEditor {
         
         drums.forEach(drum => {
             const stepRow = document.querySelector(`[data-drum="${drum}"]`);
+            if (!stepRow) return;
+            
             stepRow.innerHTML = '';
             
             for (let i = 0; i < 16; i++) {
@@ -172,39 +247,60 @@ export class CustomEditor {
 
     initPreviewSynth() {
         // 创建用于预览的简单合成器
-        this.previewSynth = new Tone.PolySynth(Tone.Synth, {
-            oscillator: { type: 'sine' },
-            envelope: { attack: 0.1, decay: 0.2, sustain: 0.5, release: 0.8 }
-        }).toDestination();
-        
-        this.previewSynth.volume.value = -10; // 降低预览音量
+        if (Tone.context.state !== 'running') {
+            Tone.start().then(() => {
+                this.createPreviewSynth();
+            });
+        } else {
+            this.createPreviewSynth();
+        }
+    }
+    
+    createPreviewSynth() {
+        try {
+            this.previewSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.1, decay: 0.2, sustain: 0.5, release: 0.8 }
+            }).toDestination();
+            
+            this.previewSynth.volume.value = -10; // 降低预览音量
+        } catch (error) {
+            console.warn('无法创建预览合成器:', error);
+        }
     }
 
     openArpeggioEditor() {
         this.currentEditingType = 'arpeggio';
         this.loadArpeggioPreset('0'); // 默认加载第一个预设
-        document.getElementById('arpeggio-editor-modal').style.display = 'block';
+        const modal = document.getElementById('arpeggio-editor-modal');
+        if (modal) {
+            modal.style.display = 'block';
+        }
     }
 
     openDrumEditor() {
         this.currentEditingType = 'drum';
         this.loadDrumPreset('0'); // 默认加载第一个预设
-        document.getElementById('drum-editor-modal').style.display = 'block';
+        const modal = document.getElementById('drum-editor-modal');
+        if (modal) {
+            modal.style.display = 'block';
+        }
     }
 
     closeModal(modal) {
-        modal.style.display = 'none';
-        this.stopPreview();
+        if (modal) {
+            modal.style.display = 'none';
+            this.stopPreview();
+        }
     }
 
     loadArpeggioPreset(presetIndex) {
         if (presetIndex === 'custom') {
-            // 加载自定义预设或创建空白预设
             this.resetArpeggioEditor();
             return;
         }
 
-        // 从MusicManager获取预设（需要传递window.musicManager）
+        // 从MusicManager获取预设
         if (window.musicManager && window.musicManager.musicPresets[presetIndex]) {
             const preset = window.musicManager.musicPresets[presetIndex];
             
@@ -215,11 +311,18 @@ export class CustomEditor {
             this.updateIntervalInputs(preset.chordIntervals);
             
             // 更新琶音模式
-            document.querySelector(`input[name="arpeggio-pattern"][value="${preset.arpeggioPattern}"]`).checked = true;
+            const patternRadio = document.querySelector(`input[name="arpeggio-pattern"][value="${preset.arpeggioPattern}"]`);
+            if (patternRadio) {
+                patternRadio.checked = true;
+            }
             
             // 更新速度
-            document.getElementById('arpeggio-tempo').value = preset.tempo;
-            document.getElementById('tempo-value').textContent = preset.tempo;
+            const tempoSlider = document.getElementById('arpeggio-tempo');
+            const tempoValue = document.getElementById('tempo-value');
+            if (tempoSlider && tempoValue) {
+                tempoSlider.value = preset.tempo;
+                tempoValue.textContent = preset.tempo;
+            }
         }
     }
 
@@ -229,7 +332,7 @@ export class CustomEditor {
             return;
         }
 
-        // 从DrumManager获取预设（需要传递window.drumManager）
+        // 从DrumManager获取预设
         if (window.drumPresets && window.drumPresets[presetIndex]) {
             const preset = window.drumPresets[presetIndex];
             this.updateDrumSequencer(preset.patterns);
@@ -263,7 +366,7 @@ export class CustomEditor {
 
     updateDrumSequencer(patterns) {
         Object.entries(patterns).forEach(([drum, pattern]) => {
-            const stepBtns = document.querySelectorAll(`[data-drum="${drum}"]`);
+            const stepBtns = document.querySelectorAll(`[data-drum="${drum}"] .step-btn`);
             stepBtns.forEach((btn, index) => {
                 if (pattern[index]) {
                     btn.classList.add('active');
@@ -294,9 +397,17 @@ export class CustomEditor {
         this.updateIntervalInputs(defaultIntervals);
         
         // 重置模式和速度
-        document.querySelector('input[name="arpeggio-pattern"][value="upDown"]').checked = true;
-        document.getElementById('arpeggio-tempo').value = 100;
-        document.getElementById('tempo-value').textContent = 100;
+        const defaultPattern = document.querySelector('input[name="arpeggio-pattern"][value="upDown"]');
+        if (defaultPattern) {
+            defaultPattern.checked = true;
+        }
+        
+        const tempoSlider = document.getElementById('arpeggio-tempo');
+        const tempoValue = document.getElementById('tempo-value');
+        if (tempoSlider && tempoValue) {
+            tempoSlider.value = 100;
+            tempoValue.textContent = 100;
+        }
     }
 
     resetDrumEditor() {
@@ -316,32 +427,45 @@ export class CustomEditor {
         
         const selectedNotes = this.getSelectedNotes();
         const intervals = this.getChordIntervals();
-        const pattern = document.querySelector('input[name="arpeggio-pattern"]:checked').value;
-        const tempo = parseInt(document.getElementById('arpeggio-tempo').value);
+        const patternElement = document.querySelector('input[name="arpeggio-pattern"]:checked');
+        const pattern = patternElement ? patternElement.value : 'upDown';
+        const tempoSlider = document.getElementById('arpeggio-tempo');
+        const tempo = tempoSlider ? parseInt(tempoSlider.value) : 100;
         
         if (selectedNotes.length === 0) {
             alert('请至少选择一个音符！');
             return;
         }
 
-        // 创建琶音预览
-        Tone.Transport.bpm.value = tempo;
-        
-        const rootNote = selectedNotes[0] + '3'; // 使用第一个选中的音符作为根音
-        const chord = Tone.Frequency(rootNote).harmonize(intervals);
-        const arpeggioNotes = chord.map(freq => Tone.Frequency(freq).toNote());
-        
-        this.previewSequence = new Tone.Pattern((time, note) => {
-            this.previewSynth.triggerAttackRelease(note, "8n", time, 0.3);
-        }, arpeggioNotes, pattern);
-        
-        this.previewSequence.interval = "8n";
-        this.previewSequence.start(0);
-        
-        // 5秒后停止预览
-        setTimeout(() => {
-            this.stopPreview();
-        }, 5000);
+        if (!this.previewSynth) {
+            this.createPreviewSynth();
+        }
+
+        try {
+            // 创建琶音预览
+            Tone.Transport.bpm.value = tempo;
+            
+            const rootNote = selectedNotes[0] + '3'; // 使用第一个选中的音符作为根音
+            const chord = Tone.Frequency(rootNote).harmonize(intervals);
+            const arpeggioNotes = chord.map(freq => Tone.Frequency(freq).toNote());
+            
+            this.previewSequence = new Tone.Pattern((time, note) => {
+                if (this.previewSynth) {
+                    this.previewSynth.triggerAttackRelease(note, "8n", time, 0.3);
+                }
+            }, arpeggioNotes, pattern);
+            
+            this.previewSequence.interval = "8n";
+            this.previewSequence.start(0);
+            
+            // 5秒后停止预览
+            setTimeout(() => {
+                this.stopPreview();
+            }, 5000);
+        } catch (error) {
+            console.warn('琶音预览失败:', error);
+            alert('琶音预览失败，请检查设置');
+        }
     }
 
     previewDrum() {
@@ -383,12 +507,20 @@ export class CustomEditor {
 
     openSavePresetModal(type) {
         this.currentEditingType = type;
-        document.getElementById('preset-name').value = '';
-        document.getElementById('save-preset-modal').style.display = 'block';
+        const nameInput = document.getElementById('preset-name');
+        if (nameInput) {
+            nameInput.value = '';
+        }
+        const modal = document.getElementById('save-preset-modal');
+        if (modal) {
+            modal.style.display = 'block';
+        }
     }
 
     savePreset() {
-        const name = document.getElementById('preset-name').value.trim();
+        const nameInput = document.getElementById('preset-name');
+        const name = nameInput ? nameInput.value.trim() : '';
+        
         if (!name) {
             alert('请输入预设名称！');
             return;
@@ -408,12 +540,15 @@ export class CustomEditor {
     }
 
     createArpeggioPreset(name) {
+        const patternElement = document.querySelector('input[name="arpeggio-pattern"]:checked');
+        const tempoSlider = document.getElementById('arpeggio-tempo');
+        
         return {
             name: name,
             scale: this.getSelectedNotes().map(note => note + '3'), // 添加八度
             chordIntervals: this.getChordIntervals(),
-            arpeggioPattern: document.querySelector('input[name="arpeggio-pattern"]:checked').value,
-            tempo: parseInt(document.getElementById('arpeggio-tempo').value),
+            arpeggioPattern: patternElement ? patternElement.value : 'upDown',
+            tempo: tempoSlider ? parseInt(tempoSlider.value) : 100,
             synthPreset: 0,
             custom: true
         };
@@ -428,9 +563,13 @@ export class CustomEditor {
     }
 
     saveToLocalStorage(key, preset) {
-        const existingPresets = JSON.parse(localStorage.getItem(key) || '[]');
-        existingPresets.push(preset);
-        localStorage.setItem(key, JSON.stringify(existingPresets));
+        try {
+            const existingPresets = JSON.parse(localStorage.getItem(key) || '[]');
+            existingPresets.push(preset);
+            localStorage.setItem(key, JSON.stringify(existingPresets));
+        } catch (error) {
+            console.warn('保存预设到本地存储失败:', error);
+        }
     }
 
     applyArpeggioChanges() {

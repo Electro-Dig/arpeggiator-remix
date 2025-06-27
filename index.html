@@ -37,70 +37,42 @@
     <body style="width: 100%; height: 100%; overflow: hidden; margin: 0;">
         <div id="renderDiv" style="width: 100%; height: 100%; margin: 0;">
 
-            <span id="info-text">raise your hands to raise the roof</span>
+            <!-- 主要状态信息 -->
+            <div id="info-text">raise your hands to raise the roof</div>
             
-            <!-- 添加预设信息显示区域 -->
-            <div id="preset-info" class="text-box" style="position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.8); color: white; font-size: 14px; text-align: center;">
+            <!-- 当前预设信息显示 -->
+            <div id="preset-info">
                 <div id="music-preset">音乐: C Minor Pentatonic</div>
                 <div id="drum-preset">鼓组: Hip Hop</div>
-                <div style="font-size: 12px; margin-top: 5px; opacity: 0.8;">
+                <div class="gesture-hint">
                     右手: 全部张开切换音乐 | 握拳切换鼓组
                 </div>
             </div>
-            
-            <div id="social-links" class="text-box">
-                <a href="https://www.x.com/measure_plan/" target="_blank">> Twitter</a><br>
-                <a href="https://www.instagram.com/stereo.drift/" target="_blank">> Instagram</a><br>
-                <a href="https://youtube.com/@funwithcomputervision" target="_blank">> Youtube</a>
-            </div>
-            <div id="coffee-link" class="text-box">
-                <a href="https://buymeacoffee.com/stereodrift" target="_blank">Buy me a coffee 💛</a>
-            </div>
-            <div id="logo-container" class="text-box">
-                <span id="logo">🪬</span><br>
-                <a href="https://funwithcomputervision.com/" target="_blank">code & tutorials here</a>
-            </div>
 
         </div>
 
-        <!-- 操作指南 -->
-        <div class="controls-guide">
-            <div class="guide-header">
-                <h3>🎮 操作指南</h3>
-                <button class="collapse-btn" onclick="toggleGuide()">−</button>
+        <!-- 控制面板 -->
+        <div id="control-panel">
+            <!-- 快捷操作按钮 -->
+            <div class="quick-controls">
+                <button id="open-arpeggio-editor" class="control-btn">
+                    <span class="btn-icon">🎹</span>
+                    <span class="btn-text">琶音编辑</span>
+                </button>
+                <button id="open-drum-editor" class="control-btn">
+                    <span class="btn-icon">🥁</span>
+                    <span class="btn-text">鼓组编辑</span>
+                </button>
+                <button id="toggle-help" class="control-btn">
+                    <span class="btn-icon">❓</span>
+                    <span class="btn-text">帮助</span>
+                </button>
             </div>
-            <div class="guide-content">
-                <div class="guide-section">
-                    <h4>🤚 左手控制 (琶音)</h4>
-                    <ul>
-                        <li>上下移动：控制音高</li>
-                        <li>拇指食指距离：控制音量</li>
-                        <li>握拳：切换音色</li>
-                    </ul>
-                </div>
-                <div class="guide-section">
-                    <h4>🤚 右手控制 (鼓组)</h4>
-                    <ul>
-                        <li>食指：Kick 鼓</li>
-                        <li>中指：Snare 鼓</li>
-                        <li>无名指：Hi-hat</li>
-                        <li>小指：Clap</li>
-                        <li>全部张开：切换音乐预设</li>
-                        <li>握拳：切换鼓组预设</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
 
-        <!-- 预设选择器 -->
-        <div class="preset-selector">
-            <div class="preset-header">
-                <h3>🎵 预设选择</h3>
-                <button class="collapse-btn" onclick="togglePresets()">−</button>
-            </div>
-            <div class="preset-content">
-                <div class="preset-section">
-                    <h4>音乐预设</h4>
+            <!-- 预设选择器 -->
+            <div class="preset-controls">
+                <div class="preset-group">
+                    <label>音乐预设</label>
                     <select id="music-preset-select">
                         <option value="0">C Minor Pentatonic</option>
                         <option value="1">G Major Pentatonic</option>
@@ -109,8 +81,8 @@
                         <option value="4">Japanese Pentatonic</option>
                     </select>
                 </div>
-                <div class="preset-section">
-                    <h4>鼓组预设</h4>
+                <div class="preset-group">
+                    <label>鼓组预设</label>
                     <select id="drum-preset-select">
                         <option value="0">Hip Hop</option>
                         <option value="1">House</option>
@@ -122,16 +94,30 @@
             </div>
         </div>
 
-        <!-- 自定义编辑器按钮 -->
-        <div class="editor-buttons">
-            <button id="open-arpeggio-editor" class="editor-btn">
-                <span>🎹</span>
-                <span>自定义琶音</span>
-            </button>
-            <button id="open-drum-editor" class="editor-btn">
-                <span>🥁</span>
-                <span>自定义鼓组</span>
-            </button>
+        <!-- 帮助面板 -->
+        <div id="help-panel" class="hidden">
+            <div class="help-content">
+                <h3>🎮 操作指南</h3>
+                <div class="help-section">
+                    <h4>🤚 左手控制 (琶音)</h4>
+                    <ul>
+                        <li>上下移动：控制音高</li>
+                        <li>拇指食指距离：控制音量</li>
+                        <li>握拳：切换音色</li>
+                    </ul>
+                </div>
+                <div class="help-section">
+                    <h4>🤚 右手控制 (鼓组)</h4>
+                    <ul>
+                        <li>食指：Kick 鼓</li>
+                        <li>中指：Snare 鼓</li>
+                        <li>无名指：Hi-hat</li>
+                        <li>小指：Clap</li>
+                        <li>全部张开：切换音乐预设</li>
+                        <li>握拳：切换鼓组预设</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <!-- 琶音编辑器弹窗 -->
@@ -302,38 +288,21 @@
                 </div>
             </div>
         </div>
-
-        <div class="container">
-            <!-- ... existing code ... -->
-        </div>
         
         <script>
             // 全局功能函数
-            function toggleGuide() {
-                const content = document.querySelector('.guide-content');
-                const btn = document.querySelector('.controls-guide .collapse-btn');
-                
-                if (content.style.display === 'none') {
-                    content.style.display = 'block';
-                    btn.textContent = '−';
-                } else {
-                    content.style.display = 'none';
-                    btn.textContent = '+';
-                }
+            function toggleHelp() {
+                const helpPanel = document.getElementById('help-panel');
+                helpPanel.classList.toggle('hidden');
             }
             
-            function togglePresets() {
-                const content = document.querySelector('.preset-content');
-                const btn = document.querySelector('.preset-selector .collapse-btn');
-                
-                if (content.style.display === 'none') {
-                    content.style.display = 'block';
-                    btn.textContent = '−';
-                } else {
-                    content.style.display = 'none';
-                    btn.textContent = '+';
+            // 更新帮助按钮事件监听
+            document.addEventListener('DOMContentLoaded', function() {
+                const helpBtn = document.getElementById('toggle-help');
+                if (helpBtn) {
+                    helpBtn.addEventListener('click', toggleHelp);
                 }
-            }
+            });
         </script>
         
         <script type="module" src="main.js"></script>
