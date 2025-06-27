@@ -280,10 +280,6 @@ export var MusicManager = /*#__PURE__*/ function() {
             }
         ];
         this.currentSynthIndex = 0;
-        
-        // 自定义预设支持
-        this.customPreset = null;
-        this.isUsingCustomPreset = false;
     }
     _create_class(MusicManager, [
         {
@@ -482,62 +478,7 @@ export var MusicManager = /*#__PURE__*/ function() {
             // 获取当前音乐预设
             key: "getCurrentMusicPreset",
             value: function getCurrentMusicPreset() {
-                if (this.isUsingCustomPreset && this.customPreset) {
-                    return this.customPreset;
-                }
                 return this.musicPresets[this.currentMusicPresetIndex];
-            }
-        },
-        {
-            // 应用自定义预设
-            key: "applyCustomPreset",
-            value: function applyCustomPreset(preset) {
-                this.customPreset = preset;
-                this.isUsingCustomPreset = true;
-                
-                // 更新速度
-                Tone.Transport.bpm.value = preset.tempo;
-                
-                // 如果有活动的琶音，重新启动以应用新预设
-                const activePatterns = Array.from(this.activePatterns.keys());
-                activePatterns.forEach(handId => {
-                    const pattern = this.activePatterns.get(handId);
-                    if (pattern) {
-                        this.stopArpeggio(handId);
-                        // 延迟重启以确保停止完成
-                        setTimeout(() => {
-                            this.startArpeggio(handId, pattern.currentRoot);
-                        }, 100);
-                    }
-                });
-                
-                console.log("Applied custom arpeggio preset:", preset.name);
-            }
-        },
-        {
-            // 切换回内置预设
-            key: "useBuiltinPreset",
-            value: function useBuiltinPreset(index) {
-                this.isUsingCustomPreset = false;
-                this.currentMusicPresetIndex = index;
-                Tone.Transport.bpm.value = this.musicPresets[index].tempo;
-                
-                console.log("Switched to builtin preset:", this.musicPresets[index].name);
-            }
-        },
-        {
-            // 获取所有可用预设（内置+自定义）
-            key: "getAllPresets",
-            value: function getAllPresets() {
-                const builtinPresets = this.musicPresets.map((preset, index) => ({
-                    ...preset,
-                    index: index,
-                    custom: false
-                }));
-                
-                const customPresets = JSON.parse(localStorage.getItem('custom-arpeggio-presets') || '[]');
-                
-                return [...builtinPresets, ...customPresets];
             }
         }
     ]);

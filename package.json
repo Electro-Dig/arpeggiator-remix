@@ -1,0 +1,27 @@
+{
+  "name": "arpeggiator-remix",
+  "version": "1.0.0",
+  "description": "Hand-controlled arpeggiator with drum machine and real-time visualizer",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --dev",
+    "python-server": "python server.py"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "https": "^1.0.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "arpeggiator",
+    "music",
+    "mediapipe",
+    "threejs",
+    "tonejs",
+    "hand-tracking"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+} 

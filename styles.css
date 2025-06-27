@@ -1,685 +1,139 @@
-/* ===== 全局样式重置 ===== */
-* {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #000;
-    overflow: hidden;
-}
-
-/* ===== 主要信息显示 ===== */
-#info-text {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 12px 24px;
-    background: rgba(0, 0, 0, 0.8);
-    color: #00ffff;
-    border-radius: 25px;
-    font-size: clamp(18px, 3vw, 24px);
-    font-weight: 600;
+.text-box {
+    padding: 8px 15px;
+    background-color: rgba(255, 255, 255, 0.6);
+    color: black;
+    border-radius: 4px;
+    font-family: "Helvetica Neue", Helvetica, sans-serif;
+    border: 2px solid rgb(53, 47, 108);
+    box-shadow: 3px 3px 0px rgb(23, 17, 77);
+    font-size: clamp(13px, 2vw, 15px);
     text-align: center;
     z-index: 200;
-    border: 2px solid rgba(0, 255, 255, 0.3);
-    backdrop-filter: blur(10px);
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out, bottom 0.3s ease-in-out, box-shadow 0.2s ease;
 }
 
-/* ===== 当前预设信息 ===== */
-#preset-info {
+#info-text {
     position: absolute;
-    top: 80px;
+    top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.85);
-    color: white;
-    padding: 16px 20px;
-    border-radius: 12px;
+    padding: 8px 15px;
+    background-color: rgba(255, 255, 255, 0.6);
+    color: black;
+    border-radius: 4px;
+    font-family: "Helvetica Neue", Helvetica, sans-serif;
+    border: 2px solid rgb(53, 47, 108);
+    box-shadow: 3px 3px 0px rgb(23, 17, 77);
+    font-size: clamp(20px, 4vw, 30px);
     text-align: center;
-    z-index: 150;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(15px);
-    min-width: 280px;
+    z-index: 200;
 }
 
-#music-preset, #drum-preset {
-    font-size: 14px;
-    margin: 4px 0;
-    font-weight: 500;
-}
-
-.gesture-hint {
-    font-size: 11px;
-    margin-top: 8px;
-    opacity: 0.7;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 8px;
-}
-
-/* ===== 控制面板 ===== */
-#control-panel {
-    position: fixed;
-    bottom: 20px;
+#instruction-text {
+    position: absolute;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    border-radius: 16px;
-    padding: 20px;
-    z-index: 100;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    max-width: 90vw;
-}
-
-/* 快捷控制按钮 */
-.quick-controls {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.control-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    background: rgba(0, 255, 255, 0.1);
-    border: 2px solid rgba(0, 255, 255, 0.3);
-    border-radius: 12px;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-    min-width: 110px;
-}
-
-.control-btn:hover {
-    background: rgba(0, 255, 255, 0.2);
-    border-color: #00ffff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
-}
-
-.btn-icon {
-    font-size: 16px;
-}
-
-.btn-text {
-    font-size: 13px;
-}
-
-/* 预设控制 */
-.preset-controls {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.preset-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 140px;
-}
-
-.preset-group label {
-    color: #00ffff;
-    font-size: 12px;
-    font-weight: 600;
-    text-align: center;
-}
-
-.preset-group select {
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    color: #fff;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.preset-group select:hover,
-.preset-group select:focus {
-    border-color: #00ffff;
-    background: rgba(0, 255, 255, 0.1);
-    outline: none;
-}
-
-/* ===== 帮助面板 ===== */
-#help-panel {
-    position: fixed;
-    top: 160px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.9);
-    border-radius: 12px;
-    padding: 20px;
-    z-index: 120;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(15px);
-    max-width: 300px;
-    transition: all 0.3s ease;
-}
-
-#help-panel.hidden {
-    opacity: 0;
     pointer-events: none;
-    transform: translateY(-10px);
 }
 
-.help-content h3 {
-    margin: 0 0 16px 0;
-    color: #00ffff;
-    font-size: 16px;
-    text-align: center;
-}
-
-.help-section {
-    margin-bottom: 16px;
-}
-
-.help-section h4 {
-    margin: 0 0 8px 0;
-    color: #fff;
-    font-size: 14px;
-}
-
-.help-section ul {
-    margin: 0;
-    padding-left: 20px;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.help-section li {
-    font-size: 12px;
-    margin-bottom: 4px;
-}
-
-/* ===== 弹窗样式 ===== */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(5px);
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.modal-content {
+#social-links {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-    border: 2px solid #00ffff;
-    border-radius: 12px;
-    box-shadow: 0 20px 60px rgba(0, 255, 255, 0.3);
-    max-width: 90vw;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: slideIn 0.4s ease;
+    bottom: 10px;
+    left: 10px;
+    text-align: left;
 }
 
-.modal-content.small {
-    width: 400px;
-    max-width: 90vw;
+#coffee-link {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
 }
 
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -60%);
-    }
-    to {
-        opacity: 1;
-        transform: translate(-50%, -50%);
-    }
+#video-link {
+    position: absolute;
+    top: 10px;
+    left: 10px;
 }
 
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 25px;
-    border-bottom: 2px solid #333;
-    background: rgba(0, 255, 255, 0.1);
+#logo-container {
+    position: absolute;
+    top: 10px;
+    right: 10px;
 }
 
-.modal-header h2 {
-    margin: 0;
-    color: #00ffff;
-    font-size: 24px;
+#logo {
+    font-size: 2em;
 }
 
-.close {
-    color: #aaa;
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: color 0.3s ease;
+/* 预设选择器特殊样式 */
+#preset-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
-.close:hover {
-    color: #ff6b6b;
-}
-
-.modal-body {
-    padding: 25px;
-    max-height: calc(90vh - 100px);
-    overflow-y: auto;
-}
-
-/* 编辑器区块 */
-.editor-section {
-    margin-bottom: 30px;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    border: 1px solid rgba(0, 255, 255, 0.2);
-}
-
-.editor-section h3 {
-    margin: 0 0 15px 0;
-    color: #00ffff;
-    font-size: 18px;
-    border-bottom: 1px solid rgba(0, 255, 255, 0.3);
-    padding-bottom: 8px;
-}
-
-/* 音符网格 */
-.note-grid {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 8px;
-    margin-top: 15px;
-}
-
-.note-btn {
-    padding: 10px 5px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid #555;
-    border-radius: 4px;
-    color: #fff;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 12px;
-    text-align: center;
-}
-
-.note-btn:hover {
-    background: rgba(0, 255, 255, 0.3);
-    border-color: #00ffff;
-}
-
-.note-btn.active {
-    background: #00ffff;
-    color: #000;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-}
-
-.note-btn.black-key {
-    background: rgba(0, 0, 0, 0.7);
-    border-color: #333;
-}
-
-.note-btn.black-key.active {
-    background: #ff6b6b;
-}
-
-/* 和弦间隔输入 */
-.interval-inputs {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.interval-input {
-    width: 60px;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid #555;
-    border-radius: 4px;
-    color: #fff;
-    text-align: center;
-}
-
-.interval-input:focus {
-    border-color: #00ffff;
-    outline: none;
-    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
-}
-
-/* 模式选择器 */
-.pattern-selector {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-
-.pattern-selector label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #fff;
-    cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 4px;
-    transition: all 0.3s ease;
-}
-
-.pattern-selector label:hover {
-    background: rgba(0, 255, 255, 0.1);
-}
-
-.pattern-selector input[type="radio"] {
-    accent-color: #00ffff;
-}
-
-/* 速度控制 */
-#arpeggio-tempo {
-    width: 100%;
-    margin: 10px 0;
-    accent-color: #00ffff;
-}
-
-#tempo-value {
-    color: #00ffff;
-    font-weight: bold;
-    font-size: 18px;
-}
-
-/* 音序器界面 */
-.sequencer {
-    position: relative;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 8px;
-    padding: 15px;
+#preset-menu {
     border: 1px solid #333;
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+    max-height: 300px;
+    overflow-y: auto;
 }
 
-.drum-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
+/* 操作提示响应式 */
+#instructions {
+    max-width: min(600px, 90vw);
 }
 
-.drum-label {
-    width: 100px;
-    color: #00ffff;
-    font-weight: bold;
-    font-size: 14px;
-    flex-shrink: 0;
-}
-
-.step-row {
-    display: flex;
-    gap: 4px;
-    flex: 1;
-    margin-left: 15px;
-}
-
-.step-btn {
-    width: 30px;
-    height: 30px;
-    border: 1px solid #555;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.step-btn:hover {
-    border-color: #00ffff;
-    transform: scale(1.1);
-}
-
-.step-btn.active {
-    background: #00ffff;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-}
-
-.step-btn.current {
-    border-color: #ff6b6b;
-    border-width: 2px;
-}
-
-/* 播放头 */
-.playhead {
-    position: absolute;
-    top: 15px;
-    left: 130px;
-    width: 2px;
-    height: calc(100% - 30px);
-    background: #ff6b6b;
-    transition: transform 0.1s ease;
-    opacity: 0.8;
-    z-index: 10;
-}
-
-/* 快速操作按钮 */
-.quick-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.quick-btn {
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid #555;
-    border-radius: 4px;
-    color: #fff;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-size: 12px;
-}
-
-.quick-btn:hover {
-    background: rgba(0, 255, 255, 0.2);
-    border-color: #00ffff;
-}
-
-/* 操作按钮 */
-.editor-actions {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 1px solid #333;
-}
-
-.action-btn {
-    padding: 12px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    min-width: 100px;
-}
-
-.preview-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.save-btn {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    color: white;
-}
-
-.apply-btn {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-}
-
-.cancel-btn {
-    background: linear-gradient(135deg, #666 0%, #999 100%);
-    color: white;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-/* 保存预设弹窗 */
-#preset-name {
-    width: 100%;
-    padding: 12px;
-    margin: 15px 0;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid #555;
-    border-radius: 4px;
-    color: #fff;
-    font-size: 16px;
-}
-
-#preset-name:focus {
-    border-color: #00ffff;
-    outline: none;
-    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-}
-
-.modal-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-}
-
-/* ===== 响应式设计 ===== */
 @media (max-width: 768px) {
-    #control-panel {
-        bottom: 10px;
-        padding: 16px;
-        max-width: 95vw;
+    #instructions {
+        top: 5px;
+        font-size: 11px;
+        padding: 6px 10px;
     }
     
-    .quick-controls {
-        gap: 8px;
-    }
-    
-    .control-btn {
-        padding: 10px 12px;
-        min-width: 90px;
-    }
-    
-    .btn-text {
-        font-size: 12px;
-    }
-    
-    .preset-controls {
-        gap: 12px;
-    }
-    
-    .preset-group {
-        min-width: 120px;
-    }
-    
-    #help-panel {
-        right: 10px;
-        top: 140px;
-        max-width: 250px;
-    }
-    
-    .modal-content {
-        width: 95vw;
-        max-height: 95vh;
-    }
-    
-    .modal-header {
-        padding: 15px 20px;
-    }
-    
-    .modal-body {
-        padding: 20px;
-    }
-    
-    .note-grid {
-        grid-template-columns: repeat(6, 1fr);
-    }
-    
-    .interval-inputs {
-        justify-content: center;
-    }
-    
-    .step-btn {
-        width: 25px;
-        height: 25px;
-    }
-    
-    .drum-label {
-        width: 80px;
-        font-size: 12px;
-    }
-    
-    .editor-actions {
+    #instructions .instructions-content {
         flex-direction: column;
         gap: 10px;
     }
     
-    .quick-actions {
-        justify-content: center;
+    #preset-info {
+        top: 80px;
+        font-size: 12px;
+    }
+    
+    #preset-selector {
+        top: 10px;
+        right: 10px;
+    }
+    
+    #preset-toggle {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    
+    #preset-menu {
+        font-size: 11px;
+        min-width: 180px;
     }
 }
 
-@media (max-width: 480px) {
-    #preset-info {
-        min-width: 250px;
-        padding: 12px 16px;
-    }
-    
-    .control-btn .btn-text {
-        display: none;
-    }
-    
-    .control-btn {
-        min-width: 60px;
-    }
-    
-    .preset-controls {
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .note-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-    
-    .pattern-selector {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .step-btn {
-        width: 20px;
-        height: 20px;
-    }
+/* 滚动条样式 */
+#preset-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+#preset-menu::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+}
+
+#preset-menu::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+}
+
+#preset-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.5);
 }
