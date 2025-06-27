@@ -757,12 +757,15 @@ export var Game = /*#__PURE__*/ function() {
                                 var handY = (1 - normY_visible) * canvasHeight - canvasHeight / 2;
                                 hand.anchorPos.set(handX, handY, 1);
                                 if (i === 0) {
-                                    // --- Music & Gesture Control ---
+                                    // --- 左手：音乐控制 ---
                                     var isFistNow = _this1._isFist(smoothedLandmarks);
+                                    
+                                    // 检测握拳手势：只切换音色，不影响其他预设
                                     if (isFistNow && !hand.isFist) {
-                                        // Fist gesture was just made
+                                        // 刚刚握拳：切换音色
                                         _this1.musicManager.cycleSynth();
-                                        _this1.musicManager.stopArpeggio(i); // Stop any old arpeggio
+                                        _this1.musicManager.stopArpeggio(i); // 停止当前琶音
+                                        _this1._showPresetChangeNotification(`音色: ${_this1.musicManager.getSynthName()}`, 'synth');
                                     }
                                     hand.isFist = isFistNow;
                                     
@@ -772,24 +775,32 @@ export var Game = /*#__PURE__*/ function() {
                                     
                                     var noteIndex = Math.floor((1 - normY_visible) * currentScale.length);
                                     var note = currentScale[Math.max(0, Math.min(currentScale.length - 1, noteIndex))];
+                                    
+                                    // 更新波形可视化颜色
                                     if (_this1.waveformVisualizer) {
                                         var colorIndex = noteIndex % _this1.waveformColors.length;
                                         var newColor = _this1.waveformColors[colorIndex];
                                         _this1.waveformVisualizer.updateColor(newColor);
                                     }
+                                    
+                                    // 计算音量（拇指和食指距离）
                                     var thumbTip = smoothedLandmarks[4];
                                     var indexTip = smoothedLandmarks[8];
                                     var dx = thumbTip.x - indexTip.x;
                                     var dy = thumbTip.y - indexTip.y;
                                     var distance = Math.sqrt(dx * dx + dy * dy);
                                     var velocity = Math.max(0, Math.min(1.0, distance * 5));
+                                    
+                                    // 更新手部可视化
                                     _this1._updateHandLines(i, smoothedLandmarks, videoParams, canvasWidth, canvasHeight, {
                                         note: note,
                                         velocity: velocity,
                                         isFist: isFistNow
                                     });
+                                    
+                                    // 琶音控制
                                     if (!isFistNow) {
-                                        // Start/Restart arpeggio if the hand just appeared OR if it just opened from a fist.
+                                        // 非握拳状态：播放琶音
                                         var arpeggioIsActive = _this1.musicManager.activePatterns.has(i);
                                         if (!wasVisible || !arpeggioIsActive) {
                                             _this1.musicManager.startArpeggio(i, note);
@@ -798,10 +809,11 @@ export var Game = /*#__PURE__*/ function() {
                                         }
                                         _this1.musicManager.updateArpeggioVolume(i, velocity);
                                     } else {
-                                        // If it is a fist, make sure the arpeggio is stopped
+                                        // 握拳状态：停止琶音
                                         _this1.musicManager.stopArpeggio(i);
                                     }
                                 } else if (i === 1) {
+                                    // --- 右手：鼓组控制 ---
                                     var fingerStates = _this1._getFingerStates(smoothedLandmarks);
                                     
                                     // 检查特殊手势组合来切换预设
@@ -812,16 +824,22 @@ export var Game = /*#__PURE__*/ function() {
                                         // 所有手指张开：切换音乐预设
                                         var newMusicPreset = _this1.musicManager.cycleMusicPreset();
                                         _this1._showPresetChangeNotification(`音乐: ${newMusicPreset.name}`, 'music');
+                                        _this1._updatePresetDisplay();
                                     } else if (isFistNow && !hand.wasFist) {
                                         // 握拳手势：切换鼓组预设
                                         var newDrumPreset = drumManager.cycleDrumPreset();
                                         _this1._showPresetChangeNotification(`鼓组: ${newDrumPreset.name}`, 'drum');
+                                        _this1._updatePresetDisplay();
                                     }
                                     
+                                    // 更新手势状态
                                     hand.wasAllFingersUp = allFingersUp;
                                     hand.wasFist = isFistNow;
                                     
+                                    // 更新鼓组激活状态
                                     drumManager.updateActiveDrums(fingerStates);
+                                    
+                                    // 更新手部可视化
                                     _this1._updateHandLines(i, smoothedLandmarks, videoParams, canvasWidth, canvasHeight, {
                                         fingerStates: fingerStates
                                     });
@@ -1202,21 +1220,24 @@ export var Game = /*#__PURE__*/ function() {
                 var _this = this;
                 var hand = this.hands[handIndex];
                 var lineGroup = hand.lineGroup;
-                // Clean up previous frame's objects
+                
+                // 清理上一帧的对象
                 while(lineGroup.children.length){
                     var child = lineGroup.children[0];
                     lineGroup.remove(child);
                     if (child.geometry) child.geometry.dispose();
                     if (child.material) {
-                        // For sprites, we need to dispose the texture map as well
                         if (child.material.map) child.material.map.dispose();
                         child.material.dispose();
                     }
                 }
+                
                 if (!landmarks || landmarks.length === 0 || !videoParams) {
                     lineGroup.visible = false;
                     return;
                 }
+                
+                // 转换landmark坐标到3D空间
                 var points3D = landmarks.map(function(lm) {
                     var lmOriginalX = lm.x * videoParams.videoNaturalWidth;
                     var lmOriginalY = lm.y * videoParams.videoNaturalHeight;
@@ -1226,99 +1247,128 @@ export var Game = /*#__PURE__*/ function() {
                     normY_visible = Math.max(0, Math.min(1, normY_visible));
                     var x = (1 - normX_visible) * canvasWidth - canvasWidth / 2;
                     var y = (1 - normY_visible) * canvasHeight - canvasHeight / 2;
-                    return new THREE.Vector3(x, y, 1.1); // Z for fingertip circles
+                    return new THREE.Vector3(x, y, 1.1);
                 });
-                // --- Draw Skeleton Lines ---
+                
+                // 简化的手部骨架线条（只绘制主要连接）
                 var lineZ = 1;
-                this.handConnections.forEach(function(conn) {
+                var mainConnections = [
+                    [0, 1], [1, 2], [2, 3], [3, 4],     // 拇指
+                    [0, 5], [5, 6], [6, 7], [7, 8],     // 食指
+                    [0, 9], [9, 10], [10, 11], [11, 12], // 中指
+                    [0, 13], [13, 14], [14, 15], [15, 16], // 无名指
+                    [0, 17], [17, 18], [18, 19], [19, 20], // 小指
+                    [5, 9], [9, 13], [13, 17]            // 手指间连接
+                ];
+                
+                // 设置线条材质（更细更简约）
+                var lineColor = handIndex === 0 ? 0x00ffff : 0xff6b6b;
+                var lineMaterial = new THREE.LineBasicMaterial({
+                    color: lineColor,
+                    linewidth: 2,
+                    opacity: 0.8,
+                    transparent: true
+                });
+                
+                mainConnections.forEach(function(conn) {
                     var p1 = points3D[conn[0]];
                     var p2 = points3D[conn[1]];
                     if (p1 && p2) {
                         var lineP1 = p1.clone().setZ(lineZ);
                         var lineP2 = p2.clone().setZ(lineZ);
-                        var geometry = new THREE.BufferGeometry().setFromPoints([
-                            lineP1,
-                            lineP2
-                        ]);
-                        var line = new THREE.Line(geometry, _this.handLineMaterial);
+                        var geometry = new THREE.BufferGeometry().setFromPoints([lineP1, lineP2]);
+                        var line = new THREE.Line(geometry, lineMaterial);
                         lineGroup.add(line);
                     }
                 });
-                // --- Draw Fingertip & Wrist Circles ---
-                var fingertipRadius = 8, wristRadius = 12, circleSegments = 16;
-                this.fingertipLandmarkIndices.forEach(function(index) {
+                
+                // 简化的关节点（只显示指尖和手腕）
+                var keyPoints = [0, 4, 8, 12, 16, 20]; // 手腕和5个指尖
+                var pointRadius = 3;
+                var pointMaterial = new THREE.MeshBasicMaterial({
+                    color: lineColor,
+                    opacity: 0.9,
+                    transparent: true
+                });
+                
+                keyPoints.forEach(function(index) {
                     var landmarkPosition = points3D[index];
                     if (landmarkPosition) {
-                        var radius = index === 0 ? wristRadius : fingertipRadius;
-                        var circleGeometry = new THREE.CircleGeometry(radius, circleSegments);
-                        var material = handIndex === 0 ? _this.fingertipMaterialHand1 : _this.fingertipMaterialHand2;
-                        var landmarkCircle = new THREE.Mesh(circleGeometry, material);
+                        var radius = index === 0 ? pointRadius * 1.5 : pointRadius; // 手腕稍大
+                        var circleGeometry = new THREE.CircleGeometry(radius, 8);
+                        var landmarkCircle = new THREE.Mesh(circleGeometry, pointMaterial);
                         landmarkCircle.position.copy(landmarkPosition);
                         lineGroup.add(landmarkCircle);
                     }
                 });
-                // --- Draw Thumb-to-Index line and Labels ---
-                var thumbPos = points3D[4];
-                var indexPos = points3D[8];
+                
+                // 简化的状态标签
                 var wristPos = points3D[0];
-                if (wristPos) {
-                    // Labels depend on which hand it is
-                    if (handIndex === 0 && thumbPos && indexPos) {
-                        // Connecting line
-                        var lineGeom = new THREE.BufferGeometry().setFromPoints([
-                            thumbPos,
-                            indexPos
-                        ]);
-                        var line = new THREE.Line(lineGeom, new THREE.LineBasicMaterial({
-                            color: 0xffffff,
-                            linewidth: 3
-                        }));
-                        lineGroup.add(line);
-                        // Volume and Pitch labels
-                        var note = controlData.note, velocity = controlData.velocity, isFist = controlData.isFist;
-                        if (isFist) {
-                            var fistLabel = this._createTextSprite("SYNTH ".concat(this.musicManager.currentSynthIndex + 1), {
-                                fontsize: 22,
-                                backgroundColor: this.labelColors.evaPurple,
-                                textColor: this.labelColors.evaGreen
+                if (wristPos && handIndex === 0) {
+                    // 左手：显示音符和音量
+                    var note = controlData.note, velocity = controlData.velocity, isFist = controlData.isFist;
+                    
+                    if (isFist) {
+                        // 握拳时显示音色切换提示
+                        var fistLabel = this._createTextSprite("♪ SYNTH", {
+                            fontsize: 16,
+                            backgroundColor: 'rgba(0, 255, 255, 0.8)',
+                            textColor: '#000'
+                        });
+                        fistLabel.position.set(wristPos.x, wristPos.y + 40, 2);
+                        lineGroup.add(fistLabel);
+                    } else {
+                        // 正常状态显示音符
+                        var noteLabel = this._createTextSprite(note, {
+                            fontsize: 14,
+                            backgroundColor: 'rgba(0, 255, 255, 0.7)',
+                            textColor: '#000'
+                        });
+                        noteLabel.position.set(wristPos.x, wristPos.y + 30, 2);
+                        lineGroup.add(noteLabel);
+                        
+                        // 显示音量条
+                        if (velocity > 0.1) {
+                            var volumeBarWidth = 30;
+                            var volumeBarHeight = 4;
+                            var volumeWidth = volumeBarWidth * velocity;
+                            
+                            var volumeGeometry = new THREE.PlaneGeometry(volumeWidth, volumeBarHeight);
+                            var volumeMaterial = new THREE.MeshBasicMaterial({
+                                color: 0x00ff00,
+                                opacity: 0.8,
+                                transparent: true
                             });
-                            fistLabel.position.set(wristPos.x, wristPos.y + 60, 2);
-                            lineGroup.add(fistLabel);
-                        } else {
-                            var midPoint = new THREE.Vector3().lerpVectors(thumbPos, indexPos, 0.5);
-                            var volumeLabel = this._createTextSprite("Volume: ".concat(velocity.toFixed(2)), {
-                                fontsize: 18,
-                                backgroundColor: this.labelColors.evaOrange,
-                                textColor: this.labelColors.white
-                            });
-                            volumeLabel.position.set(midPoint.x, midPoint.y, 2);
-                            lineGroup.add(volumeLabel);
-                            var pitchLabel = this._createTextSprite("Pitch: ".concat(note), {
-                                fontsize: 18,
-                                backgroundColor: this.labelColors.evaGreen,
-                                textColor: this.labelColors.black
-                            });
-                            pitchLabel.position.set(wristPos.x, wristPos.y + 60, 2); // Position above the wrist
-                            lineGroup.add(pitchLabel);
+                            var volumeBar = new THREE.Mesh(volumeGeometry, volumeMaterial);
+                            volumeBar.position.set(wristPos.x - volumeBarWidth/2 + volumeWidth/2, wristPos.y + 45, 2);
+                            lineGroup.add(volumeBar);
                         }
-                    } else if (handIndex === 1) {
-                        var fingerStates = controlData.fingerStates;
-                        var activeDrums = Object.entries(fingerStates).filter(function(param) {
+                    }
+                } else if (wristPos && handIndex === 1) {
+                    // 右手：显示活跃的鼓点
+                    var fingerStates = controlData.fingerStates;
+                    var activeDrums = Object.entries(fingerStates)
+                        .filter(function(param) {
                             var _param = _sliced_to_array(param, 2), _ = _param[0], isUp = _param[1];
                             return isUp;
-                        }).map(function(param) {
+                        })
+                        .map(function(param) {
                             var _param = _sliced_to_array(param, 2), finger = _param[0], _ = _param[1];
                             return drumManager.getFingerToDrumMap()[finger];
-                        }).join(', ');
-                        var drumLabel = this._createTextSprite("Drums: ".concat(activeDrums || 'None'), {
-                            fontsize: 18,
-                            backgroundColor: this.labelColors.evaRed,
-                            textColor: this.labelColors.white
                         });
-                        drumLabel.position.set(wristPos.x, wristPos.y + 60, 2);
+                    
+                    if (activeDrums.length > 0) {
+                        var drumText = activeDrums.join(' ');
+                        var drumLabel = this._createTextSprite(drumText, {
+                            fontsize: 14,
+                            backgroundColor: 'rgba(255, 107, 107, 0.8)',
+                            textColor: '#fff'
+                        });
+                        drumLabel.position.set(wristPos.x, wristPos.y + 30, 2);
                         lineGroup.add(drumLabel);
                     }
                 }
+                
                 lineGroup.visible = true;
             }
         },
@@ -1396,77 +1446,116 @@ export var Game = /*#__PURE__*/ function() {
             key: "_setupEventListeners",
             value: function _setupEventListeners() {
                 var _this = this;
-                // Add click listener for resuming audio context and potentially restarting on error
+                
+                // 点击恢复音频上下文
                 this.renderDiv.addEventListener('click', function() {
-                    _this.musicManager.start(); // Resume audio context on any click
-                    if (_this.gameState === 'error') {
-                        _this._restartGame();
+                    if (Tone.context.state !== 'running') {
+                        Tone.start();
                     }
                 });
-                console.log('Game event listeners set up.');
-            }
-        },
-        {
-            // 添加预设切换通知方法
-            key: "_showPresetChangeNotification",
-            value: function _showPresetChangeNotification(message, type) {
-                var color = type === 'music' ? '#7B4394' : '#D72828';
                 
-                // 创建通知元素
-                var notification = document.createElement('div');
-                notification.style.position = 'absolute';
-                notification.style.top = '20px';
-                notification.style.right = '20px';
-                notification.style.background = color;
-                notification.style.color = 'white';
-                notification.style.padding = '10px 20px';
-                notification.style.borderRadius = '8px';
-                notification.style.fontFamily = 'Arial, sans-serif';
-                notification.style.fontWeight = 'bold';
-                notification.style.fontSize = '16px';
-                notification.style.zIndex = '1000';
-                notification.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-                notification.style.transition = 'opacity 0.3s ease-in-out';
-                notification.innerText = message;
-                
-                this.renderDiv.appendChild(notification);
-                
-                // 更新预设显示
-                this._updatePresetDisplay();
-                
-                // 如果预设选择器已初始化，更新其显示
-                if (document.getElementById('music-presets') && type === 'music') {
-                    this._generateMusicPresetOptions();
-                } else if (document.getElementById('drum-presets') && type === 'drum') {
-                    this._generateDrumPresetOptions();
+                // 帮助按钮功能
+                var helpToggle = document.getElementById('help-toggle');
+                var helpPanel = document.getElementById('help-panel');
+                if (helpToggle && helpPanel) {
+                    helpToggle.addEventListener('click', function() {
+                        helpPanel.classList.toggle('hidden');
+                    });
+                    
+                    // 点击外部关闭帮助面板
+                    document.addEventListener('click', function(event) {
+                        if (!helpToggle.contains(event.target) && !helpPanel.contains(event.target)) {
+                            helpPanel.classList.add('hidden');
+                        }
+                    });
                 }
                 
-                // 3秒后淡出并移除
-                setTimeout(() => {
-                    notification.style.opacity = '0';
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            notification.parentNode.removeChild(notification);
-                        }
-                    }, 300);
-                }, 3000);
+                // 预设选择器功能
+                this._setupPresetSelectors();
+                
+                // 窗口大小变化处理
+                window.addEventListener('resize', this._onResize.bind(this));
             }
         },
         {
-            // 更新预设显示信息
+            key: "_setupPresetSelectors",
+            value: function _setupPresetSelectors() {
+                var _this = this;
+                
+                // 音乐预设选择器
+                var musicSelect = document.getElementById('music-preset-select');
+                if (musicSelect) {
+                    // 填充选项
+                    musicSelect.innerHTML = '';
+                    this.musicManager.musicPresets.forEach(function(preset, index) {
+                        var option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = preset.name;
+                        musicSelect.appendChild(option);
+                    });
+                    
+                    // 设置当前选中项
+                    musicSelect.value = this.musicManager.currentMusicPreset;
+                    
+                    // 添加事件监听
+                    musicSelect.addEventListener('change', function(e) {
+                        var presetIndex = parseInt(e.target.value);
+                        _this.musicManager.setMusicPreset(presetIndex);
+                        _this._updatePresetDisplay();
+                        _this._showPresetChangeNotification(`音乐: ${_this.musicManager.getCurrentMusicPreset().name}`, 'music');
+                    });
+                }
+                
+                // 鼓组预设选择器
+                var drumSelect = document.getElementById('drum-preset-select');
+                if (drumSelect) {
+                    // 填充选项
+                    drumSelect.innerHTML = '';
+                    drumManager.drumPresets.forEach(function(preset, index) {
+                        var option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = preset.name;
+                        drumSelect.appendChild(option);
+                    });
+                    
+                    // 设置当前选中项
+                    drumSelect.value = drumManager.currentDrumPreset;
+                    
+                    // 添加事件监听
+                    drumSelect.addEventListener('change', function(e) {
+                        var presetIndex = parseInt(e.target.value);
+                        drumManager.setDrumPreset(presetIndex);
+                        _this._updatePresetDisplay();
+                        _this._showPresetChangeNotification(`鼓组: ${drumManager.getCurrentDrumPreset().name}`, 'drum');
+                    });
+                }
+            }
+        },
+        {
             key: "_updatePresetDisplay",
             value: function _updatePresetDisplay() {
-                var musicPresetElement = document.getElementById('music-preset');
-                var drumPresetElement = document.getElementById('drum-preset');
+                // 更新状态面板显示
+                var musicPresetEl = document.getElementById('music-preset');
+                var drumPresetEl = document.getElementById('drum-preset');
                 
-                if (musicPresetElement && this.musicManager) {
-                    var currentMusicPreset = this.musicManager.getCurrentMusicPreset();
-                    musicPresetElement.textContent = `音乐: ${currentMusicPreset.name}`;
+                if (musicPresetEl) {
+                    musicPresetEl.textContent = `🎵 ${this.musicManager.getCurrentMusicPreset().name}`;
                 }
                 
-                if (drumPresetElement) {
-                    var currentDrumPreset = drumManager.getCurrentDrumPreset();
-                    drumPresetElement.textContent = `鼓组: ${currentDrumPreset.name}`;
+                if (drumPresetEl) {
+                    drumPresetEl.textContent = `🥁 ${drumManager.getCurrentDrumPreset().name}`;
+                }
+                
+                // 同步选择器
+                var musicSelect = document.getElementById('music-preset-select');
+                var drumSelect = document.getElementById('drum-preset-select');
+                
+                if (musicSelect) {
+                    musicSelect.value = this.musicManager.currentMusicPreset;
+                }
+                
+                if (drumSelect) {
+                    drumSelect.value = drumManager.currentDrumPreset;
                 }
             }
         },
@@ -1637,6 +1726,53 @@ export var Game = /*#__PURE__*/ function() {
                 
                 // 关闭菜单
                 document.getElementById('preset-menu').style.display = 'none';
+            }
+        },
+        {
+            key: "_showPresetChangeNotification",
+            value: function _showPresetChangeNotification(message, type) {
+                // 简化的通知显示
+                var notification = document.createElement('div');
+                notification.style.position = 'fixed';
+                notification.style.top = '50%';
+                notification.style.left = '50%';
+                notification.style.transform = 'translate(-50%, -50%)';
+                notification.style.background = 'rgba(0, 0, 0, 0.9)';
+                notification.style.color = '#00ffff';
+                notification.style.padding = '16px 24px';
+                notification.style.borderRadius = '12px';
+                notification.style.fontFamily = 'Segoe UI, sans-serif';
+                notification.style.fontSize = '18px';
+                notification.style.fontWeight = 'bold';
+                notification.style.zIndex = '9999';
+                notification.style.border = '2px solid #00ffff';
+                notification.style.backdropFilter = 'blur(10px)';
+                notification.style.animation = 'fadeInOut 2s ease-in-out';
+                notification.textContent = message;
+                
+                // 添加CSS动画
+                if (!document.getElementById('notification-styles')) {
+                    var style = document.createElement('style');
+                    style.id = 'notification-styles';
+                    style.textContent = `
+                        @keyframes fadeInOut {
+                            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                
+                document.body.appendChild(notification);
+                
+                // 2秒后自动移除
+                setTimeout(function() {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 2000);
             }
         }
     ]);

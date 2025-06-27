@@ -37,51 +37,45 @@
     <body style="width: 100%; height: 100%; overflow: hidden; margin: 0;">
         <div id="renderDiv" style="width: 100%; height: 100%; margin: 0;">
 
+            <!-- 主标题 -->
             <span id="info-text">raise your hands to raise the roof</span>
             
-            <!-- 添加操作提示区域 -->
-            <div id="instructions" class="text-box" style="position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background-color: rgba(255, 255, 255, 0.95); color: black; font-size: 13px; text-align: center; max-width: 600px; line-height: 1.4;">
-                <div style="font-weight: bold; margin-bottom: 8px;">🎵 手势控制指南</div>
-                <div class="instructions-content" style="display: flex; justify-content: space-around; gap: 20px;">
-                    <div style="flex: 1;">
-                        <strong>左手</strong><br>
-                        上下移动：音高<br>
-                        拇指食指距离：音量<br>
-                        握拳：切换音色
+            <!-- 简化的状态信息（左上角） -->
+            <div id="status-info" class="status-panel">
+                <div id="music-preset">🎵 C Minor Pentatonic</div>
+                <div id="drum-preset">🥁 Hip Hop</div>
+            </div>
+            
+            <!-- 帮助按钮（右上角） -->
+            <button id="help-toggle" class="help-btn" title="操作指南">?</button>
+            
+            <!-- 折叠式帮助面板 -->
+            <div id="help-panel" class="help-panel hidden">
+                <div class="help-content">
+                    <div class="help-section">
+                        <span class="help-hand">👈 左手</span>
+                        <div>上下：音高 | 捏合：音量 | 握拳：音色</div>
                     </div>
-                    <div style="flex: 1;">
-                        <strong>右手</strong><br>
-                        手指控制：鼓点<br>
-                        全部张开：切换音乐预设<br>
-                        握拳：切换鼓组预设
+                    <div class="help-section">
+                        <span class="help-hand">👉 右手</span>
+                        <div>手指：鼓点 | 张开：音乐 | 握拳：鼓组</div>
                     </div>
                 </div>
             </div>
             
-            <!-- 预设信息显示区域 -->
-            <div id="preset-info" class="text-box" style="position: absolute; top: 100px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.8); color: white; font-size: 14px; text-align: center;">
-                <div id="music-preset">音乐: C Minor Pentatonic</div>
-                <div id="drum-preset">鼓组: Hip Hop</div>
-            </div>
-            
-            <!-- 预设选择器 -->
-            <div id="preset-selector" style="position: absolute; top: 20px; right: 20px; z-index: 1000;">
-                <button id="preset-toggle" class="text-box" style="background-color: rgba(123, 67, 148, 0.9); color: white; border: none; cursor: pointer; font-size: 14px; padding: 10px 15px;">
-                    🎛️ 预设选择
-                </button>
-                <div id="preset-menu" class="text-box" style="display: none; position: absolute; top: 100%; right: 0; background-color: rgba(0, 0, 0, 0.95); color: white; min-width: 200px; font-size: 13px;">
-                    <div style="padding: 10px; border-bottom: 1px solid #444;">
-                        <strong>🎵 音乐预设</strong>
-                        <div id="music-presets" style="margin-top: 8px;">
-                            <!-- 动态生成 -->
-                        </div>
-                    </div>
-                    <div style="padding: 10px;">
-                        <strong>🥁 鼓组预设</strong>
-                        <div id="drum-presets" style="margin-top: 8px;">
-                            <!-- 动态生成 -->
-                        </div>
-                    </div>
+            <!-- 预设选择器（底部中央） -->
+            <div id="preset-selector" class="preset-selector">
+                <div class="preset-group">
+                    <label>🎵</label>
+                    <select id="music-preset-select" class="preset-select">
+                        <!-- 动态生成 -->
+                    </select>
+                </div>
+                <div class="preset-group">
+                    <label>🥁</label>
+                    <select id="drum-preset-select" class="preset-select">
+                        <!-- 动态生成 -->
+                    </select>
                 </div>
             </div>
 

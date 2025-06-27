@@ -1,139 +1,246 @@
-.text-box {
-    padding: 8px 15px;
-    background-color: rgba(255, 255, 255, 0.6);
-    color: black;
-    border-radius: 4px;
-    font-family: "Helvetica Neue", Helvetica, sans-serif;
-    border: 2px solid rgb(53, 47, 108);
-    box-shadow: 3px 3px 0px rgb(23, 17, 77);
-    font-size: clamp(13px, 2vw, 15px);
-    text-align: center;
-    z-index: 200;
-    opacity: 1;
-    transition: opacity 0.3s ease-in-out, bottom 0.3s ease-in-out, box-shadow 0.2s ease;
+/* ===== 全局样式重置 ===== */
+* {
+    box-sizing: border-box;
 }
 
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #000;
+    overflow: hidden;
+}
+
+/* ===== 主标题 ===== */
 #info-text {
     position: absolute;
-    top: 10px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    padding: 8px 15px;
-    background-color: rgba(255, 255, 255, 0.6);
-    color: black;
-    border-radius: 4px;
-    font-family: "Helvetica Neue", Helvetica, sans-serif;
-    border: 2px solid rgb(53, 47, 108);
-    box-shadow: 3px 3px 0px rgb(23, 17, 77);
-    font-size: clamp(20px, 4vw, 30px);
+    transform: translate(-50%, -50%);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: clamp(24px, 4vw, 48px);
+    font-weight: 300;
     text-align: center;
-    z-index: 200;
+    z-index: 50;
+    pointer-events: none;
+    letter-spacing: 2px;
 }
 
-#instruction-text {
+/* ===== 状态面板（左上角） ===== */
+.status-panel {
     position: absolute;
-    bottom: 10px;
+    top: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: white;
+    font-size: 14px;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-width: 200px;
+}
+
+.status-panel div {
+    margin: 4px 0;
+    font-weight: 500;
+}
+
+/* ===== 帮助按钮（右上角） ===== */
+.help-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.help-btn:hover {
+    border-color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+/* ===== 帮助面板 ===== */
+.help-panel {
+    position: absolute;
+    top: 70px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 12px;
+    padding: 16px;
+    color: white;
+    font-size: 13px;
+    z-index: 90;
+    max-width: 280px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(15px);
+    transition: all 0.3s ease;
+    transform-origin: top right;
+}
+
+.help-panel.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.9) translateY(-10px);
+}
+
+.help-content {
+    line-height: 1.4;
+}
+
+.help-section {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.help-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.help-hand {
+    font-weight: bold;
+    color: #00ffff;
+    margin-bottom: 4px;
+    display: block;
+}
+
+/* ===== 预设选择器（底部中央） ===== */
+.preset-selector {
+    position: absolute;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    pointer-events: none;
+    display: flex;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 12px;
+    padding: 16px 20px;
+    z-index: 100;
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-#social-links {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    text-align: left;
+.preset-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-#coffee-link {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
+.preset-group label {
+    font-size: 18px;
+    color: white;
 }
 
-#video-link {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-}
-
-#logo-container {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-}
-
-#logo {
-    font-size: 2em;
-}
-
-/* 预设选择器特殊样式 */
-#preset-toggle:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-#preset-menu {
-    border: 1px solid #333;
+.preset-select {
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
-    max-height: 300px;
-    overflow-y: auto;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 140px;
 }
 
-/* 操作提示响应式 */
-#instructions {
-    max-width: min(600px, 90vw);
+.preset-select:hover,
+.preset-select:focus {
+    border-color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+    outline: none;
 }
 
+.preset-select option {
+    background: #2a2a2a;
+    color: white;
+}
+
+/* ===== 旧样式兼容（保留部分必要样式） ===== */
+.text-box {
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ===== 响应式设计 ===== */
 @media (max-width: 768px) {
-    #instructions {
-        top: 5px;
-        font-size: 11px;
+    .status-panel {
+        top: 10px;
+        left: 10px;
+        font-size: 12px;
+        padding: 10px 12px;
+        min-width: 160px;
+    }
+    
+    .help-btn {
+        top: 10px;
+        right: 10px;
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+    
+    .help-panel {
+        top: 56px;
+        right: 10px;
+        max-width: 240px;
+        font-size: 12px;
+        padding: 12px;
+    }
+    
+    .preset-selector {
+        bottom: 10px;
+        padding: 12px 16px;
+        gap: 12px;
+    }
+    
+    .preset-select {
+        min-width: 120px;
+        font-size: 12px;
         padding: 6px 10px;
     }
     
-    #instructions .instructions-content {
+    #info-text {
+        font-size: clamp(18px, 5vw, 32px);
+    }
+}
+
+@media (max-width: 480px) {
+    .preset-selector {
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
     }
     
-    #preset-info {
-        top: 80px;
-        font-size: 12px;
+    .preset-group {
+        justify-content: center;
     }
     
-    #preset-selector {
-        top: 10px;
-        right: 10px;
+    .preset-select {
+        min-width: 160px;
     }
     
-    #preset-toggle {
-        font-size: 12px;
-        padding: 8px 12px;
-    }
-    
-    #preset-menu {
+    .status-panel {
         font-size: 11px;
-        min-width: 180px;
+        min-width: 140px;
     }
-}
-
-/* 滚动条样式 */
-#preset-menu::-webkit-scrollbar {
-    width: 6px;
-}
-
-#preset-menu::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.1);
-    border-radius: 3px;
-}
-
-#preset-menu::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.3);
-    border-radius: 3px;
-}
-
-#preset-menu::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.5);
+    
+    .help-panel {
+        max-width: 200px;
+        font-size: 11px;
+    }
 }

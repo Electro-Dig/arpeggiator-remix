@@ -480,6 +480,41 @@ export var MusicManager = /*#__PURE__*/ function() {
             value: function getCurrentMusicPreset() {
                 return this.musicPresets[this.currentMusicPresetIndex];
             }
+        },
+        {
+            // 获取当前合成器名称
+            key: "getSynthName",
+            value: function getSynthName() {
+                const synthNames = ["FM Synth", "AM Synth", "Membrane Synth", "Metal Synth"];
+                return synthNames[this.currentSynthIndex] || `Synth ${this.currentSynthIndex + 1}`;
+            }
+        },
+        {
+            // 设置音乐预设
+            key: "setMusicPreset",
+            value: function setMusicPreset(index) {
+                if (index >= 0 && index < this.musicPresets.length) {
+                    // 停止所有当前琶音
+                    this.activePatterns.forEach((value, key) => {
+                        this.stopArpeggio(key);
+                    });
+                    
+                    this.currentMusicPresetIndex = index;
+                    const newPreset = this.musicPresets[index];
+                    
+                    // 更新节拍速度
+                    Tone.Transport.bpm.value = newPreset.tempo;
+                    
+                    // 切换合成器预设
+                    if (newPreset.synthPreset !== this.currentSynthIndex) {
+                        this.currentSynthIndex = newPreset.synthPreset;
+                        this.cycleSynth();
+                    }
+                    
+                    console.log(`设置音乐预设: ${newPreset.name}`);
+                    return newPreset;
+                }
+            }
         }
     ]);
     return MusicManager;
