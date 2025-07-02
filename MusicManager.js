@@ -157,54 +157,152 @@ export var MusicManager = /*#__PURE__*/ function() {
         // Use a Map to store the current volume (velocity) for each hand's arpeggio
         this.handVolumes = new Map();
         
-        // 音乐风格预设系统
+        // 音乐风格预设系统 - 8音符电子琶音组合
+        this.currentMusicPresetIndex = 0;
         this.musicPresets = [
             {
-                name: "C Minor Pentatonic",
-                scale: ['C3', 'Eb3', 'F3', 'G3', 'Bb3', 'C4', 'Eb4', 'F4', 'G4', 'Bb4', 'C5', 'Eb5'],
-                chordIntervals: [0, 3, 5, 7, 10, 12], // 小调五声音阶和弦
-                arpeggioPattern: "upDown",
-                tempo: 100,
-                synthPreset: 0
+                name: "Minimal Groove",
+                scale: ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'], // E3到A4完整半音音阶（18个音符）
+                sequence: [0, 3, null, 7, 8, null, 7, null], // 完整的8拍序列音程关系，null表示空拍
+                arpeggioPattern: "up", // 顺序播放序列
+                tempo: 122,
+                synthPreset: 2  // MARIMBA for percussive minimal feel
             },
             {
-                name: "G Major Pentatonic",
-                scale: ['G2', 'A2', 'B2', 'D3', 'E3', 'G3', 'A3', 'B3', 'D4', 'E4', 'G4', 'A4'],
-                chordIntervals: [0, 2, 4, 7, 9, 12], // 大调五声音阶和弦
+                name: "Rhythmic Drive",
+                scale: ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'], // E3到A4完整半音音阶（18个音符）
+                sequence: [null, 0, null, 0, null, 0, null, null, 0, null, 0, null, 0, null, null, 0], // 16拍节奏型序列
                 arpeggioPattern: "up",
-                tempo: 120,
-                synthPreset: 1
+                tempo: 128,
+                synthPreset: 1  // BRASS for punchy rhythm
             },
             {
-                name: "E Minor Blues",
-                scale: ['E2', 'G2', 'A2', 'Bb2', 'B2', 'D3', 'E3', 'G3', 'A3', 'Bb3', 'B3', 'D4'],
-                chordIntervals: [0, 3, 5, 6, 7, 10, 12], // 蓝调音阶和弦
-                arpeggioPattern: "upDown",
-                tempo: 90,
-                synthPreset: 2
+                name: "Melodic Flow",
+                scale: ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'], // E3到A4完整半音音阶（18个音符）
+                sequence: [0, 7, 10, 12, 3, 2, 10, 12], // 8拍旋律性序列，更新的音程关系
+                arpeggioPattern: "up",
+                tempo: 105,
+                synthPreset: 2  // MARIMBA for clear melodic lines
             },
             {
-                name: "A Dorian Mode",
-                scale: ['A2', 'B2', 'C3', 'D3', 'E3', 'F#3', 'G3', 'A3', 'B3', 'C4', 'D4', 'E4'],
-                chordIntervals: [0, 2, 3, 5, 7, 9, 10, 12], // 多利亚调式和弦
-                arpeggioPattern: "down",
+                name: "Groove Pulse",
+                scale: ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'], // E3到A4完整半音音阶（18个音符）
+                sequence: [0, 7, 2, 7, 0, 3, 7, 0, 8, 7, 0, 5, 7, 0, 7, 7], // 16拍新律动序列，根音与音程交替
+                arpeggioPattern: "up",
+                tempo: 115,
+                synthPreset: 0  // E.PIANO for smooth rhythmic flow
+            },
+            {
+                name: "Dark Current",
+                scale: ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'], // E3到A4完整半音音阶（18个音符）
+                sequence: [0, 2, null, 5, 7, null, 5, null], // 8拍序列：根音-大二度-空拍-纯四度-纯五度-空拍-纯四度-空拍
+                arpeggioPattern: "up",
+                tempo: 118,
+                synthPreset: 1  // BRASS for deep undercurrent feel
+            },
+            {
+                name: "Light Flow",
+                scale: ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'], // E3到A4完整半音音阶（18个音符）
+                sequence: [0, 4, null, 7, 9, null, 7, null], // 8拍序列：根音-大三度-空拍-纯五度-大六度-空拍-纯五度-空拍
+                arpeggioPattern: "up",
+                tempo: 125,
+                synthPreset: 0  // E.PIANO for bright flowing feel
+            },
+            {
+                name: "Deep Space",
+                scale: ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'], // E3到A4完整半音音阶（18个音符）
+                sequence: [0, 5, null, 7, 10, null, 7, null], // 8拍序列：根音-纯四度-空拍-纯五度-小七度-空拍-纯五度-空拍
+                arpeggioPattern: "up",
                 tempo: 110,
-                synthPreset: 0
-            },
-            {
-                name: "Japanese Pentatonic",
-                scale: ['D3', 'Eb3', 'G3', 'A3', 'Bb3', 'D4', 'Eb4', 'G4', 'A4', 'Bb4', 'D5', 'Eb5'],
-                chordIntervals: [0, 1, 5, 7, 8, 12], // 日式五声音阶
-                arpeggioPattern: "upDown",
-                tempo: 85,
-                synthPreset: 1
+                synthPreset: 2  // MARIMBA for spacious deep feel
             }
         ];
         
         this.currentMusicPresetIndex = 0;
         
         this.synthPresets = [
-            // Preset 1: Clean Sine Wave (Default)
+            // Preset 1: DX7 E.PIANO 1 - Classic Electric Piano
+            {
+                harmonicity: 14,        // M:C = 14:1 ratio from DX7 specs
+                modulationIndex: 4.5,   // Moderate modulation for bell-like attack
+                oscillator: {
+                    type: 'sine'        // Pure sine wave carriers
+                },
+                envelope: {
+                    attack: 0.01,       // Fast attack for percussive feel
+                    decay: 0.3,         // Medium decay
+                    sustain: 0.4,       // Medium sustain
+                    release: 1.2        // Long release for natural piano decay
+                },
+                modulation: {
+                    type: 'sine'        // Sine wave modulator
+                },
+                modulationEnvelope: {
+                    attack: 0.01,       // Fast modulation attack
+                    decay: 0.2,         // Quick modulation decay
+                    sustain: 0.2,       // Low modulation sustain
+                    release: 0.8        // Medium modulation release
+                },
+                effects: {
+                    reverbWet: 0.2,
+                    delayWet: 0.05
+                }
+            },
+            // Preset 2: DX7 BRASS 1 - Classic Brass Sound
+            {
+                harmonicity: 2,         // M:C = 2:1 ratio for brass harmonics
+                modulationIndex: 12,    // High modulation for bright brass
+                oscillator: {
+                    type: 'sine'
+                },
+                envelope: {
+                    attack: 0.1,        // Slower attack for brass breath
+                    decay: 0.2,         // Quick initial decay
+                    sustain: 0.8,       // High sustain for held brass notes
+                    release: 0.6        // Medium release
+                },
+                modulation: {
+                    type: 'sine'
+                },
+                modulationEnvelope: {
+                    attack: 0.05,       // Medium modulation attack
+                    decay: 0.1,         // Quick modulation decay  
+                    sustain: 0.6,       // High modulation sustain for brightness
+                    release: 0.4        // Quick modulation release
+                },
+                effects: {
+                    reverbWet: 0.15,
+                    delayWet: 0.02
+                }
+            },
+            // Preset 3: DX7 MARIMBA - Classic Mallet Percussion
+            {
+                harmonicity: 3,         // M:C = 3:1 ratio for wooden mallet tone
+                modulationIndex: 6,     // Medium-high modulation for percussive attack
+                oscillator: {
+                    type: 'sine'
+                },
+                envelope: {
+                    attack: 0.005,      // Very fast attack for mallet strike
+                    decay: 0.4,         // Medium decay
+                    sustain: 0.1,       // Low sustain for natural mallet decay
+                    release: 0.8        // Medium release
+                },
+                modulation: {
+                    type: 'sine'
+                },
+                modulationEnvelope: {
+                    attack: 0.005,      // Very fast modulation attack
+                    decay: 0.3,         // Quick modulation decay
+                    sustain: 0.05,      // Very low modulation sustain
+                    release: 0.6        // Medium modulation release
+                },
+                effects: {
+                    reverbWet: 0.25,    // More reverb for spacious mallet sound
+                    delayWet: 0.08
+                }
+            },
+            // Preset 4: Original Clean Sine Wave (kept for compatibility)
             {
                 harmonicity: 4,
                 modulationIndex: 3,
@@ -227,55 +325,58 @@ export var MusicManager = /*#__PURE__*/ function() {
                     release: 0.5
                 }
             },
-            // Preset 2: Buzzy Sawtooth
+            // Preset 5: DX7 SYNTHWAVE LEAD - Cyberpunk Lead Sound
             {
-                harmonicity: 1,
-                modulationIndex: 8,
-                oscillator: {
-                    type: 'sawtooth'
-                },
-                // More staccato/plucky envelope
-                envelope: {
-                    attack: 0.01,
-                    decay: 0.15,
-                    sustain: 0.05,
-                    release: 0.2
-                },
-                modulation: {
-                    type: 'square'
-                },
-                modulationEnvelope: {
-                    attack: 0.05,
-                    decay: 0.2,
-                    sustain: 0.4,
-                    release: 0.6
-                }
-            },
-            // Preset 3: Funk Electric Piano (Rhodes-like)
-            {
-                harmonicity: 2,
-                modulationIndex: 12,
+                harmonicity: 1.5,       // M:C = 1.5:1 for rich harmonics
+                modulationIndex: 15,    // High modulation for aggressive lead
                 oscillator: {
                     type: 'sine'
                 },
                 envelope: {
-                    attack: 0.02,
-                    decay: 0.3,
-                    sustain: 0.2,
-                    release: 0.8
+                    attack: 0.05,       // Slightly slower attack for sweep-in
+                    decay: 0.1,         // Quick decay
+                    sustain: 0.7,       // High sustain for held leads
+                    release: 0.8        // Medium release for tail
                 },
                 modulation: {
                     type: 'sine'
                 },
                 modulationEnvelope: {
-                    attack: 0.05,
-                    decay: 0.2,
-                    sustain: 0.1,
-                    release: 0.8
+                    attack: 0.02,       // Quick modulation attack
+                    decay: 0.05,        // Very quick modulation decay
+                    sustain: 0.8,       // High modulation sustain for brightness
+                    release: 0.3        // Quick modulation release
                 },
                 effects: {
-                    reverbWet: 0.3,
-                    delayWet: 0.1 // A touch of delay
+                    reverbWet: 0.1,     // Less reverb for tight lead
+                    delayWet: 0.15      // More delay for synthwave feel
+                }
+            },
+            // Preset 6: DX7 CRYSTAL PLUCK - Bright Plucked Sound
+            {
+                harmonicity: 7,         // M:C = 7:1 for bell-like harmonics
+                modulationIndex: 8,     // Medium-high modulation for sparkle
+                oscillator: {
+                    type: 'sine'
+                },
+                envelope: {
+                    attack: 0.002,      // Ultra-fast attack for pluck
+                    decay: 0.3,         // Medium decay
+                    sustain: 0.15,      // Low sustain for pluck character
+                    release: 0.5        // Medium release
+                },
+                modulation: {
+                    type: 'sine'
+                },
+                modulationEnvelope: {
+                    attack: 0.001,      // Instant modulation attack
+                    decay: 0.2,         // Quick modulation decay
+                    sustain: 0.1,       // Low modulation sustain
+                    release: 0.4        // Quick modulation release
+                },
+                effects: {
+                    reverbWet: 0.3,     // More reverb for spacious pluck
+                    delayWet: 0.12      // Moderate delay for depth
                 }
             }
         ];
@@ -339,12 +440,37 @@ export var MusicManager = /*#__PURE__*/ function() {
                 if (!this.polySynth || this.activePatterns.has(handId)) return;
                 
                 const currentPreset = this.getCurrentMusicPreset();
+                
+                // 🎵 优化的琶音生成逻辑：支持序列模式和和弦模式
+                let arpeggioNotes;
+                
+                if (currentPreset.sequence) {
+                    // 序列模式：基于根音和音程关系生成完整的8拍序列
+                    arpeggioNotes = currentPreset.sequence.map(interval => {
+                        if (interval === null) return null; // 保持空拍标记
+                        return Tone.Frequency(rootNote).transpose(interval).toNote();
+                    });
+                } else if (currentPreset.chordIntervals) {
+                    // 和弦模式：基于和弦音程生成琶音
                 const chord = Tone.Frequency(rootNote).harmonize(currentPreset.chordIntervals);
-                const arpeggioNotes = chord.map(freq => Tone.Frequency(freq).toNote());
+                    arpeggioNotes = chord.map(freq => Tone.Frequency(freq).toNote());
+                } else {
+                    // 默认模式：使用标准小七和弦
+                    const chord = Tone.Frequency(rootNote).harmonize([0, 3, 5, 7]);
+                    arpeggioNotes = chord.map(freq => Tone.Frequency(freq).toNote());
+                }
                 
                 const pattern = new Tone.Pattern((time, note) => {
                     const velocity = _this.handVolumes.get(handId) || 0.2;
+                    
+                    if (note === null) {
+                        // 空拍处理：降低音量但不停止琶音
+                        _this.polySynth.volume.value = -20; // 降低音量到很低但不完全静音
+                    } else {
+                        // 正常音符：恢复音量并播放
+                        _this.polySynth.volume.value = Tone.gainToDb(velocity);
                     _this.polySynth.triggerAttackRelease(note, "16n", time, velocity);
+                    }
                 }, arpeggioNotes, currentPreset.arpeggioPattern);
                 
                 pattern.interval = "16n";
@@ -381,18 +507,29 @@ export var MusicManager = /*#__PURE__*/ function() {
                 if (!this.polySynth || !activePattern || activePattern.currentRoot === newRootNote) {
                     return; // No need to update if the note hasn't changed
                 }
-                // Create new notes for the pattern
-                var newChord = Tone.Frequency(newRootNote).harmonize([
-                    0,
-                    3,
-                    5,
-                    7,
-                    10,
-                    12
-                ]);
-                activePattern.pattern.values = newChord.map(function(freq) {
-                    return Tone.Frequency(freq).toNote();
-                });
+                
+                // 🎵 根据预设类型更新琶音序列
+                var currentPreset = this.getCurrentMusicPreset();
+                let newNotes;
+                
+                if (currentPreset.sequence) {
+                    // 序列模式：基于新根音重新生成完整序列
+                    newNotes = currentPreset.sequence.map(interval => {
+                        if (interval === null) return null; // 保持空拍标记
+                        return Tone.Frequency(newRootNote).transpose(interval).toNote();
+                    });
+                } else if (currentPreset.chordIntervals) {
+                    // 和弦模式：基于新根音生成和弦
+                    var newChord = Tone.Frequency(newRootNote).harmonize(currentPreset.chordIntervals);
+                    newNotes = newChord.map(freq => Tone.Frequency(freq).toNote());
+                } else {
+                    // 默认模式
+                    var newChord = Tone.Frequency(newRootNote).harmonize([0, 3, 5, 7]);
+                    newNotes = newChord.map(freq => Tone.Frequency(freq).toNote());
+                }
+                
+                // 更新模式的音符序列
+                activePattern.pattern.values = newNotes;
                 activePattern.currentRoot = newRootNote;
             }
         },
@@ -444,6 +581,42 @@ export var MusicManager = /*#__PURE__*/ function() {
             }
         },
         {
+            // 更新合成器到当前索引（不循环）
+            key: "_updateSynth",
+            value: function _updateSynth() {
+                var _this = this;
+                var _newPreset_effects, _newPreset_effects1;
+                if (!this.polySynth) return;
+                
+                // Stop all currently playing notes/arpeggios before swapping
+                this.activePatterns.forEach(function(value, key) {
+                    _this.stopArpeggio(key);
+                });
+                
+                // Dispose the old synth to free up resources
+                this.polySynth.dispose();
+                
+                // Use current preset index (don't cycle)
+                var newPreset = this.synthPresets[this.currentSynthIndex];
+                
+                // Create the new synth but don't connect it yet
+                this.polySynth = new Tone.PolySynth(Tone.FMSynth, newPreset);
+                
+                // Re-establish the audio chain: synth -> analyser -> delay
+                this.polySynth.connect(this.analyser);
+                this.polySynth.volume.value = 0; // Reset volume
+                
+                var _newPreset_effects_reverbWet;
+                // Adjust global effects based on the new preset's settings
+                this.reverb.wet.value = (_newPreset_effects_reverbWet = (_newPreset_effects = newPreset.effects) === null || _newPreset_effects === void 0 ? void 0 : _newPreset_effects.reverbWet) !== null && _newPreset_effects_reverbWet !== void 0 ? _newPreset_effects_reverbWet : 0.8;
+                
+                var _newPreset_effects_delayWet;
+                this.stereoDelay.wet.value = (_newPreset_effects_delayWet = (_newPreset_effects1 = newPreset.effects) === null || _newPreset_effects1 === void 0 ? void 0 : _newPreset_effects1.delayWet) !== null && _newPreset_effects_delayWet !== void 0 ? _newPreset_effects_delayWet : 0;
+                
+                console.log("Updated to synth preset: ".concat(this.currentSynthIndex));
+            }
+        },
+        {
             // Getter for the analyser so the game can use it
             key: "getAnalyser",
             value: function getAnalyser() {
@@ -478,14 +651,21 @@ export var MusicManager = /*#__PURE__*/ function() {
             // 获取当前音乐预设
             key: "getCurrentMusicPreset",
             value: function getCurrentMusicPreset() {
-                return this.musicPresets[this.currentMusicPresetIndex];
+                return this.musicPresets[this.currentMusicPresetIndex] || this.musicPresets[0];
             }
         },
         {
             // 获取当前合成器名称
             key: "getSynthName",
             value: function getSynthName() {
-                const synthNames = ["FM Synth", "AM Synth", "Membrane Synth", "Metal Synth"];
+                const synthNames = [
+                    "DX7 E.PIANO 1", 
+                    "DX7 BRASS 1", 
+                    "DX7 MARIMBA", 
+                    "Clean Sine", 
+                    "SYNTHWAVE LEAD",
+                    "CRYSTAL PLUCK"
+                ];
                 return synthNames[this.currentSynthIndex] || `Synth ${this.currentSynthIndex + 1}`;
             }
         },

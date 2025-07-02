@@ -235,6 +235,8 @@ export var Game = /*#__PURE__*/ function() {
         this.handLandmarker = null;
         this.lastVideoTime = -1;
         this.hands = []; // Stores data about detected hands (landmarks, anchor position, line group)
+        // 初始化空的手部对象作为备用，防止undefined错误
+        this.handsInitialized = false;
         this.handLineMaterial = null; // Material for hand lines
         this.fingertipMaterialHand1 = null; // Material for first hand's fingertip circles (blue)
         this.fingertipMaterialHand2 = null; // Material for second hand's fingertip circles (green)
@@ -315,6 +317,16 @@ export var Game = /*#__PURE__*/ function() {
             new THREE.Color("#D72828"),
             new THREE.Color("#66ffff")
         ];
+        
+        // 添加手部平滑处理相关属性
+        this.smoothingFactor = 0.7; // 平滑系数，值越大响应越快
+        this.lastLandmarkPositions = []; // 存储上一帧的手部位置用于平滑
+        this.lastVideoTime = 0; // 用于视频时间戳检查
+        
+        // 添加通知防抖相关属性
+        this.notificationTimeout = null;
+        this.lastNotificationTime = 0;
+        this.pendingNotification = null;
         // Initialize asynchronously
         this._init().catch(function(error) {
             console.error("Initialization failed:", error);
@@ -454,9 +466,15 @@ export var Game = /*#__PURE__*/ function() {
                         lineGroup: lineGroup,
                         isFist: false, // Track if the hand is currently in a fist
                         wasAllFingersUp: false,
-                        wasFist: false
+                        wasFist: false,
+                        wasPalmFacingAway: false, // Track palm orientation for right hand
+                        wasFourFingersVertical: false, // Track 4-finger vertical gesture state
+                        lastFistTime: 0 // Track last fist time for cooldown period
                     });
                 }
+                // 标记hands已经正确初始化
+                this.handsInitialized = true;
+                console.log('✅ Hands数组初始化完成:', this.hands.length, '个手部对象');
                 this.handLineMaterial = new THREE.LineBasicMaterial({
                     color: 0x00ccff,
                     linewidth: 8
@@ -644,16 +662,24 @@ export var Game = /*#__PURE__*/ function() {
                             case 0:
                                 _state.trys.push([
                                     0,
-                                    4,
+                                    5,
                                     ,
-                                    5
+                                    6
                                 ]);
                                 console.log("Setting up Hand Tracking...");
+                                
+                                // 预检查摄像头可用性
+                                return [
+                                    4,
+                                    _this._checkCameraAvailability()
+                                ];
+                            case 1:
+                                _state.sent(); // 摄像头可用性检查结果
                                 return [
                                     4,
                                     FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm')
                                 ];
-                            case 1:
+                            case 2:
                                 vision = _state.sent();
                                 return [
                                     4,
@@ -666,21 +692,250 @@ export var Game = /*#__PURE__*/ function() {
                                         runningMode: 'VIDEO'
                                     })
                                 ];
-                            case 2:
+                            case 3:
                                 _this.handLandmarker = _state.sent();
                                 console.log("HandLandmarker created.");
                                 console.log("Requesting webcam access...");
+                                
+                                // 创建带超时的摄像头访问Promise
+                                var getUserMediaWithTimeout = function(constraints, timeout) {
+                                    return Promise.race([
+                                        navigator.mediaDevices.getUserMedia(constraints),
+                                        new Promise(function(_, reject) {
+                                            setTimeout(function() {
+                                                reject(new Error('摄像头访问超时，请检查摄像头是否被其他应用占用'));
+                                            }, timeout);
+                                        })
+                                    ]);
+                                };
+                                
+                                return [
+                                    4,
+                                    getUserMediaWithTimeout({
+                                        video: {
+                                            facingMode: 'user',
+                                            width: {
+                                                ideal: 640,  // 降低分辨率以提高兼容性
+                                                max: 1280
+                                            },
+                                            height: {
+                                                ideal: 480,  // 降低分辨率以提高兼容性
+                                                max: 720
+                                            },
+                                            frameRate: {
+                                                ideal: 30,
+                                                max: 60
+                                            }
+                                        },
+                                        audio: false
+                                    }, 10000) // 10秒超时
+                                ];
+                            case 4:
+                                stream = _state.sent();
+                                _this.videoElement.srcObject = stream;
+                                console.log("Webcam stream obtained.");
+                                
+                                // 添加视频播放
+                                _this.videoElement.play().catch(function(playError) {
+                                    console.warn('视频自动播放失败:', playError);
+                                });
+                                
+                                // Wait for video metadata to load to ensure dimensions are available (with timeout)
+                                return [
+                                    2,
+                                    new Promise(function(resolve, reject) {
+                                        var metadataTimeout = setTimeout(function() {
+                                            reject(new Error('视频元数据加载超时'));
+                                        }, 5000); // 5秒超时
+                                        
+                                        _this.videoElement.onloadedmetadata = function() {
+                                            clearTimeout(metadataTimeout);
+                                            console.log("Webcam metadata loaded.");
+                                            
+                                            // 设置视频尺寸
+                                            _this.videoElement.style.width = _this.renderDiv.clientWidth + 'px';
+                                            _this.videoElement.style.height = _this.renderDiv.clientHeight + 'px';
+                                            
+                                            // 确保视频开始播放
+                                            if (_this.videoElement.paused) {
+                                                _this.videoElement.play().catch(function(err) {
+                                                    console.warn('视频播放失败:', err);
+                                                });
+                                            }
+                                            
+                                            resolve();
+                                        };
+                                        
+                                        // 如果元数据已经加载，直接解析
+                                        if (_this.videoElement.readyState >= 1) {
+                                            clearTimeout(metadataTimeout);
+                                            console.log("Webcam metadata already loaded.");
+                                            resolve();
+                                        }
+                                    })
+                                ];
+                            case 5:
+                                error = _state.sent();
+                                console.error('Error setting up Hand Tracking or Webcam:', error);
+                                
+                                // 提供更友好的错误处理
+                                let errorMessage = "摄像头访问失败";
+                                
+                                if (error.name === 'NotReadableError') {
+                                    errorMessage = "摄像头被其他应用占用，请关闭其他使用摄像头的程序后重试";
+                                } else if (error.name === 'NotAllowedError') {
+                                    errorMessage = "请允许浏览器访问摄像头权限，然后重试";
+                                } else if (error.name === 'NotFoundError') {
+                                    errorMessage = "未找到摄像头设备，请检查设备连接";
+                                } else if (error.name === 'AbortError') {
+                                    errorMessage = "摄像头启动被中断，请重试";
+                                } else if (error.message && error.message.includes('超时')) {
+                                    errorMessage = error.message;
+                                } else if (error.name === 'OverconstrainedError') {
+                                    errorMessage = "摄像头不支持请求的分辨率，正在尝试降低要求...";
+                                    
+                                    // 尝试使用更低的约束重新初始化
+                                    setTimeout(function() {
+                                        _this._setupHandTrackingFallback();
+                                    }, 1000);
+                                    return [2];
+                                }
+                                
+                                _this._showError(errorMessage);
+                                
+                                // 不要完全停止初始化，允许用户重试
+                                return [2]; // 继续执行而不是抛出错误
+                            case 6:
+                                return [
+                                    2
+                                ];
+                        }
+                    });
+                })();
+            }
+        },
+        {
+            key: "_checkCameraAvailability",
+            value: function _checkCameraAvailability() {
+                return _async_to_generator(function() {
+                    return _ts_generator(this, function(_state) {
+                        switch(_state.label){
+                            case 0:
+                                console.log("🔍 检查摄像头和环境可用性...");
+                                
+                                // 1. 检查安全上下文（HTTPS要求）
+                                var isSecureContext = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost';
+                                console.log('🔒 安全上下文状态:', isSecureContext);
+                                console.log('📍 当前协议:', location.protocol);
+                                console.log('🌐 当前域名:', location.hostname);
+                                
+                                if (!isSecureContext) {
+                                    var errorMsg = '';
+                                    if (location.protocol === 'file:') {
+                                        errorMsg = '本地文件访问不支持摄像头。请使用本地服务器访问（如：python -m http.server 8000）或部署到HTTPS网站';
+                                    } else if (location.protocol === 'http:' && location.hostname !== 'localhost') {
+                                        errorMsg = '非HTTPS环境不支持摄像头访问。请使用HTTPS协议或在localhost下运行';
+                                    } else {
+                                        errorMsg = '当前环境不是安全上下文，无法访问摄像头';
+                                    }
+                                    throw new Error(errorMsg);
+                                }
+                                
+                                // 2. 检查是否支持getUserMedia
+                                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                                    throw new Error('浏览器不支持摄像头访问API（MediaDevices.getUserMedia）');
+                                }
+                                
+                                // 3. 检查权限状态
+                                if (navigator.permissions && navigator.permissions.query) {
+                                    return [4, navigator.permissions.query({name: 'camera'})];
+                                } else {
+                                    return [3, 2]; // 跳到设备枚举
+                                }
+                            case 1:
+                                var permissionStatus = _state.sent();
+                                console.log('🎥 摄像头权限状态:', permissionStatus.state);
+                                
+                                if (permissionStatus.state === 'denied') {
+                                    throw new Error('摄像头权限已被拒绝。请在浏览器设置中重新允许摄像头访问权限');
+                                }
+                                
+                                _state.label = 2;
+                            case 2:
+                                // 4. 枚举可用的摄像头设备
+                                return [4, navigator.mediaDevices.enumerateDevices()];
+                            case 3:
+                                var devices = _state.sent();
+                                var videoDevices = devices.filter(function(device) {
+                                    return device.kind === 'videoinput';
+                                });
+                                
+                                console.log('📹 发现摄像头设备:', videoDevices.length + '个');
+                                videoDevices.forEach(function(device, index) {
+                                    console.log(`  设备 ${index + 1}: ${device.label || '未知设备'}`);
+                                });
+                                
+                                if (videoDevices.length === 0) {
+                                    throw new Error('未找到可用的摄像头设备。请检查摄像头是否连接并在系统中启用');
+                                }
+                                
+                                return [2, true];
+                        }
+                    });
+                })();
+            }
+        },
+        {
+            key: "_setupHandTrackingFallback",
+            value: function _setupHandTrackingFallback() {
+                var _this = this;
+                return _async_to_generator(function() {
+                    var vision, stream, error;
+                    return _ts_generator(this, function(_state) {
+                        switch(_state.label){
+                            case 0:
+                                _state.trys.push([
+                                    0,
+                                    4,
+                                    ,
+                                    5
+                                ]);
+                                console.log("尝试使用回退设置初始化摄像头...");
+                                
+                                if (!_this.handLandmarker) {
+                                    return [
+                                        4,
+                                        FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm')
+                                    ];
+                                } else {
+                                    return [3, 2];
+                                }
+                            case 1:
+                                vision = _state.sent();
+                                return [
+                                    4,
+                                    HandLandmarker.createFromOptions(vision, {
+                                        baseOptions: {
+                                            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+                                            delegate: 'CPU' // 使用CPU而不是GPU
+                                        },
+                                        numHands: 2,
+                                        runningMode: 'VIDEO'
+                                    })
+                                ];
+                            case 2:
+                                if (!_this.handLandmarker) {
+                                    _this.handLandmarker = _state.sent();
+                                }
+                                
+                                console.log("尝试获取基础摄像头访问...");
                                 return [
                                     4,
                                     navigator.mediaDevices.getUserMedia({
                                         video: {
-                                            facingMode: 'user',
-                                            width: {
-                                                ideal: 1280
-                                            },
-                                            height: {
-                                                ideal: 720
-                                            }
+                                            width: { ideal: 320, max: 640 },  // 更低分辨率
+                                            height: { ideal: 240, max: 480 }, // 更低分辨率
+                                            frameRate: { ideal: 15, max: 30 } // 更低帧率
                                         },
                                         audio: false
                                     })
@@ -688,29 +943,33 @@ export var Game = /*#__PURE__*/ function() {
                             case 3:
                                 stream = _state.sent();
                                 _this.videoElement.srcObject = stream;
-                                console.log("Webcam stream obtained.");
-                                // Wait for video metadata to load to ensure dimensions are available
+                                console.log("回退摄像头设置成功");
+                                
+                                _this.videoElement.play().catch(function(playError) {
+                                    console.warn('视频播放失败:', playError);
+                                });
+                                
+                                // 简化的元数据加载
                                 return [
                                     2,
                                     new Promise(function(resolve) {
                                         _this.videoElement.onloadedmetadata = function() {
-                                            console.log("Webcam metadata loaded.");
-                                            // Adjust video size slightly after metadata is loaded if needed, but CSS handles most
-                                            _this.videoElement.style.width = _this.renderDiv.clientWidth + 'px';
-                                            _this.videoElement.style.height = _this.renderDiv.clientHeight + 'px';
+                                            console.log("回退设置元数据加载完成");
                                             resolve();
                                         };
+                                        
+                                        if (_this.videoElement.readyState >= 1) {
+                                            resolve();
+                                        }
                                     })
                                 ];
                             case 4:
                                 error = _state.sent();
-                                console.error('Error setting up Hand Tracking or Webcam:', error);
-                                _this._showError("Webcam/Hand Tracking Error: ".concat(error.message, ". Please allow camera access."));
-                                throw error; // Re-throw to stop initialization
+                                console.error('回退摄像头设置也失败:', error);
+                                _this._showError("摄像头初始化完全失败，请检查设备或尝试刷新页面");
+                                return [2];
                             case 5:
-                                return [
-                                    2
-                                ];
+                                return [2];
                         }
                     });
                 })();
@@ -721,12 +980,24 @@ export var Game = /*#__PURE__*/ function() {
             key: "_updateHands",
             value: function _updateHands() {
                 var _this = this;
-                if (!this.handLandmarker || !this.videoElement.srcObject || this.videoElement.readyState < 2 || this.videoElement.videoWidth === 0) return;
+                // 添加hands数组的安全检查
+                if (!this.handLandmarker || !this.videoElement.srcObject || this.videoElement.readyState < 2 || 
+                    this.videoElement.videoWidth === 0 || !this.handsInitialized || !this.hands || this.hands.length < 2) {
+                    if (!this.handsInitialized) {
+                        console.debug('⏳ Hands尚未初始化，跳过更新');
+                    }
+                    return;
+                }
                 var videoTime = this.videoElement.currentTime;
                 if (videoTime > this.lastVideoTime) {
                     this.lastVideoTime = videoTime;
                     try {
                         var _this1, _loop = function(i) {
+                            // 额外的安全检查
+                            if (!_this1.hands || !_this1.hands[i]) {
+                                console.warn(`Hand ${i} not properly initialized`);
+                                return "continue";
+                            }
                             var hand = _this1.hands[i];
                             var wasVisible = hand.landmarks !== null;
                             if (results.landmarks && results.landmarks[i]) {
@@ -757,24 +1028,29 @@ export var Game = /*#__PURE__*/ function() {
                                 var handY = (1 - normY_visible) * canvasHeight - canvasHeight / 2;
                                 hand.anchorPos.set(handX, handY, 1);
                                 if (i === 0) {
-                                    // --- 左手：音乐控制 ---
+                                    // --- Music & Gesture Control ---
                                     var isFistNow = _this1._isFist(smoothedLandmarks);
-                                    
-                                    // 检测握拳手势：只切换音色，不影响其他预设
                                     if (isFistNow && !hand.isFist) {
-                                        // 刚刚握拳：切换音色
+                                        // Fist gesture was just made
                                         _this1.musicManager.cycleSynth();
-                                        _this1.musicManager.stopArpeggio(i); // 停止当前琶音
-                                        _this1._showPresetChangeNotification(`音色: ${_this1.musicManager.getSynthName()}`, 'synth');
+                                        _this1.musicManager.stopArpeggio(i); // Stop any old arpeggio
+
                                     }
                                     hand.isFist = isFistNow;
                                     
-                                    // 获取当前音乐预设的音阶
+                                    // 🎵 音阶识别逻辑（参考原版arpeggiator-main）
+                                    
+                                    // 获取当前音乐预设的音阶（E3到A4完整半音音阶）
                                     var currentMusicPreset = _this1.musicManager.getCurrentMusicPreset();
-                                    var currentScale = currentMusicPreset.scale;
+                                    var currentScale = currentMusicPreset.scale || ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4']; // fallback
                                     
                                     var noteIndex = Math.floor((1 - normY_visible) * currentScale.length);
-                                    var note = currentScale[Math.max(0, Math.min(currentScale.length - 1, noteIndex))];
+                                    var rootNote = currentScale[Math.max(0, Math.min(currentScale.length - 1, noteIndex))];
+                                    
+
+                                    
+                                    // 2. 琶音播放 - 以识别的根音为基础，应用当前预设的音程关系
+                                    // 不再使用固定的音阶序列，而是以根音+音程关系来生成琶音
                                     
                                     // 更新波形可视化颜色
                                     if (_this1.waveformVisualizer) {
@@ -789,57 +1065,67 @@ export var Game = /*#__PURE__*/ function() {
                                     var dx = thumbTip.x - indexTip.x;
                                     var dy = thumbTip.y - indexTip.y;
                                     var distance = Math.sqrt(dx * dx + dy * dy);
-                                    var velocity = Math.max(0, Math.min(1.0, distance * 5));
+                                    var velocity = Math.max(0.1, Math.min(1.0, distance * 5));
                                     
                                     // 更新手部可视化
                                     _this1._updateHandLines(i, smoothedLandmarks, videoParams, canvasWidth, canvasHeight, {
-                                        note: note,
+                                        note: rootNote,  // 使用识别到的根音
                                         velocity: velocity,
                                         isFist: isFistNow
                                     });
                                     
-                                    // 琶音控制
+                                    // 🎵 简化的琶音播放逻辑 - 以根音为基础生成琶音
                                     if (!isFistNow) {
-                                        // 非握拳状态：播放琶音
                                         var arpeggioIsActive = _this1.musicManager.activePatterns.has(i);
+                                        
                                         if (!wasVisible || !arpeggioIsActive) {
-                                            _this1.musicManager.startArpeggio(i, note);
-                                        } else {
-                                            _this1.musicManager.updateArpeggio(i, note);
-                                        }
+                                            // 手刚出现或琶音未激活：启动琶音
+                                            _this1.musicManager.startArpeggio(i, rootNote);
+                                        } else if (arpeggioIsActive) {
+                                            // 琶音已激活：更新根音和音量
+                                            _this1.musicManager.updateArpeggio(i, rootNote);
                                         _this1.musicManager.updateArpeggioVolume(i, velocity);
+                                        }
                                     } else {
                                         // 握拳状态：停止琶音
                                         _this1.musicManager.stopArpeggio(i);
                                     }
                                 } else if (i === 1) {
-                                    // --- 右手：鼓组控制 ---
+                                    // 🥁 右手控制：简化版本
                                     var fingerStates = _this1._getFingerStates(smoothedLandmarks);
-                                    
-                                    // 检查特殊手势组合来切换预设
-                                    var allFingersUp = Object.values(fingerStates).every(isUp => isUp);
                                     var isFistNow = _this1._isFist(smoothedLandmarks);
+                                    var fourFingersVerticalNow = _this1._isFourFingersVertical(smoothedLandmarks);
                                     
-                                    if (allFingersUp && !hand.wasAllFingersUp) {
-                                        // 所有手指张开：切换音乐预设
+                                    // 检测手势变化（简化状态管理）
+                                    var fistChanged = isFistNow !== hand.wasFist;
+                                    var fourFingersChanged = fourFingersVerticalNow !== hand.wasFourFingersVertical;
+                                    
+                                    // 防抖机制：避免过快切换
+                                    var now = performance.now();
+                                    var timeSinceLastChange = now - (hand.lastGestureChangeTime || 0);
+                                    var canTrigger = timeSinceLastChange > 300; // 300ms防抖
+                                    
+                                    // 执行切换逻辑
+                                                                         if (canTrigger && fourFingersChanged && fourFingersVerticalNow) {
+                                         // 4指竖直：切换琶音风格
                                         var newMusicPreset = _this1.musicManager.cycleMusicPreset();
-                                        _this1._showPresetChangeNotification(`音乐: ${newMusicPreset.name}`, 'music');
-                                        _this1._updatePresetDisplay();
-                                    } else if (isFistNow && !hand.wasFist) {
-                                        // 握拳手势：切换鼓组预设
+                                         _this1._showPresetChangeNotification(`琶音风格: ${newMusicPreset.name} (${newMusicPreset.tempo} BPM)`, 'music');
+                                         hand.lastGestureChangeTime = now;
+                                     } else if (canTrigger && fistChanged && isFistNow) {
+                                         // 握拳：切换鼓组预设
                                         var newDrumPreset = drumManager.cycleDrumPreset();
                                         _this1._showPresetChangeNotification(`鼓组: ${newDrumPreset.name}`, 'drum');
-                                        _this1._updatePresetDisplay();
+                                         hand.lastGestureChangeTime = now;
                                     }
                                     
-                                    // 更新手势状态
-                                    hand.wasAllFingersUp = allFingersUp;
+                                    // 更新状态
                                     hand.wasFist = isFistNow;
+                                    hand.wasFourFingersVertical = fourFingersVerticalNow;
                                     
-                                    // 更新鼓组激活状态
+                                    // 更新鼓组
                                     drumManager.updateActiveDrums(fingerStates);
                                     
-                                    // 更新手部可视化
+                                    // 更新可视化
                                     _this1._updateHandLines(i, smoothedLandmarks, videoParams, canvasWidth, canvasHeight, {
                                         fingerStates: fingerStates
                                     });
@@ -853,6 +1139,7 @@ export var Game = /*#__PURE__*/ function() {
                                         // Disable all drums when hand is gone
                                         drumManager.updateActiveDrums({});
                                     }
+ 
                                 }
                                 hand.landmarks = null;
                                 if (hand.lineGroup) hand.lineGroup.visible = false;
@@ -863,24 +1150,23 @@ export var Game = /*#__PURE__*/ function() {
                         if (!videoParams) return;
                         var canvasWidth = this.renderDiv.clientWidth;
                         var canvasHeight = this.renderDiv.clientHeight;
-                        // C Minor Pentatonic Scale
-                        var scale = [
-                            'C3',
-                            'Eb3',
-                            'F3',
-                            'G3',
-                            'Bb3',
-                            'C4',
-                            'Eb4',
-                            'F4',
-                            'G4',
-                            'Bb4',
-                            'C5',
-                            'Eb5'
-                        ];
+                        // 注意：现在使用MusicManager中的预设系统，这里的硬编码音阶已被移除
                         for(var i = 0; i < this.hands.length; i++)_this1 = this, _loop(i);
                     } catch (error) {
                         console.error("Error during hand detection:", error);
+                        // 优雅降级：清理无效的手部数据
+                        this.hands.forEach(function(hand, index) {
+                            if (hand.landmarks) {
+                                hand.landmarks = null;
+                                if (hand.lineGroup) hand.lineGroup.visible = false;
+                                // 停止相关的音频
+                                if (index === 0) {
+                                    _this.musicManager.stopArpeggio(index);
+                                } else if (index === 1) {
+                                    drumManager.updateActiveDrums({});
+                                }
+                            }
+                        });
                     }
                 }
             }
@@ -962,16 +1248,116 @@ export var Game = /*#__PURE__*/ function() {
         {
             key: "_showError",
             value: function _showError(message) {
-                this.gameOverContainer.style.display = 'block';
-                this.gameOverText.innerText = "ERROR: ".concat(message);
-                this.gameOverText.style.color = 'orange';
-                this.restartHintText.style.display = 'true'; // Show restart hint on error
+                var _this = this;
+                
+                // 分析错误类型并生成对应的解决方案
+                var solutions = this._generateSolutions(message);
+                
+                // 创建错误显示界面
+                var errorDiv = document.createElement('div');
+                errorDiv.innerHTML = `
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <h2 style="color: #ff6b6b; margin: 0;">🚫 摄像头访问失败</h2>
+                        <p style="font-size: 18px; margin: 15px 0; color: #ffa500;">${message}</p>
+                    </div>
+                    
+                    <div style="text-align: left; margin-bottom: 30px;">
+                        <h3 style="color: #4ecdc4; margin-bottom: 15px;">💡 解决方案：</h3>
+                        ${solutions}
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button id="retry-camera" style="padding: 12px 24px; font-size: 16px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">🔄 重试摄像头</button>
+                        <button id="reload-page" style="padding: 12px 24px; font-size: 16px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">🔃 刷新页面</button>
+                        <button id="copy-url" style="padding: 12px 24px; font-size: 16px; background: #9c27b0; color: white; border: none; border-radius: 8px; cursor: pointer;">📋 复制HTTPS链接</button>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 14px; text-align: left;">
+                        <strong style="color: #4ecdc4;">🔧 环境信息：</strong><br>
+                        📍 协议: ${location.protocol}<br>
+                        🌐 域名: ${location.hostname}<br>
+                        🔒 安全上下文: ${window.isSecureContext ? '✅ 是' : '❌ 否'}<br>
+                        🌍 浏览器: ${navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Firefox') ? 'Firefox' : navigator.userAgent.includes('Safari') ? 'Safari' : '其他'}
+                    </div>
+                `;
+                
+                errorDiv.style.cssText = `
+                    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                    color: white; z-index: 2000;
+                    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(42, 42, 42, 0.95));
+                    padding: 30px; border-radius: 16px;
+                    font-family: 'Segoe UI', sans-serif; max-width: 600px; width: 90%;
+                    border: 2px solid rgba(255, 165, 0, 0.3);
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+                    backdrop-filter: blur(10px);
+                `;
+                
+                // 添加重试按钮事件
+                errorDiv.querySelector('#retry-camera').onclick = function() {
+                    errorDiv.remove();
+                    _this._setupHandTracking().then(function() {
+                        console.log('✅ 摄像头重试成功');
+                        _this._startGame();
+                    }).catch(function(error) {
+                        console.error('❌ 摄像头重试失败:', error);
+                        _this._showError('摄像头重试失败，请检查设备连接或权限设置');
+                    });
+                };
+                
+                // 添加刷新页面按钮事件
+                errorDiv.querySelector('#reload-page').onclick = function() {
+                    window.location.reload();
+                };
+                
+                // 添加复制HTTPS链接按钮事件
+                errorDiv.querySelector('#copy-url').onclick = function() {
+                    var httpsUrl = 'https://' + location.hostname + location.pathname + location.search;
+                    navigator.clipboard.writeText(httpsUrl).then(function() {
+                        alert('HTTPS链接已复制到剪贴板！');
+                    }).catch(function() {
+                        prompt('复制此HTTPS链接:', httpsUrl);
+                    });
+                };
+                
+                this.renderDiv.appendChild(errorDiv);
+                
                 this.gameState = 'error';
-                // No spawning to stop
                 this.hands.forEach(function(hand) {
                     if (hand.lineGroup) hand.lineGroup.visible = false;
                 });
-            // if (this.startButton) this.startButton.style.display = 'none'; // No longer exists
+            }
+        },
+        {
+            key: "_generateSolutions",
+            value: function _generateSolutions(message) {
+                var solutions = [];
+                
+                if (message.includes('本地文件访问')) {
+                    solutions.push('📁 <strong>本地开发解决方案：</strong><br>• 使用 <code>python -m http.server 8000</code> 启动本地服务器<br>• 或使用 <code>npx serve .</code><br>• 然后访问 <code>http://localhost:8000</code>');
+                }
+                
+                if (message.includes('非HTTPS环境') || location.protocol === 'http:') {
+                    solutions.push('🔒 <strong>HTTPS解决方案：</strong><br>• 部署到支持HTTPS的服务（GitHub Pages、Netlify、Vercel等）<br>• 或在本地使用 localhost 域名');
+                }
+                
+                if (message.includes('权限已被拒绝')) {
+                    solutions.push('🎥 <strong>权限设置：</strong><br>• 点击地址栏左侧的摄像头图标重新允许权限<br>• 或在浏览器设置 → 隐私和安全 → 网站设置 → 摄像头中允许此网站');
+                }
+                
+                if (message.includes('未找到可用的摄像头设备')) {
+                    solutions.push('📷 <strong>设备检查：</strong><br>• 确保摄像头已连接并在系统中启用<br>• 关闭其他正在使用摄像头的应用程序<br>• 重新插拔摄像头设备');
+                }
+                
+                if (message.includes('被其他应用占用')) {
+                    solutions.push('🔧 <strong>设备占用：</strong><br>• 关闭其他使用摄像头的程序（QQ、微信、Zoom等）<br>• 重启浏览器<br>• 重新插拔摄像头');
+                }
+                
+                // 通用解决方案
+                solutions.push('🌐 <strong>通用解决方案：</strong><br>• 尝试使用Chrome或Firefox浏览器<br>• 清除浏览器缓存和Cookie<br>• 检查防火墙或杀毒软件是否阻止摄像头访问');
+                
+                return solutions.map(function(solution, index) {
+                    return `<div style="margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; border-left: 3px solid #4ecdc4;">${solution}</div>`;
+                }).join('');
             }
         },
         {
@@ -979,6 +1365,10 @@ export var Game = /*#__PURE__*/ function() {
             value: function _startGame() {
                 var _this = this;
                 console.log("Starting tracking...");
+                
+                // 添加音频上下文激活提示
+                this._showAudioActivationPrompt();
+                
                 // This is now called automatically, so no need to check gameState
                 this.musicManager.start().then(function() {
                     drumManager.startSequence(); // Start drums *after* audio context is ready.
@@ -992,12 +1382,54 @@ export var Game = /*#__PURE__*/ function() {
                     _this._updatePresetDisplay();
                     // 初始化预设选择器
                     _this._initPresetSelector();
+                    
+                    // 游戏初始化完成，状态面板将由main.js中的StatusUpdater处理
+                    
+                    // 移除音频激活提示
+                    _this._hideAudioActivationPrompt();
+                }).catch(function(error) {
+                    console.error('音频初始化失败:', error);
+                    _this._showError('音频系统初始化失败，请刷新页面重试');
                 });
+                
                 this.gameState = 'tracking'; // Changed from 'playing'
                 this.lastVideoTime = -1;
                 this.clock.start();
             // Removed display of score, castle, chad
             // Removed _startSpawning()
+            }
+        },
+        {
+            key: "_showAudioActivationPrompt",
+            value: function _showAudioActivationPrompt() {
+                if (this.audioPromptDiv) return; // 避免重复显示
+                
+                this.audioPromptDiv = document.createElement('div');
+                this.audioPromptDiv.innerHTML = '<h3>🎵 音频系统启动中...</h3><p>如果音频无法播放，请点击屏幕任意位置激活音频</p>';
+                this.audioPromptDiv.style.cssText = "\n            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);\n            text-align: center; color: #00ffff; z-index: 500;\n            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 8px;\n            font-family: 'Segoe UI', sans-serif; border: 1px solid rgba(0, 255, 255, 0.3);\n            backdrop-filter: blur(10px);\n        ";
+                
+                this.renderDiv.appendChild(this.audioPromptDiv);
+                
+                // 添加点击激活音频的事件
+                var activateAudio = () => {
+                    if (window.Tone && Tone.context.state !== 'running') {
+                        Tone.start().then(() => {
+                            console.log('✅ 音频上下文已激活');
+                        });
+                    }
+                };
+                
+                this.renderDiv.addEventListener('click', activateAudio, { once: true });
+                this.renderDiv.addEventListener('touchstart', activateAudio, { once: true });
+            }
+        },
+        {
+            key: "_hideAudioActivationPrompt",
+            value: function _hideAudioActivationPrompt() {
+                if (this.audioPromptDiv) {
+                    this.audioPromptDiv.remove();
+                    this.audioPromptDiv = null;
+                }
             }
         },
         {
@@ -1215,29 +1647,228 @@ export var Game = /*#__PURE__*/ function() {
             }
         },
         {
+            key: "_isPalmFacingAway",
+            value: function _isPalmFacingAway(landmarks) {
+                if (!landmarks || landmarks.length < 21) return false;
+                
+                // 使用手指位移模式检测手掌翻转，而不是依赖不稳定的Z坐标
+                
+                // MediaPipe 手部关键点索引
+                var wrist = landmarks[0];        // 手腕
+                var thumbTip = landmarks[4];     // 拇指指尖
+                var indexTip = landmarks[8];     // 食指指尖
+                var middleTip = landmarks[12];   // 中指指尖
+                var ringTip = landmarks[16];     // 无名指指尖
+                var pinkyTip = landmarks[20];    // 小指指尖
+                
+                // 方法1: 检测拇指相对于其他手指的位置关系
+                var indexToMiddleX = middleTip.x - indexTip.x;
+                var thumbToIndexX = indexTip.x - thumbTip.x;
+                
+                // 方法2: 检测手指排列的整体方向
+                // 正常情况下，从食指到小指应该有一定的X坐标递减或递增趋势
+                var fingerProgression = (ringTip.x - indexTip.x) * (pinkyTip.x - middleTip.x);
+                
+                // 方法3: 手掌中心相对于手指的位置
+                var palmCenterX = (indexTip.x + middleTip.x + ringTip.x) / 3;
+                var thumbRelativePos = thumbTip.x - palmCenterX;
+                
+                // 翻转检测逻辑：
+                // 1. 拇指位置发生显著变化
+                var thumbShiftDetected = Math.abs(thumbToIndexX) < 0.02; // 拇指和食指X坐标过于接近
+                
+                // 2. 手指排列顺序异常
+                var progressionAnomaly = fingerProgression < 0; // 排列方向异常
+                
+                // 3. 手掌几何关系异常
+                var geometryAnomaly = Math.abs(thumbRelativePos) > 0.15; // 拇指偏离手掌中心过远
+                
+                // 需要至少两个条件同时满足才认为是翻转
+                var anomalyCount = 0;
+                if (thumbShiftDetected) anomalyCount++;
+                if (progressionAnomaly) anomalyCount++;
+                if (geometryAnomaly) anomalyCount++;
+                
+                // 调试信息（可以在控制台查看检测过程）
+                if (anomalyCount >= 2) {
+                    console.log('🔄 检测到手掌翻转:', {
+                        拇指位移: thumbShiftDetected,
+                        排列异常: progressionAnomaly, 
+                        几何异常: geometryAnomaly,
+                        异常计数: anomalyCount
+                    });
+                }
+                
+                return anomalyCount >= 2;
+            }
+        },
+        {
+            key: "_isAllFingersOpen",
+            value: function _isAllFingersOpen(landmarks) {
+                if (!landmarks || landmarks.length < 21) return false;
+                
+                // 更稳定的检测方式：检测所有手指是否张开
+                var fingerStates = this._getFingerStates(landmarks);
+                var allFingersUp = Object.values(fingerStates).every(function(isUp) {
+                    return isUp;
+                });
+                
+                if (allFingersUp) {
+                    console.log('✋ 检测到所有手指张开');
+                }
+                
+                return allFingersUp;
+            }
+        },
+        {
+            key: "_isFourFingersVertical",
+            value: function _isFourFingersVertical(landmarks) {
+                if (!landmarks || landmarks.length < 21) {
+                    return false;
+                }
+                
+                // 检测右手4个指头竖直排列的手势（朝向屏幕）
+                var fingerStates = this._getFingerStates(landmarks);
+                
+                // 1. 检查4个手指（食指、中指、无名指、小指）是否都伸直
+                var fourFingersUp = fingerStates.index && fingerStates.middle && 
+                                   fingerStates.ring && fingerStates.pinky;
+                
+                if (!fourFingersUp) {
+                    return false;
+                }
+                
+                // 2. 额外的手指伸直度检查 - 避免握拳后松开时的误触
+                if (!this._areFingersProperlyStraight(landmarks)) {
+                    return false;
+                }
+                
+                // 3. **新逻辑**：检查4个手指的x坐标是否基本在同一竖直线上（竖直排列朝向屏幕）
+                var indexTip = landmarks[8];   // 食指指尖
+                var middleTip = landmarks[12]; // 中指指尖
+                var ringTip = landmarks[16];   // 无名指指尖
+                var pinkyTip = landmarks[20];  // 小指指尖
+                
+                // 收集所有手指的x坐标
+                var xCoordinates = [indexTip.x, middleTip.x, ringTip.x, pinkyTip.x];
+                
+                // 计算x坐标的最大值和最小值
+                var maxX = Math.max(...xCoordinates);
+                var minX = Math.min(...xCoordinates);
+                
+                // 计算x坐标的差值范围
+                var xSpread = maxX - minX;
+                
+                // 竖直排列阈值：如果四个手指的x坐标差值小于这个值，认为是竖直排列
+                var verticalThreshold = 0.02; // 相对于视频尺寸的比例
+                
+                var fingersVertical = xSpread < verticalThreshold;
+                
+                // 可选：添加调试日志（降低频率）
+                if (fingersVertical && Math.random() < 0.1) { // 只有10%的概率输出日志
+                    console.log(`✅ 四指竖直排列检测成功: x坐标差值=${xSpread.toFixed(4)}, 阈值=${verticalThreshold}`);
+                }
+                
+                return fingersVertical;
+            }
+        },
+
+        {
+            key: "_areFingersProperlyStraight",
+            value: function _areFingersProperlyStraight(landmarks) {
+                // 更严格的手指伸直检查，避免握拳后松开时的误触
+                
+                // 检查每个手指的多个关节点，确保真正伸直
+                var fingerJoints = {
+                    index: [5, 6, 7, 8],   // 食指：MCP, PIP, DIP, TIP
+                    middle: [9, 10, 11, 12], // 中指：MCP, PIP, DIP, TIP  
+                    ring: [13, 14, 15, 16],  // 无名指：MCP, PIP, DIP, TIP
+                    pinky: [17, 18, 19, 20]  // 小指：MCP, PIP, DIP, TIP
+                };
+                
+                var straightnessResults = {};
+                var minStraightnessThreshold = 0.02; // 手指伸直度最小阈值
+                
+                for (var fingerName in fingerJoints) {
+                    var joints = fingerJoints[fingerName];
+                    var mcp = landmarks[joints[0]];   // 掌指关节
+                    var pip = landmarks[joints[1]];   // 近端指间关节
+                    var dip = landmarks[joints[2]];   // 远端指间关节
+                    var tip = landmarks[joints[3]];   // 指尖
+                    
+                    // 计算手指的整体伸直程度
+                    // 真正伸直的手指，从掌指关节到指尖应该是相对直线的
+                    var mcpTipDistance = Math.sqrt(
+                        Math.pow(tip.x - mcp.x, 2) + 
+                        Math.pow(tip.y - mcp.y, 2)
+                    );
+                    
+                    var mcpPipDistance = Math.sqrt(
+                        Math.pow(pip.x - mcp.x, 2) + 
+                        Math.pow(pip.y - mcp.y, 2)
+                    );
+                    
+                    var pipDipDistance = Math.sqrt(
+                        Math.pow(dip.x - pip.x, 2) + 
+                        Math.pow(dip.y - pip.y, 2)
+                    );
+                    
+                    var dipTipDistance = Math.sqrt(
+                        Math.pow(tip.x - dip.x, 2) + 
+                        Math.pow(tip.y - dip.y, 2)
+                    );
+                    
+                    // 总的关节间距离
+                    var totalJointDistance = mcpPipDistance + pipDipDistance + dipTipDistance;
+                    
+                    // 直线距离与关节间距离的比值，越接近1越直
+                    var straightnessRatio = mcpTipDistance / totalJointDistance;
+                    
+                    straightnessResults[fingerName] = {
+                        ratio: straightnessRatio,
+                        isStraight: straightnessRatio > (1 - minStraightnessThreshold)
+                    };
+                }
+                
+                // 所有4个手指都需要达到伸直度要求
+                var allFingersStraight = straightnessResults.index.isStraight && 
+                                        straightnessResults.middle.isStraight && 
+                                        straightnessResults.ring.isStraight && 
+                                        straightnessResults.pinky.isStraight;
+                
+                return allFingersStraight;
+            }
+        },
+        {
             key: "_updateHandLines",
             value: function _updateHandLines(handIndex, landmarks, videoParams, canvasWidth, canvasHeight, controlData) {
                 var _this = this;
+                // 添加安全检查
+                if (!this.hands || handIndex >= this.hands.length || !this.hands[handIndex]) {
+                    console.warn(`Invalid hand index ${handIndex} or hands not initialized`);
+                    return;
+                }
                 var hand = this.hands[handIndex];
+                if (!hand || !hand.lineGroup) {
+                    console.warn(`Hand ${handIndex} or lineGroup not properly initialized`);
+                    return;
+                }
                 var lineGroup = hand.lineGroup;
-                
-                // 清理上一帧的对象
+                // Clean up previous frame's objects
                 while(lineGroup.children.length){
                     var child = lineGroup.children[0];
                     lineGroup.remove(child);
                     if (child.geometry) child.geometry.dispose();
                     if (child.material) {
+                        // For sprites, we need to dispose the texture map as well
                         if (child.material.map) child.material.map.dispose();
                         child.material.dispose();
                     }
                 }
-                
                 if (!landmarks || landmarks.length === 0 || !videoParams) {
                     lineGroup.visible = false;
                     return;
                 }
-                
-                // 转换landmark坐标到3D空间
                 var points3D = landmarks.map(function(lm) {
                     var lmOriginalX = lm.x * videoParams.videoNaturalWidth;
                     var lmOriginalY = lm.y * videoParams.videoNaturalHeight;
@@ -1247,128 +1878,99 @@ export var Game = /*#__PURE__*/ function() {
                     normY_visible = Math.max(0, Math.min(1, normY_visible));
                     var x = (1 - normX_visible) * canvasWidth - canvasWidth / 2;
                     var y = (1 - normY_visible) * canvasHeight - canvasHeight / 2;
-                    return new THREE.Vector3(x, y, 1.1);
+                    return new THREE.Vector3(x, y, 1.1); // Z for fingertip circles
                 });
-                
-                // 简化的手部骨架线条（只绘制主要连接）
+                // --- Draw Skeleton Lines ---
                 var lineZ = 1;
-                var mainConnections = [
-                    [0, 1], [1, 2], [2, 3], [3, 4],     // 拇指
-                    [0, 5], [5, 6], [6, 7], [7, 8],     // 食指
-                    [0, 9], [9, 10], [10, 11], [11, 12], // 中指
-                    [0, 13], [13, 14], [14, 15], [15, 16], // 无名指
-                    [0, 17], [17, 18], [18, 19], [19, 20], // 小指
-                    [5, 9], [9, 13], [13, 17]            // 手指间连接
-                ];
-                
-                // 设置线条材质（更细更简约）
-                var lineColor = handIndex === 0 ? 0x00ffff : 0xff6b6b;
-                var lineMaterial = new THREE.LineBasicMaterial({
-                    color: lineColor,
-                    linewidth: 2,
-                    opacity: 0.8,
-                    transparent: true
-                });
-                
-                mainConnections.forEach(function(conn) {
+                this.handConnections.forEach(function(conn) {
                     var p1 = points3D[conn[0]];
                     var p2 = points3D[conn[1]];
                     if (p1 && p2) {
                         var lineP1 = p1.clone().setZ(lineZ);
                         var lineP2 = p2.clone().setZ(lineZ);
-                        var geometry = new THREE.BufferGeometry().setFromPoints([lineP1, lineP2]);
-                        var line = new THREE.Line(geometry, lineMaterial);
+                        var geometry = new THREE.BufferGeometry().setFromPoints([
+                            lineP1,
+                            lineP2
+                        ]);
+                        var line = new THREE.Line(geometry, _this.handLineMaterial);
                         lineGroup.add(line);
                     }
                 });
-                
-                // 简化的关节点（只显示指尖和手腕）
-                var keyPoints = [0, 4, 8, 12, 16, 20]; // 手腕和5个指尖
-                var pointRadius = 3;
-                var pointMaterial = new THREE.MeshBasicMaterial({
-                    color: lineColor,
-                    opacity: 0.9,
-                    transparent: true
-                });
-                
-                keyPoints.forEach(function(index) {
+                // --- Draw Fingertip & Wrist Circles ---
+                var fingertipRadius = 8, wristRadius = 12, circleSegments = 16;
+                this.fingertipLandmarkIndices.forEach(function(index) {
                     var landmarkPosition = points3D[index];
                     if (landmarkPosition) {
-                        var radius = index === 0 ? pointRadius * 1.5 : pointRadius; // 手腕稍大
-                        var circleGeometry = new THREE.CircleGeometry(radius, 8);
-                        var landmarkCircle = new THREE.Mesh(circleGeometry, pointMaterial);
+                        var radius = index === 0 ? wristRadius : fingertipRadius;
+                        var circleGeometry = new THREE.CircleGeometry(radius, circleSegments);
+                        var material = handIndex === 0 ? _this.fingertipMaterialHand1 : _this.fingertipMaterialHand2;
+                        var landmarkCircle = new THREE.Mesh(circleGeometry, material);
                         landmarkCircle.position.copy(landmarkPosition);
                         lineGroup.add(landmarkCircle);
                     }
                 });
-                
-                // 简化的状态标签
+                // --- Draw Thumb-to-Index line and Labels ---
+                var thumbPos = points3D[4];
+                var indexPos = points3D[8];
                 var wristPos = points3D[0];
-                if (wristPos && handIndex === 0) {
-                    // 左手：显示音符和音量
+                if (wristPos) {
+                    // Labels depend on which hand it is
+                    if (handIndex === 0 && thumbPos && indexPos) {
+                        // Connecting line
+                        var lineGeom = new THREE.BufferGeometry().setFromPoints([
+                            thumbPos,
+                            indexPos
+                        ]);
+                        var line = new THREE.Line(lineGeom, new THREE.LineBasicMaterial({
+                            color: 0xffffff,
+                            linewidth: 3
+                        }));
+                        lineGroup.add(line);
+                        // Volume and Pitch labels
                     var note = controlData.note, velocity = controlData.velocity, isFist = controlData.isFist;
-                    
                     if (isFist) {
-                        // 握拳时显示音色切换提示
-                        var fistLabel = this._createTextSprite("♪ SYNTH", {
-                            fontsize: 16,
-                            backgroundColor: 'rgba(0, 255, 255, 0.8)',
-                            textColor: '#000'
+                            var fistLabel = this._createTextSprite("SYNTH ".concat(this.musicManager.currentSynthIndex + 1), {
+                                fontsize: 22,
+                                backgroundColor: this.labelColors.evaPurple,
+                                textColor: this.labelColors.evaGreen
                         });
-                        fistLabel.position.set(wristPos.x, wristPos.y + 40, 2);
+                            fistLabel.position.set(wristPos.x, wristPos.y + 60, 2);
                         lineGroup.add(fistLabel);
                     } else {
-                        // 正常状态显示音符
-                        var noteLabel = this._createTextSprite(note, {
-                            fontsize: 14,
-                            backgroundColor: 'rgba(0, 255, 255, 0.7)',
-                            textColor: '#000'
+                            var midPoint = new THREE.Vector3().lerpVectors(thumbPos, indexPos, 0.5);
+                            var volumeLabel = this._createTextSprite("Volume: ".concat(velocity.toFixed(2)), {
+                                fontsize: 18,
+                                backgroundColor: this.labelColors.evaOrange,
+                                textColor: this.labelColors.white
                         });
-                        noteLabel.position.set(wristPos.x, wristPos.y + 30, 2);
-                        lineGroup.add(noteLabel);
-                        
-                        // 显示音量条
-                        if (velocity > 0.1) {
-                            var volumeBarWidth = 30;
-                            var volumeBarHeight = 4;
-                            var volumeWidth = volumeBarWidth * velocity;
-                            
-                            var volumeGeometry = new THREE.PlaneGeometry(volumeWidth, volumeBarHeight);
-                            var volumeMaterial = new THREE.MeshBasicMaterial({
-                                color: 0x00ff00,
-                                opacity: 0.8,
-                                transparent: true
+                            volumeLabel.position.set(midPoint.x, midPoint.y, 2);
+                            lineGroup.add(volumeLabel);
+                            var pitchLabel = this._createTextSprite("Pitch: ".concat(note), {
+                                fontsize: 18,
+                                backgroundColor: this.labelColors.evaGreen,
+                                textColor: this.labelColors.black
                             });
-                            var volumeBar = new THREE.Mesh(volumeGeometry, volumeMaterial);
-                            volumeBar.position.set(wristPos.x - volumeBarWidth/2 + volumeWidth/2, wristPos.y + 45, 2);
-                            lineGroup.add(volumeBar);
-                        }
+                            pitchLabel.position.set(wristPos.x, wristPos.y + 60, 2); // Position above the wrist
+                            lineGroup.add(pitchLabel);
                     }
-                } else if (wristPos && handIndex === 1) {
-                    // 右手：显示活跃的鼓点
+                    } else if (handIndex === 1) {
                     var fingerStates = controlData.fingerStates;
-                    var activeDrums = Object.entries(fingerStates)
-                        .filter(function(param) {
+                        var activeDrums = Object.entries(fingerStates).filter(function(param) {
                             var _param = _sliced_to_array(param, 2), _ = _param[0], isUp = _param[1];
                             return isUp;
-                        })
-                        .map(function(param) {
+                        }).map(function(param) {
                             var _param = _sliced_to_array(param, 2), finger = _param[0], _ = _param[1];
                             return drumManager.getFingerToDrumMap()[finger];
+                        }).join(', ');
+                        var drumLabel = this._createTextSprite("Drums: ".concat(activeDrums || 'None'), {
+                            fontsize: 18,
+                            backgroundColor: this.labelColors.evaRed,
+                            textColor: this.labelColors.white
                         });
-                    
-                    if (activeDrums.length > 0) {
-                        var drumText = activeDrums.join(' ');
-                        var drumLabel = this._createTextSprite(drumText, {
-                            fontsize: 14,
-                            backgroundColor: 'rgba(255, 107, 107, 0.8)',
-                            textColor: '#fff'
-                        });
-                        drumLabel.position.set(wristPos.x, wristPos.y + 30, 2);
+                        drumLabel.position.set(wristPos.x, wristPos.y + 60, 2);
                         lineGroup.add(drumLabel);
                     }
                 }
-                
                 lineGroup.visible = true;
             }
         },
@@ -1471,62 +2073,107 @@ export var Game = /*#__PURE__*/ function() {
                 }
                 
                 // 预设选择器功能
-                this._setupPresetSelectors();
+                this._checkInitialization();
                 
                 // 窗口大小变化处理
                 window.addEventListener('resize', this._onResize.bind(this));
             }
         },
         {
+            key: "_checkInitialization",
+            value: function _checkInitialization() {
+                const checkInterval = setInterval(() => {
+                    if (this.musicManager && this.drumManager && 
+                        this.musicManager.musicPresets && 
+                        typeof this.musicManager.getCurrentMusicPreset === 'function') {
+                        
+                        clearInterval(checkInterval);
+                        console.log('所有管理器已成功初始化，设置UI组件');
+                        this._setupPresetSelectors();
+                    } else {
+                        console.log('等待管理器初始化...');
+                    }
+                }, 100);
+                
+                // 设置超时防止无限等待
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    console.warn('初始化超时，使用默认设置');
+                    this._setupPresetSelectors();
+                }, 5000);
+            }
+        },
+        {
             key: "_setupPresetSelectors",
             value: function _setupPresetSelectors() {
-                var _this = this;
+                // 添加空值检查，确保管理器已正确初始化
+                if (!this.musicManager || !this.drumManager) {
+                    console.warn('琶音风格或鼓组管理器未初始化，跳过预设选择器设置');
+                    return;
+                }
+
+                // 获取琶音风格并添加空值检查
+                const musicPresets = this.musicManager.musicPresets || [];
+                const musicSelect = document.getElementById('music-preset-select');
                 
-                // 音乐预设选择器
-                var musicSelect = document.getElementById('music-preset-select');
-                if (musicSelect) {
-                    // 填充选项
+                if (musicSelect && musicPresets.length > 0) {
                     musicSelect.innerHTML = '';
-                    this.musicManager.musicPresets.forEach(function(preset, index) {
-                        var option = document.createElement('option');
+                    musicPresets.forEach((preset, index) => {
+                        const option = document.createElement('option');
                         option.value = index;
-                        option.textContent = preset.name;
+                        option.textContent = preset.name || `预设 ${index + 1}`;
                         musicSelect.appendChild(option);
                     });
-                    
-                    // 设置当前选中项
-                    musicSelect.value = this.musicManager.currentMusicPreset;
-                    
-                    // 添加事件监听
-                    musicSelect.addEventListener('change', function(e) {
-                        var presetIndex = parseInt(e.target.value);
-                        _this.musicManager.setMusicPreset(presetIndex);
-                        _this._updatePresetDisplay();
-                        _this._showPresetChangeNotification(`音乐: ${_this.musicManager.getCurrentMusicPreset().name}`, 'music');
+                } else {
+                    console.warn('琶音风格选择器元素未找到或预设数组为空');
+                }
+
+                // 获取鼓组预设并添加空值检查
+                const drumPresets = this.drumManager.getAllDrumPresets ? this.drumManager.getAllDrumPresets() : [];
+                const drumSelect = document.getElementById('drum-preset-select');
+                
+                if (drumSelect && drumPresets.length > 0) {
+                    drumSelect.innerHTML = '';
+                    drumPresets.forEach((preset, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = preset.name || `鼓组 ${index + 1}`;
+                        drumSelect.appendChild(option);
+                    });
+                } else {
+                    console.warn('鼓组预设选择器元素未找到或预设数组为空');
+                }
+
+                // 设置默认选中值和添加事件监听
+                if (musicSelect) {
+                    musicSelect.value = '0';
+                    // 添加琶音风格选择事件
+                    musicSelect.addEventListener('change', (e) => {
+                        const presetIndex = parseInt(e.target.value);
+                        if (this.musicManager && this.musicManager.setMusicPreset) {
+                            this.musicManager.setMusicPreset(presetIndex);
+                            this._updatePresetDisplay();
+                            const currentPreset = this.musicManager.getCurrentMusicPreset();
+                            if (currentPreset) {
+                                this._showPresetChangeNotification(`琶音风格: ${currentPreset.name}`, 'music');
+                            }
+                        }
                     });
                 }
                 
-                // 鼓组预设选择器
-                var drumSelect = document.getElementById('drum-preset-select');
                 if (drumSelect) {
-                    // 填充选项
-                    drumSelect.innerHTML = '';
-                    drumManager.drumPresets.forEach(function(preset, index) {
-                        var option = document.createElement('option');
-                        option.value = index;
-                        option.textContent = preset.name;
-                        drumSelect.appendChild(option);
-                    });
-                    
-                    // 设置当前选中项
-                    drumSelect.value = drumManager.currentDrumPreset;
-                    
-                    // 添加事件监听
-                    drumSelect.addEventListener('change', function(e) {
-                        var presetIndex = parseInt(e.target.value);
-                        drumManager.setDrumPreset(presetIndex);
-                        _this._updatePresetDisplay();
-                        _this._showPresetChangeNotification(`鼓组: ${drumManager.getCurrentDrumPreset().name}`, 'drum');
+                    drumSelect.value = '0';
+                    // 添加鼓组预设选择事件
+                    drumSelect.addEventListener('change', (e) => {
+                        const presetIndex = parseInt(e.target.value);
+                        if (this.drumManager && typeof this.drumManager.setDrumPreset === 'function') {
+                            this.drumManager.setDrumPreset(presetIndex);
+                            this._updatePresetDisplay();
+                            const currentPreset = this.drumManager.getCurrentDrumPreset();
+                            if (currentPreset) {
+                                this._showPresetChangeNotification(`鼓组: ${currentPreset.name}`, 'drum');
+                            }
+                        }
                     });
                 }
             }
@@ -1546,6 +2193,8 @@ export var Game = /*#__PURE__*/ function() {
                     drumPresetEl.textContent = `🥁 ${drumManager.getCurrentDrumPreset().name}`;
                 }
                 
+
+                
                 // 同步选择器
                 var musicSelect = document.getElementById('music-preset-select');
                 var drumSelect = document.getElementById('drum-preset-select');
@@ -1559,6 +2208,7 @@ export var Game = /*#__PURE__*/ function() {
                 }
             }
         },
+
         {
             key: "_initPresetSelector",
             value: function _initPresetSelector() {
@@ -1581,14 +2231,14 @@ export var Game = /*#__PURE__*/ function() {
                     });
                 }
                 
-                // 生成音乐预设选项
+                // 生成琶音风格选项
                 this._generateMusicPresetOptions();
                 // 生成鼓组预设选项
                 this._generateDrumPresetOptions();
             }
         },
         {
-            // 生成音乐预设选项
+            // 生成琶音风格选项
             key: "_generateMusicPresetOptions",
             value: function _generateMusicPresetOptions() {
                 var _this = this;
@@ -1676,7 +2326,7 @@ export var Game = /*#__PURE__*/ function() {
             }
         },
         {
-            // 选择音乐预设
+            // 选择琶音风格
             key: "_selectMusicPreset",
             value: function _selectMusicPreset(index) {
                 if (this.musicManager) {
@@ -1687,14 +2337,17 @@ export var Game = /*#__PURE__*/ function() {
                     // 应用预设
                     Tone.Transport.bpm.value = preset.tempo;
                     this.musicManager.currentSynthIndex = preset.synthPreset;
-                    this.musicManager.cycleSynth();
+                    // 直接设置合成器而不是循环切换
+                    this.musicManager._updateSynth();
                     
                     // 更新显示
                     this._updatePresetDisplay();
                     this._generateMusicPresetOptions();
                     
                     // 显示通知
-                    this._showPresetChangeNotification(`音乐: ${preset.name}`, 'music');
+                    this._showPresetChangeNotification(`琶音风格: ${preset.name} (${preset.tempo} BPM)`, 'music');
+                    
+
                     
                     // 关闭菜单
                     document.getElementById('preset-menu').style.display = 'none';
@@ -1717,12 +2370,20 @@ export var Game = /*#__PURE__*/ function() {
                 
                 var currentPreset = drumManager.getCurrentDrumPreset();
                 
+                // 更新BPM - 以最后切换的鼓组BPM为准
+                if (currentPreset.bpm) {
+                    Tone.Transport.bpm.value = currentPreset.bpm;
+                    console.log(`BPM已更新为鼓组预设: ${currentPreset.bpm}`);
+                }
+                
                 // 更新显示
                 this._updatePresetDisplay();
                 this._generateDrumPresetOptions();
                 
                 // 显示通知
                 this._showPresetChangeNotification(`鼓组: ${currentPreset.name}`, 'drum');
+                
+
                 
                 // 关闭菜单
                 document.getElementById('preset-menu').style.display = 'none';
@@ -1731,47 +2392,23 @@ export var Game = /*#__PURE__*/ function() {
         {
             key: "_showPresetChangeNotification",
             value: function _showPresetChangeNotification(message, type) {
-                // 简化的通知显示
-                var notification = document.createElement('div');
-                notification.style.position = 'fixed';
-                notification.style.top = '50%';
-                notification.style.left = '50%';
-                notification.style.transform = 'translate(-50%, -50%)';
-                notification.style.background = 'rgba(0, 0, 0, 0.9)';
-                notification.style.color = '#00ffff';
-                notification.style.padding = '16px 24px';
-                notification.style.borderRadius = '12px';
-                notification.style.fontFamily = 'Segoe UI, sans-serif';
-                notification.style.fontSize = '18px';
-                notification.style.fontWeight = 'bold';
-                notification.style.zIndex = '9999';
-                notification.style.border = '2px solid #00ffff';
-                notification.style.backdropFilter = 'blur(10px)';
-                notification.style.animation = 'fadeInOut 2s ease-in-out';
-                notification.textContent = message;
+                var statusElement = document.getElementById('info-text');
+                if (!statusElement) return;
                 
-                // 添加CSS动画
-                if (!document.getElementById('notification-styles')) {
-                    var style = document.createElement('style');
-                    style.id = 'notification-styles';
-                    style.textContent = `
-                        @keyframes fadeInOut {
-                            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-                            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-                            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-                            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-                        }
-                    `;
-                    document.head.appendChild(style);
-                }
+                statusElement.textContent = message;
+                statusElement.style.color = '#7B4394';
+                statusElement.style.opacity = '1';
+                statusElement.style.transform = 'translateX(-50%) scale(1.1)';
                 
-                document.body.appendChild(notification);
-                
-                // 2秒后自动移除
-                setTimeout(function() {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
+                setTimeout(() => {
+                    statusElement.style.opacity = '0.7';
+                    statusElement.style.transform = 'translateX(-50%) scale(1)';
+                    statusElement.style.color = '#FFFFFF';
+                    
+                    setTimeout(() => {
+                        statusElement.textContent = 'raise your hands to raise the roof';
+                        statusElement.style.opacity = '1';
+                    }, 500);
                 }, 2000);
             }
         }

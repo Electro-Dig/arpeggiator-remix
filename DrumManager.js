@@ -53,69 +53,104 @@ var beatIndex = 0;
 var activeDrums = new Set();
 // 鼓组风格预设系统
 var drumPresets = [
+    // House 预设组 (2个，删除Deep House)
     {
-        name: "Hip Hop",
+        name: "Rhythm1",
+        bpm: 124,
         patterns: {
-            'kick': [true, false, false, false, false, true, false, false, 
-                     true, false, false, true, false, true, false, false],
+            'kick': [true, false, false, false, true, false, false, false,
+                     true, false, false, false, true, false, false, false],
             'snare': [false, false, false, false, true, false, false, false,
                       false, false, false, false, true, false, false, false],
-            'hihat': [false, true, false, true, false, true, false, true,
-                      false, true, false, true, false, true, false, true],
-            'clap': [false, false, false, false, true, false, false, true,
+            'hihat': [false, false, true, false, false, false, true, false,
+                      false, false, true, false, false, false, true, false],
+            'openhat': [false, false, false, false, false, false, false, false,
+                        false, false, false, false, false, false, false, false],
+            'clap': [false, false, false, false, true, false, false, false,
                      false, false, false, false, true, false, false, false]
         }
     },
     {
-        name: "House",
+        name: "Rhythm2",
+        bpm: 126,
         patterns: {
             'kick': [true, false, false, false, true, false, false, false,
                      true, false, false, false, true, false, false, false],
+            'snare': [false, false, false, false, true, false, false, false,
+                      false, false, false, false, true, false, true, true],
+            'hihat': [false, false, true, false, false, false, true, false,
+                      false, false, true, false, false, true, true, true],
+            'openhat': [false, false, false, false, false, false, false, false,
+                        false, false, false, false, false, false, false, false],
+            'clap': [false, false, false, false, true, false, false, false,
+                     false, false, false, false, true, false, false, false]
+        }
+    },
+    // Techno 预设组 (2个，改进Berlin Techno)
+    {
+        name: "Rhythm3",
+        bpm: 132,
+        patterns: {
+            'kick': [true, false, false, false, true, false, false, false,
+                     true, false, false, false, true, false, false, false],
+            'snare': [false, false, false, false, false, false, false, false,
+                      false, false, false, false, true, false, false, false],
+            'hihat': [false, false, true, false, false, false, true, false,
+                      false, false, true, false, false, false, true, false],
+            'openhat': [false, false, false, false, false, false, false, false,
+                        false, false, false, false, false, false, false, false],
+            'clap': [false, false, false, false, true, false, false, false,
+                     false, false, false, false, false, false, false, false]
+        }
+    },
+    {
+        name: "Rhythm4",
+        bpm: 128,
+        patterns: {
+            // 基于Attack Magazine专业模式：四四拍底鼓，拍手只在第2和第4拍，噪音在第3拍和第4拍前
+            'kick': [true, false, false, false, true, false, false, false,
+                     true, false, false, false, true, false, false, false],
+            'snare': [false, false, false, false, true, false, false, false,
+                      false, false, false, false, true, false, false, false],
+            'hihat': [false, false, true, false, false, false, false, false,
+                      false, false, true, false, false, false, true, false],
+            'openhat': [false, false, true, false, false, false, false, false,
+                        false, false, true, false, false, false, false, false],
+            'clap': [false, false, false, false, true, false, true, false,
+                     false, false, false, false, true, false, false, false]
+        }
+    },
+    // Disco 预设组 (2个)
+    {
+        name: "Rhythm5",
+        bpm: 118,
+        patterns: {
+            'kick': [true, false, false, false, false, true, false, false,
+                     true, false, false, true, false, true, false, false],
             'snare': [false, false, false, false, true, false, false, false,
                       false, false, false, false, true, false, false, false],
             'hihat': [true, true, true, true, true, true, true, true,
                       true, true, true, true, true, true, true, true],
-            'clap': [false, false, false, false, false, false, false, false,
-                     false, false, false, false, false, false, false, false]
+            'openhat': [false, false, true, false, false, false, true, false,
+                        false, false, true, false, false, false, true, false],
+            'clap': [false, false, false, false, true, false, false, false,
+                     false, false, false, false, true, false, false, false]
         }
     },
     {
-        name: "Techno",
+        name: "Rhythm6",
+        bpm: 125,
         patterns: {
-            'kick': [true, false, false, false, true, false, false, false,
-                     true, false, false, false, true, false, false, false],
-            'snare': [false, false, true, false, false, false, true, false,
-                      false, false, true, false, false, false, true, false],
-            'hihat': [false, true, false, true, false, true, false, true,
-                      false, true, false, true, false, true, false, true],
-            'clap': [false, false, false, false, false, false, false, false,
-                     false, false, false, false, false, false, false, false]
-        }
-    },
-    {
-        name: "Funk",
-        patterns: {
-            'kick': [true, false, false, true, false, false, true, false,
-                     false, true, false, false, true, false, false, false],
+            'kick': [true, false, false, false, false, true, false, false,
+                     true, false, false, true, false, true, false, false],
             'snare': [false, false, false, false, true, false, false, true,
                       false, false, false, false, true, false, false, false],
             'hihat': [true, false, true, true, false, true, true, false,
                       true, true, false, true, true, false, true, false],
-            'clap': [false, false, false, false, false, false, false, false,
-                     false, false, false, false, false, false, false, false]
-        }
-    },
-    {
-        name: "Reggae",
-        patterns: {
-            'kick': [false, false, true, false, false, false, true, false,
-                     false, false, true, false, false, false, true, false],
-            'snare': [false, false, false, false, true, false, false, false,
-                      false, false, false, false, true, false, false, false],
-            'hihat': [true, true, false, true, true, true, false, true,
-                      true, true, false, true, true, true, false, true],
-            'clap': [false, false, false, false, false, false, false, false,
-                     false, false, false, false, false, false, false, false]
+            'openhat': [false, false, false, false, false, false, false, false,
+                        false, false, true, false, false, false, false, false],
+            'clap': [false, false, false, false, true, false, false, false,
+                     false, false, false, false, true, false, false, false]
         }
     }
 ];
@@ -123,6 +158,7 @@ var currentDrumPresetIndex = 0;
 // 更新drumPattern为当前预设
 var drumPattern = drumPresets[currentDrumPresetIndex].patterns;
 var fingerToDrumMap = {
+    'thumb': 'openhat',
     'index': 'kick',
     'middle': 'snare',
     'ring': 'hihat',
@@ -142,6 +178,7 @@ var fingerToDrumMap = {
                 kick: 'assets/kick.wav',
                 snare: 'assets/snare.wav',
                 hihat: 'assets/hihat.wav',
+                openhat: 'assets/hihat.wav', // 使用同样的hihat音色，但播放时会处理成开放式
                 clap: 'assets/clap.wav'
             },
             onload: function() {
@@ -150,6 +187,7 @@ var fingerToDrumMap = {
                 players.player('kick').volume.value = -6; // Lowered kick volume
                 players.player('snare').volume.value = 0;
                 players.player('hihat').volume.value = -2; // Softer hi-hat
+                players.player('openhat').volume.value = -1; // Open hat slightly louder
                 players.player('clap').volume.value = 0;
                 console.log("Drum samples loaded successfully.");
                 resolve();
@@ -260,4 +298,175 @@ export function getCurrentDrumPreset() {
  */
 export function getAllDrumPresets() {
     return drumPresets;
+}
+
+export function setDrumPreset(index) {
+    if (index >= 0 && index < drumPresets.length) {
+        currentDrumPresetIndex = index;
+        drumPattern = drumPresets[currentDrumPresetIndex].patterns;
+        console.log(`切换到鼓组预设: ${drumPresets[currentDrumPresetIndex].name}`);
+    }
+}
+
+/**
+ * 获取当前鼓组预设的BPM
+ */
+export function getCurrentDrumBPM() {
+    return drumPresets[currentDrumPresetIndex].bpm;
+}
+
+/**
+ * 设置鼓组预设的BPM（支持自定义编辑）
+ */
+export function setDrumPresetBPM(index, bpm) {
+    if (index >= 0 && index < drumPresets.length) {
+        drumPresets[index].bpm = bpm;
+        console.log(`鼓组预设 ${drumPresets[index].name} BPM已更新为: ${bpm}`);
+    }
+}
+
+/**
+ * 获取指定鼓组预设的BPM
+ */
+export function getDrumPresetBPM(index) {
+    if (index >= 0 && index < drumPresets.length) {
+        return drumPresets[index].bpm;
+    }
+    return 120; // 默认BPM
+}
+
+/**
+ * 更新鼓组预设的模式（支持自定义编辑）
+ */
+export function updateDrumPresetPatterns(index, patterns) {
+    if (index >= 0 && index < drumPresets.length) {
+        drumPresets[index].patterns = patterns;
+        // 如果更新的是当前预设，也要更新全局pattern
+        if (index === currentDrumPresetIndex) {
+            drumPattern = patterns;
+        }
+        console.log(`鼓组预设 ${drumPresets[index].name} 模式已更新`);
+    }
+}
+
+/**
+ * 重置鼓组预设到原始状态
+ */
+export function resetDrumPreset(index) {
+    if (index >= 0 && index < drumPresets.length) {
+        // 这里需要存储原始预设数据的备份
+        const originalPresets = getOriginalDrumPresets();
+        if (originalPresets[index]) {
+            drumPresets[index] = { ...originalPresets[index] };
+            // 如果重置的是当前预设，也要更新全局pattern
+            if (index === currentDrumPresetIndex) {
+                drumPattern = drumPresets[index].patterns;
+            }
+            console.log(`鼓组预设 ${drumPresets[index].name} 已重置到原始状态`);
+        }
+    }
+}
+
+/**
+ * 获取原始鼓组预设数据（用于重置功能）
+ */
+function getOriginalDrumPresets() {
+    return [
+        {
+            name: "Classic House",
+            bpm: 124,
+            patterns: {
+                'kick': [true, false, false, false, true, false, false, false,
+                         true, false, false, false, true, false, false, false],
+                'snare': [false, false, false, false, true, false, false, false,
+                          false, false, false, false, true, false, false, false],
+                'hihat': [false, false, true, false, false, false, true, false,
+                          false, false, true, false, false, false, true, false],
+                'openhat': [false, false, false, false, false, false, false, false,
+                            false, false, false, false, false, false, false, false],
+                'clap': [false, false, false, false, true, false, false, false,
+                         false, false, false, false, true, false, false, false]
+            }
+        },
+        {
+            name: "Tech House",
+            bpm: 126,
+            patterns: {
+                'kick': [true, false, false, false, true, false, false, false,
+                         true, false, false, false, true, false, false, false],
+                'snare': [false, false, false, false, true, false, false, false,
+                          false, false, false, false, true, false, true, true],
+                'hihat': [false, false, true, false, false, false, true, false,
+                          false, false, true, false, false, true, true, true],
+                'openhat': [false, false, false, false, false, false, false, false,
+                            false, false, false, false, false, false, false, false],
+                'clap': [false, false, false, false, true, false, false, false,
+                         false, false, false, false, true, false, false, false]
+            }
+        },
+        {
+            name: "Driving Techno",
+            bpm: 132,
+            patterns: {
+                'kick': [true, false, false, false, true, false, false, false,
+                         true, false, false, false, true, false, false, false],
+                'snare': [false, false, false, false, false, false, false, false,
+                          false, false, false, false, true, false, false, false],
+                'hihat': [false, false, true, false, false, false, true, false,
+                          false, false, true, false, false, false, true, false],
+                'openhat': [false, false, false, false, false, false, false, false,
+                            false, false, false, false, false, false, false, false],
+                'clap': [false, false, false, false, true, false, false, false,
+                         false, false, false, false, false, false, false, false]
+            }
+        },
+        {
+            name: "Berlin Techno",
+            bpm: 128,
+            patterns: {
+                'kick': [true, false, false, false, true, false, false, false,
+                         true, false, false, false, true, false, false, false],
+                'snare': [false, false, false, false, true, false, false, false,
+                          false, false, false, false, true, false, false, false],
+                'hihat': [false, false, true, false, false, false, false, false,
+                          false, false, true, false, false, false, true, false],
+                'openhat': [false, false, true, false, false, false, false, false,
+                            false, false, true, false, false, false, false, false],
+                'clap': [false, false, false, false, true, false, true, false,
+                         false, false, false, false, true, false, false, false]
+            }
+        },
+        {
+            name: "Classic Disco",
+            bpm: 118,
+            patterns: {
+                'kick': [true, false, false, false, false, true, false, false,
+                         true, false, false, true, false, true, false, false],
+                'snare': [false, false, false, false, true, false, false, false,
+                          false, false, false, false, true, false, false, false],
+                'hihat': [true, true, true, true, true, true, true, true,
+                          true, true, true, true, true, true, true, true],
+                'openhat': [false, false, true, false, false, false, true, false,
+                            false, false, true, false, false, false, true, false],
+                'clap': [false, false, false, false, true, false, false, false,
+                         false, false, false, false, true, false, false, false]
+            }
+        },
+        {
+            name: "Funky Disco",
+            bpm: 125,
+            patterns: {
+                'kick': [true, false, false, false, false, true, false, false,
+                         true, false, false, true, false, true, false, false],
+                'snare': [false, false, false, false, true, false, false, true,
+                          false, false, false, false, true, false, false, false],
+                'hihat': [true, false, true, true, false, true, true, false,
+                          true, true, false, true, true, false, true, false],
+                'openhat': [false, false, false, false, false, false, false, false,
+                            false, false, true, false, false, false, false, false],
+                'clap': [false, false, false, false, true, false, false, false,
+                         false, false, false, false, true, false, false, false]
+            }
+        }
+    ];
 }

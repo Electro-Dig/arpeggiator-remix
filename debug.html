@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arpeggiator Debug - 初始化测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .debug-panel {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #2d5a3d;
+            border: 1px solid #4caf50;
+        }
+        .status.error {
+            background: #5a2d2d;
+            border: 1px solid #f44336;
+        }
+        .status.warning {
+            background: #5a4d2d;
+            border: 1px solid #ff9800;
+        }
+        .test-button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #5855eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Arpeggiator-Remix 调试面板</h1>
+    
+    <div class="debug-panel">
+        <h2>🔧 初始化状态检查</h2>
+        <div id="init-status">检查中...</div>
+        <button class="test-button" onclick="checkInitialization()">重新检查</button>
+        <button class="test-button" onclick="testAudioPermissions()">测试音频权限</button>
+        <button class="test-button" onclick="testCameraPermissions()">测试摄像头权限</button>
+    </div>
+
+    <div class="debug-panel">
+        <h2>📊 系统状态</h2>
+        <div id="system-status">
+            <div class="status" id="tone-status">Tone.js: 未检测</div>
+            <div class="status" id="mediapipe-status">MediaPipe: 未检测</div>
+            <div class="status" id="threejs-status">Three.js: 未检测</div>
+            <div class="status" id="managers-status">管理器: 未检测</div>
+        </div>
+    </div>
+
+    <div class="debug-panel">
+        <h2>🎛 手动测试</h2>
+        <button class="test-button" onclick="testMusicManager()">测试音乐管理器</button>
+        <button class="test-button" onclick="testDrumManager()">测试鼓机管理器</button>
+        <button class="test-button" onclick="startApp()">启动应用</button>
+    </div>
+
+    <div class="debug-panel">
+        <h2>📝 日志输出</h2>
+        <div id="log-output" style="background: #000; padding: 10px; border-radius: 4px; height: 200px; overflow-y: scroll; font-family: monospace; font-size: 12px;"></div>
+        <button class="test-button" onclick="clearLog()">清除日志</button>
+    </div>
+
+    <script type="module">
+        import { Game } from './game.js';
+        import { MusicManager } from './MusicManager.js';
+        import * as DrumManager from './DrumManager.js';
+
+        // 日志捕获
+        const logOutput = document.getElementById('log-output');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        function logToPanel(message, type = 'log') {
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'warn' ? '#ffd93d' : '#51cf66';
+            logOutput.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToPanel(args.join(' '), 'log');
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logToPanel('ERROR: ' + args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            logToPanel('WARN: ' + args.join(' '), 'warn');
+        };
+
+        window.checkInitialization = function() {
+            console.log('开始检查系统初始化状态...');
+            
+            // 检查 Tone.js
+            if (typeof Tone !== 'undefined') {
+                document.getElementById('tone-status').className = 'status success';
+                document.getElementById('tone-status').textContent = 'Tone.js: ✅ 已加载';
+            } else {
+                document.getElementById('tone-status').className = 'status error';
+                document.getElementById('tone-status').textContent = 'Tone.js: ❌ 未加载';
+            }
+
+            // 检查 Three.js
+            if (typeof THREE !== 'undefined') {
+                document.getElementById('threejs-status').className = 'status success';
+                document.getElementById('threejs-status').textContent = 'Three.js: ✅ 已加载';
+            } else {
+                document.getElementById('threejs-status').className = 'status error';
+                document.getElementById('threejs-status').textContent = 'Three.js: ❌ 未加载';
+            }
+
+            // 检查管理器
+            try {
+                const musicManager = new MusicManager();
+                const hasPresets = musicManager.musicPresets && musicManager.musicPresets.length > 0;
+                
+                if (hasPresets) {
+                    document.getElementById('managers-status').className = 'status success';
+                    document.getElementById('managers-status').textContent = `管理器: ✅ 音乐预设(${musicManager.musicPresets.length}个)`;
+                } else {
+                    document.getElementById('managers-status').className = 'status warning';
+                    document.getElementById('managers-status').textContent = '管理器: ⚠️ 预设数据缺失';
+                }
+            } catch (error) {
+                document.getElementById('managers-status').className = 'status error';
+                document.getElementById('managers-status').textContent = '管理器: ❌ 初始化失败';
+                console.error('管理器初始化错误:', error);
+            }
+        };
+
+        window.testAudioPermissions = async function() {
+            try {
+                console.log('请求音频权限...');
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                console.log('✅ 音频权限已获取');
+            } catch (error) {
+                console.error('❌ 音频权限获取失败:', error);
+            }
+        };
+
+        window.testCameraPermissions = async function() {
+            try {
+                console.log('请求摄像头权限...');
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                console.log('✅ 摄像头权限已获取');
+                stream.getTracks().forEach(track => track.stop()); // 停止流
+            } catch (error) {
+                console.error('❌ 摄像头权限获取失败:', error);
+            }
+        };
+
+        window.testMusicManager = function() {
+            try {
+                console.log('测试音乐管理器...');
+                const manager = new MusicManager();
+                console.log('✅ MusicManager 创建成功');
+                console.log('预设数量:', manager.musicPresets?.length || 0);
+                if (manager.musicPresets && manager.musicPresets.length > 0) {
+                    console.log('第一个预设:', manager.musicPresets[0].name);
+                }
+            } catch (error) {
+                console.error('❌ MusicManager 测试失败:', error);
+            }
+        };
+
+        window.testDrumManager = function() {
+            try {
+                console.log('测试鼓机管理器...');
+                const presets = DrumManager.getAllDrumPresets();
+                console.log('✅ DrumManager 访问成功');
+                console.log('鼓组预设数量:', presets?.length || 0);
+                if (presets && presets.length > 0) {
+                    console.log('第一个预设:', presets[0].name);
+                }
+            } catch (error) {
+                console.error('❌ DrumManager 测试失败:', error);
+            }
+        };
+
+        window.startApp = function() {
+            console.log('尝试启动应用...');
+            const renderDiv = document.getElementById('app-container');
+            if (!renderDiv) {
+                const newDiv = document.createElement('div');
+                newDiv.id = 'app-container';
+                newDiv.style.cssText = 'width: 100%; height: 400px; background: #000; margin-top: 20px;';
+                document.body.appendChild(newDiv);
+                
+                try {
+                    const game = new Game(newDiv);
+                    console.log('✅ 游戏实例创建成功');
+                } catch (error) {
+                    console.error('❌ 游戏启动失败:', error);
+                }
+            }
+        };
+
+        window.clearLog = function() {
+            logOutput.innerHTML = '';
+        };
+
+        // 页面加载完成后自动检查
+        setTimeout(checkInitialization, 1000);
+    </script>
+</body>
+</html> 

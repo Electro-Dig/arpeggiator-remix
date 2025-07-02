@@ -168,6 +168,22 @@ body {
 .preset-select option {
     background: #2a2a2a;
     color: white;
+    padding: 8px;
+}
+
+/* 确保下拉选项不会超出视口 */
+.preset-select {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* 修复下拉菜单在底部显示问题 */
+@media (max-height: 600px) {
+    .preset-selector {
+        bottom: auto;
+        top: 20px;
+        transform: translateX(-50%);
+    }
 }
 
 /* ===== 旧样式兼容（保留部分必要样式） ===== */
@@ -242,5 +258,658 @@ body {
     .help-panel {
         max-width: 200px;
         font-size: 11px;
+    }
+}
+
+/* ===== 自定义编辑器样式 ===== */
+.custom-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(123, 67, 148, 0.8);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    margin: 5px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    display: block;
+}
+
+.custom-btn:hover {
+    transform: scale(1.1);
+    border-color: #7B4394;
+    box-shadow: 0 0 20px rgba(123, 67, 148, 0.5);
+}
+
+.custom-btn:nth-child(2) {
+    background: rgba(255, 87, 51, 0.8);
+}
+
+.custom-btn:nth-child(2):hover {
+    border-color: #FF5733;
+    box-shadow: 0 0 20px rgba(255, 87, 51, 0.5);
+}
+
+/* ===== 模态框样式 ===== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(42, 42, 42, 0.95));
+    border-radius: 16px;
+    padding: 24px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-content.small {
+    max-width: 400px;
+}
+
+.modal-content h2, .modal-content h3 {
+    margin: 0 0 20px 0;
+    color: #00ffff;
+    text-align: center;
+    font-weight: 600;
+}
+
+.close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.close:hover {
+    color: #fff;
+}
+
+/* ===== 编辑器区域样式 ===== */
+.editor-section {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.editor-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.editor-section label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #00ffff;
+}
+
+.editor-section select,
+.editor-section input[type="text"],
+.editor-section input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+/* 优化下拉菜单选项显示 */
+.editor-section select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23ffffff' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    padding-right: 35px;
+    cursor: pointer;
+}
+
+.editor-section select option {
+    background: rgba(26, 26, 26, 0.95);
+    color: white;
+    padding: 8px 12px;
+    border: none;
+}
+
+.editor-section select option:checked {
+    background: rgba(123, 67, 148, 0.8);
+    color: white;
+}
+
+.editor-section select:focus,
+.editor-section input:focus {
+    outline: none;
+    border-color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+}
+
+.editor-section input[type="range"] {
+    width: 100%;
+    margin-top: 8px;
+}
+
+/* ===== 音符网格 ===== */
+.note-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.note-btn {
+    padding: 12px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    font-size: 12px;
+}
+
+.note-btn:hover {
+    background: rgba(123, 67, 148, 0.3);
+    border-color: #7B4394;
+}
+
+.note-btn.active {
+    background: rgba(123, 67, 148, 0.8);
+    border-color: #7B4394;
+    box-shadow: 0 0 10px rgba(123, 67, 148, 0.5);
+}
+
+/* ===== 间隔输入 ===== */
+#interval-inputs {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.interval-input {
+    flex: 1;
+    max-width: 80px;
+}
+
+/* ===== 模式选项 ===== */
+.pattern-options {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.pattern-options label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: white;
+    font-weight: normal;
+}
+
+.pattern-options input[type="radio"] {
+    margin: 0;
+}
+
+/* ===== 鼓组音序器 ===== */
+.drum-sequencer {
+    margin-top: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.drum-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+}
+
+.drum-label {
+    min-width: 80px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #00ffff;
+    text-align: center;
+}
+
+.steps-container {
+    display: flex;
+    gap: 3px;
+    flex: 1;
+    flex-wrap: wrap;
+}
+
+.step-btn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 11px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.step-btn:hover {
+    background: rgba(255, 87, 51, 0.3);
+    border-color: #FF5733;
+    transform: scale(1.05);
+}
+
+.step-btn.active {
+    background: rgba(255, 87, 51, 0.8);
+    border-color: #FF5733;
+    box-shadow: 0 0 8px rgba(255, 87, 51, 0.5);
+    transform: scale(1.1);
+}
+
+.step-btn.beat-accent {
+    border-color: rgba(0, 255, 255, 0.5);
+    background: rgba(0, 255, 255, 0.1);
+}
+
+.step-btn.beat-accent.active {
+    background: rgba(255, 87, 51, 0.9);
+    box-shadow: 0 0 12px rgba(255, 87, 51, 0.7);
+}
+
+/* ===== 鼓组快速操作按钮 ===== */
+.drum-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.quick-btn {
+    padding: 8px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-width: 70px;
+}
+
+.quick-btn:hover {
+    background: rgba(0, 255, 255, 0.3);
+    border-color: #00ffff;
+    transform: translateY(-1px);
+}
+
+/* ===== 操作按钮 ===== */
+.editor-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.action-btn {
+    padding: 12px 24px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-width: 80px;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.action-btn.save {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.2);
+}
+
+.action-btn.save:hover {
+    background: rgba(76, 175, 80, 0.4);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.action-btn.apply {
+    border-color: #00ffff;
+    background: rgba(0, 255, 255, 0.2);
+}
+
+.action-btn.apply:hover {
+    background: rgba(0, 255, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 255, 255, 0.3);
+}
+
+.action-btn.reset {
+    border-color: #ff9500;
+    background: rgba(255, 149, 0, 0.2);
+}
+
+.action-btn.reset:hover {
+    background: rgba(255, 149, 0, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
+}
+
+/* ===== 实时预览按钮样式 ===== */
+.action-btn.realtime {
+    border-color: #FFD700;
+    background: rgba(255, 215, 0, 0.2);
+    color: #FFD700;
+}
+
+.action-btn.realtime:hover {
+    background: rgba(255, 215, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.action-btn.realtime.active {
+    background: rgba(255, 215, 0, 0.6);
+    color: white;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
+    50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
+    100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); }
+}
+
+/* ===== 播放状态高亮 ===== */
+.note-btn.playing {
+    background: rgba(255, 215, 0, 0.8) !important;
+    border-color: #FFD700 !important;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6) !important;
+    transform: scale(1.05) !important;
+    transition: all 0.1s ease !important;
+}
+
+.step-btn.playing {
+    background: rgba(255, 215, 0, 0.8) !important;
+    border-color: #FFD700 !important;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.6) !important;
+    transform: scale(1.1) !important;
+    transition: all 0.1s ease !important;
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        padding: 16px;
+        max-height: 85vh;
+    }
+    
+    .note-grid {
+        grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+        gap: 6px;
+    }
+    
+    .note-btn {
+        padding: 10px 4px;
+        font-size: 11px;
+    }
+    
+    .editor-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .action-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    .step-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 11px;
+    }
+    
+    .custom-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+}
+
+/* ===== 鼓组颜色区分样式 ===== */
+.drum-kick {
+    border-left: 4px solid #e74c3c; /* 红色 - Kick */
+}
+
+.drum-snare {
+    border-left: 4px solid #3498db; /* 蓝色 - Snare */
+}
+
+.drum-hihat {
+    border-left: 4px solid #f39c12; /* 橙色 - Hi-hat */
+}
+
+.drum-clap {
+    border-left: 4px solid #2ecc71; /* 绿色 - Clap */
+}
+
+/* 鼓组步骤按钮颜色 */
+.drum-kick-step.active {
+    background-color: #e74c3c !important;
+    border-color: #c0392b !important;
+}
+
+.drum-snare-step.active {
+    background-color: #3498db !important;
+    border-color: #2980b9 !important;
+}
+
+.drum-hihat-step.active {
+    background-color: #f39c12 !important;
+    border-color: #e67e22 !important;
+}
+
+.drum-clap-step.active {
+    background-color: #2ecc71 !important;
+    border-color: #27ae60 !important;
+}
+
+/* 播放时的高亮效果 */
+.drum-kick-step.playing {
+    background-color: #e74c3c !important;
+    box-shadow: 0 0 15px #e74c3c !important;
+}
+
+.drum-snare-step.playing {
+    background-color: #3498db !important;
+    box-shadow: 0 0 15px #3498db !important;
+}
+
+.drum-hihat-step.playing {
+    background-color: #f39c12 !important;
+    box-shadow: 0 0 15px #f39c12 !important;
+}
+
+.drum-clap-step.playing {
+    background-color: #2ecc71 !important;
+    box-shadow: 0 0 15px #2ecc71 !important;
+}
+
+/* 鼓组标签颜色 */
+.drum-kick .drum-label {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.drum-snare .drum-label {
+    color: #3498db;
+    font-weight: bold;
+}
+
+.drum-hihat .drum-label {
+    color: #f39c12;
+    font-weight: bold;
+}
+
+.drum-clap .drum-label {
+    color: #2ecc71;
+    font-weight: bold;
+}
+
+/* ===== 圆形音序器样式 ===== */
+#circular-sequencer-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(20, 20, 30, 0.9), rgba(10, 10, 20, 0.9));
+    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+#circular-sequencer-container canvas {
+    border-radius: 50%;
+    box-shadow:
+        0 0 20px rgba(123, 67, 148, 0.3),
+        inset 0 0 20px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+#circular-sequencer-container canvas:hover {
+    box-shadow:
+        0 0 30px rgba(123, 67, 148, 0.5),
+        inset 0 0 20px rgba(0, 0, 0, 0.5);
+    transform: scale(1.02);
+}
+
+/* 模式切换按钮样式 */
+.mode-toggle {
+    background: linear-gradient(135deg, #7B4394, #9B59B6) !important;
+    color: white !important;
+    border: none !important;
+    font-weight: bold !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.mode-toggle:hover {
+    background: linear-gradient(135deg, #9B59B6, #BB79D6) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(123, 67, 148, 0.4) !important;
+}
+
+.mode-toggle:active {
+    transform: translateY(0) !important;
+}
+
+.mode-toggle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.mode-toggle:hover::before {
+    left: 100%;
+}
+
+/* 圆形音序器图例 */
+.circular-legend {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    font-size: 12px;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    #circular-sequencer-container {
+        padding: 15px;
+    }
+
+    #circular-sequencer-container canvas {
+        width: 300px !important;
+        height: 300px !important;
+    }
+
+    .circular-legend {
+        gap: 10px;
+    }
+
+    .legend-item {
+        font-size: 11px;
+        padding: 4px 8px;
     }
 }

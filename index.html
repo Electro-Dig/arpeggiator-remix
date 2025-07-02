@@ -37,45 +37,219 @@
     <body style="width: 100%; height: 100%; overflow: hidden; margin: 0;">
         <div id="renderDiv" style="width: 100%; height: 100%; margin: 0;">
 
-            <!-- 主标题 -->
             <span id="info-text">raise your hands to raise the roof</span>
             
-            <!-- 简化的状态信息（左上角） -->
-            <div id="status-info" class="status-panel">
-                <div id="music-preset">🎵 C Minor Pentatonic</div>
-                <div id="drum-preset">🥁 Hip Hop</div>
+
+            
+            <!-- 当前状态面板（中上方） -->
+            <div id="current-status-panel" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;">
+                <div style="background: linear-gradient(135deg, rgba(240, 240, 240, 0.75), rgba(250, 250, 250, 0.65)); 
+                            color: #2d3748; font-size: 13px; text-align: center; 
+                            border-radius: 12px; padding: 16px 24px; 
+                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                            border: 1px solid rgba(200, 200, 200, 0.2);
+                            backdrop-filter: blur(10px);
+                            min-width: 300px;">
+                    <div style="font-weight: 600; font-size: 14px; color: #4a5568; margin-bottom: 12px; letter-spacing: 0.5px;">
+                        🎵 当前状态
+                    </div>
+                    <div style="display: flex; justify-content: space-between; gap: 15px; text-align: left;">
+                        <div style="flex: 1;">
+                            <div style="color: #718096; font-size: 11px; margin-bottom: 2px;">音色</div>
+                            <div id="current-synth" style="font-weight: 500; color: #2d3748;">DX7 MARIMBA</div>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="color: #718096; font-size: 11px; margin-bottom: 2px;">琶音风格</div>
+                            <div id="current-music-preset" style="font-weight: 500; color: #2d3748;">Minimal Groove</div>
+                        </div>
+                        <div style="flex: 1;">
+                            <div style="color: #718096; font-size: 11px; margin-bottom: 2px;">鼓组</div>
+                            <div id="current-drum-preset" style="font-weight: 500; color: #2d3748;">Rhythm1</div>
+                        </div>
+                        <div style="flex: 0 0 auto;">
+                            <div style="color: #718096; font-size: 11px; margin-bottom: 2px;">节拍</div>
+                            <div id="current-tempo" style="font-weight: 500; color: #2d3748;">122 BPM</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预设信息显示区域（保留用于兼容性） -->
+            <div id="preset-info" class="text-box" style="display: none;">
+                <div id="music-preset">音乐: C Minor Pentatonic</div>
+                <div id="drum-preset">鼓组: Hip Hop</div>
             </div>
             
-            <!-- 帮助按钮（右上角） -->
-            <button id="help-toggle" class="help-btn" title="操作指南">?</button>
-            
-            <!-- 折叠式帮助面板 -->
-            <div id="help-panel" class="help-panel hidden">
-                <div class="help-content">
-                    <div class="help-section">
-                        <span class="help-hand">👈 左手</span>
-                        <div>上下：音高 | 捏合：音量 | 握拳：音色</div>
+            <!-- 操作指南面板 -->
+            <div id="controls-guide" style="position: absolute; top: 20px; right: 20px; z-index: 1000; max-width: 300px;">
+                <div class="text-box" style="background-color: rgba(0, 0, 0, 0.85); color: white; font-size: 12px; line-height: 1.4;">
+                    <div style="padding: 12px; border-bottom: 2px solid #7b4394;">
+                        <div style="font-weight: bold; font-size: 14px; color: #b794f6; margin-bottom: 8px;">
+                            🎮 操作指南
+                        </div>
                     </div>
-                    <div class="help-section">
-                        <span class="help-hand">👉 右手</span>
-                        <div>手指：鼓点 | 张开：音乐 | 握拳：鼓组</div>
+                    
+                    <div style="padding: 12px; border-bottom: 1px solid #444;">
+                        <div style="font-weight: bold; color: #4fd1c7; margin-bottom: 6px;">
+                            👈 左手控制 (琶音)
+                        </div>
+                        <div style="margin-bottom: 4px;">• <strong>上下移动</strong>：控制音高</div>
+                        <div style="margin-bottom: 4px;">• <strong>拇指食指距离</strong>：控制音量</div>
+                        <div style="margin-bottom: 4px;">• <strong>握拳</strong>：切换合成器音色</div>
+                    </div>
+                    
+                    <div style="padding: 12px; border-bottom: 1px solid #444;">
+                        <div style="font-weight: bold; color: #f6ad55; margin-bottom: 6px;">
+                            👉 右手控制 (鼓组)
+                        </div>
+                        <div style="margin-bottom: 4px;">• <strong>大拇指</strong>：开踩镲 (Open Hat)</div>
+                        <div style="margin-bottom: 4px;">• <strong>食指</strong>：底鼓 (Kick)</div>
+                        <div style="margin-bottom: 4px;">• <strong>中指</strong>：军鼓 (Snare)</div>
+                        <div style="margin-bottom: 4px;">• <strong>无名指</strong>：踩镲 (Hi-hat)</div>
+                        <div style="margin-bottom: 4px;">• <strong>小指</strong>：拍手声 (Clap)</div>
+                        <div style="margin-bottom: 4px;">• <strong>4指竖直朝向屏幕</strong>：切换琶音风格</div>
+                        <div style="margin-bottom: 4px;">• <strong>握拳</strong>：切换鼓组预设</div>
                     </div>
                 </div>
             </div>
             
-            <!-- 预设选择器（底部中央） -->
-            <div id="preset-selector" class="preset-selector">
-                <div class="preset-group">
-                    <label>🎵</label>
-                    <select id="music-preset-select" class="preset-select">
+            <!-- 自定义编辑器按钮和预设选择器（居中靠下） -->
+            <div id="custom-editor-buttons" style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; gap: 20px; align-items: center;">
+                <button id="open-arpeggio-editor" class="custom-btn" title="自定义琶音">🎼</button>
+                
+                <!-- 预设选择器 -->
+                <div id="preset-selector" style="position: relative;">
+                    <button id="preset-toggle" class="text-box" style="background-color: rgba(123, 67, 148, 0.9); color: white; border: none; cursor: pointer; font-size: 14px; padding: 10px 15px;">
+                        🎛️ 预设选择
+                    </button>
+                    <div id="preset-menu" class="text-box" style="display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.95); color: white; min-width: 200px; font-size: 13px; margin-bottom: 10px;">
+                        <div style="padding: 10px; border-bottom: 1px solid #444;">
+                            <strong>🎵 琶音风格</strong>
+                            <div id="music-presets" style="margin-top: 8px;">
+                                <!-- 动态生成 -->
+                            </div>
+                        </div>
+                        <div style="padding: 10px;">
+                            <strong>🥁 鼓组预设</strong>
+                            <div id="drum-presets" style="margin-top: 8px;">
                         <!-- 动态生成 -->
-                    </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="preset-group">
-                    <label>🥁</label>
-                    <select id="drum-preset-select" class="preset-select">
-                        <!-- 动态生成 -->
+                
+                <button id="open-drum-editor" class="custom-btn" title="自定义鼓组">🥁</button>
+            </div>
+
+            <!-- 琶音编辑器模态框 -->
+            <div id="arpeggio-editor-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>🎼 自定义琶音编辑器</h2>
+                    
+                    <div class="editor-section">
+                        <label>基础预设:</label>
+                        <select id="arpeggio-base-preset">
+                            <option value="0">C Minor Pentatonic</option>
+                            <option value="1">G Major Pentatonic</option>
+                            <option value="2">E Minor Blues</option>
+                            <option value="3">A Dorian Mode</option>
+                            <option value="4">Japanese Pentatonic</option>
                     </select>
+                    </div>
+
+                    <div class="editor-section">
+                        <label>速度 (BPM): <span id="tempo-value">100</span></label>
+                        <input type="range" id="arpeggio-tempo" min="60" max="160" value="100">
+                    </div>
+
+                    <div class="editor-section">
+                        <label>音符选择:</label>
+                        <div id="note-grid" class="note-grid">
+                            <!-- 动态生成音符按钮 -->
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <label>和弦间隔:</label>
+                        <div id="interval-inputs">
+                            <input type="number" class="interval-input" value="0" min="0" max="12">
+                            <input type="number" class="interval-input" value="3" min="0" max="12">
+                            <input type="number" class="interval-input" value="5" min="0" max="12">
+                            <input type="number" class="interval-input" value="7" min="0" max="12">
+                        </div>
+                    </div>
+
+                    <div class="editor-section">
+                        <label>琶音模式:</label>
+                        <div class="pattern-options">
+                            <label><input type="radio" name="arpeggio-pattern" value="up"> 上行</label>
+                            <label><input type="radio" name="arpeggio-pattern" value="down"> 下行</label>
+                            <label><input type="radio" name="arpeggio-pattern" value="upDown" checked> 上下行</label>
+                        </div>
+                    </div>
+
+                    <div class="editor-actions">
+                        <button id="preview-arpeggio" class="action-btn">预览</button>
+                        <button id="reset-arpeggio" class="action-btn reset">重置</button>
+                        <button id="save-arpeggio" class="action-btn save">保存</button>
+                        <button id="apply-arpeggio" class="action-btn apply">应用</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 鼓组编辑器模态框 -->
+            <div id="drum-editor-modal" class="modal" style="display: none;">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>🥁 自定义鼓组编辑器</h2>
+                    
+                    <div class="editor-section">
+                        <label>基础预设:</label>
+                        <select id="drum-base-preset">
+                            <option value="0">Hip Hop</option>
+                            <option value="1">House</option>
+                            <option value="2">Techno</option>
+                            <option value="3">Funk</option>
+                            <option value="4">Reggae</option>
+                    </select>
+                    </div>
+
+                    <div class="editor-section">
+                        <label>16步音序器:</label>
+                        <div class="drum-controls">
+                            <button onclick="clearAllDrums()" class="quick-btn">清空所有</button>
+                            <button onclick="randomizeDrums()" class="quick-btn">随机化</button>
+                            <button onclick="copyPattern()" class="quick-btn">复制</button>
+                            <button onclick="pastePattern()" class="quick-btn">粘贴</button>
+                        </div>
+                        <div id="drum-sequencer" class="drum-sequencer">
+                            <!-- 动态生成鼓组音序器 -->
+                        </div>
+                    </div>
+
+                    <div class="editor-actions">
+                        <button id="preview-drum" class="action-btn">预览</button>
+                        <button id="reset-drum" class="action-btn reset">重置</button>
+                        <button id="save-drum" class="action-btn save">保存</button>
+                        <button id="apply-drum" class="action-btn apply">应用</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 保存预设模态框 -->
+            <div id="save-preset-modal" class="modal" style="display: none;">
+                <div class="modal-content small">
+                    <span class="close">&times;</span>
+                    <h3>保存预设</h3>
+                    <div class="editor-section">
+                        <label>预设名称:</label>
+                        <input type="text" id="preset-name" placeholder="输入预设名称">
+                    </div>
+                    <div class="editor-actions">
+                        <button id="confirm-save" class="action-btn apply">确认</button>
+                        <button id="cancel-save" class="action-btn">取消</button>
+                    </div>
                 </div>
             </div>
 
