@@ -780,20 +780,22 @@ export var Game = /*#__PURE__*/ function() {
                                 
                                 // 提供更友好的错误处理
                                 let errorMessage = "摄像头访问失败";
-                                
+                                let showNoCameraMode = false;
+
                                 if (error.name === 'NotReadableError') {
                                     errorMessage = "摄像头被其他应用占用，请关闭其他使用摄像头的程序后重试";
                                 } else if (error.name === 'NotAllowedError') {
                                     errorMessage = "请允许浏览器访问摄像头权限，然后重试";
                                 } else if (error.name === 'NotFoundError') {
-                                    errorMessage = "未找到摄像头设备，请检查设备连接";
+                                    errorMessage = "未找到摄像头设备";
+                                    showNoCameraMode = true;
                                 } else if (error.name === 'AbortError') {
                                     errorMessage = "摄像头启动被中断，请重试";
                                 } else if (error.message && error.message.includes('超时')) {
                                     errorMessage = error.message;
                                 } else if (error.name === 'OverconstrainedError') {
                                     errorMessage = "摄像头不支持请求的分辨率，正在尝试降低要求...";
-                                    
+
                                     // 尝试使用更低的约束重新初始化
                                     setTimeout(function() {
                                         _this._setupHandTrackingFallback();
@@ -801,7 +803,7 @@ export var Game = /*#__PURE__*/ function() {
                                     return [2];
                                 }
                                 
-                                _this._showError(errorMessage);
+                                _this._showError(errorMessage, showNoCameraMode);
                                 
                                 // 不要完全停止初始化，允许用户重试
                                 return [2]; // 继续执行而不是抛出错误
@@ -1247,29 +1249,49 @@ export var Game = /*#__PURE__*/ function() {
         },
         {
             key: "_showError",
-            value: function _showError(message) {
+            value: function _showError(message, showNoCameraMode) {
                 var _this = this;
-                
+
                 // 分析错误类型并生成对应的解决方案
                 var solutions = this._generateSolutions(message);
-                
+
                 // 创建错误显示界面
                 var errorDiv = document.createElement('div');
-                errorDiv.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h2 style="color: #ff6b6b; margin: 0;">🚫 摄像头访问失败</h2>
-                        <p style="font-size: 18px; margin: 15px 0; color: #ffa500;">${message}</p>
-                    </div>
-                    
-                    <div style="text-align: left; margin-bottom: 30px;">
-                        <h3 style="color: #4ecdc4; margin-bottom: 15px;">💡 解决方案：</h3>
-                        ${solutions}
-                    </div>
-                    
-                    <div style="text-align: center;">
+
+                // 根据是否显示无摄像头模式来决定按钮
+                var buttonsHtml = '';
+                if (showNoCameraMode) {
+                    buttonsHtml = `
+                        <button id="no-camera-mode" style="padding: 12px 24px; font-size: 16px; background: #7B4394; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">🎵 无摄像头模式</button>
+                        <button id="retry-camera" style="padding: 12px 24px; font-size: 16px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">🔄 重试摄像头</button>
+                        <button id="reload-page" style="padding: 12px 24px; font-size: 16px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer;">🔃 刷新页面</button>
+                    `;
+                } else {
+                    buttonsHtml = `
                         <button id="retry-camera" style="padding: 12px 24px; font-size: 16px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">🔄 重试摄像头</button>
                         <button id="reload-page" style="padding: 12px 24px; font-size: 16px; background: #2196F3; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">🔃 刷新页面</button>
                         <button id="copy-url" style="padding: 12px 24px; font-size: 16px; background: #9c27b0; color: white; border: none; border-radius: 8px; cursor: pointer;">📋 复制HTTPS链接</button>
+                    `;
+                }
+
+                errorDiv.innerHTML = `
+                    <div style="position: relative;">
+                        <button id="close-error-dialog" style="position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; border-radius: 50%; background: #ff6b6b; color: white; border: none; cursor: pointer; font-size: 16px; font-weight: bold; z-index: 10; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: all 0.2s ease;" title="关闭" onmouseover="this.style.background='#ff5252'; this.style.transform='scale(1.1)'" onmouseout="this.style.background='#ff6b6b'; this.style.transform='scale(1)'">×</button>
+
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h2 style="color: #ff6b6b; margin: 0;">🚫 摄像头访问失败</h2>
+                            <p style="font-size: 18px; margin: 15px 0; color: #ffa500;">${message}</p>
+                            ${showNoCameraMode ? '<p style="font-size: 14px; color: #4ecdc4;">💡 您可以使用无摄像头模式来编辑和测试琶音、鼓组功能</p>' : ''}
+                        </div>
+
+                        <div style="text-align: left; margin-bottom: 30px;">
+                            <h3 style="color: #4ecdc4; margin-bottom: 15px;">💡 解决方案：</h3>
+                            ${solutions}
+                        </div>
+
+                        <div style="text-align: center;">
+                            ${buttonsHtml}
+                        </div>
                     </div>
                     
                     <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 14px; text-align: left;">
@@ -1292,6 +1314,20 @@ export var Game = /*#__PURE__*/ function() {
                     backdrop-filter: blur(10px);
                 `;
                 
+                // 添加关闭按钮事件
+                errorDiv.querySelector('#close-error-dialog').onclick = function() {
+                    errorDiv.remove();
+                };
+
+                // 添加无摄像头模式按钮事件
+                var noCameraModeBtn = errorDiv.querySelector('#no-camera-mode');
+                if (noCameraModeBtn) {
+                    noCameraModeBtn.onclick = function() {
+                        errorDiv.remove();
+                        _this._startNoCameraMode();
+                    };
+                }
+
                 // 添加重试按钮事件
                 errorDiv.querySelector('#retry-camera').onclick = function() {
                     errorDiv.remove();
@@ -1397,6 +1433,100 @@ export var Game = /*#__PURE__*/ function() {
                 this.clock.start();
             // Removed display of score, castle, chad
             // Removed _startSpawning()
+            }
+        },
+        {
+            key: "_startNoCameraMode",
+            value: function _startNoCameraMode() {
+                var _this = this;
+                console.log("🎵 启动无摄像头模式...");
+
+                // 设置无摄像头模式标志
+                this.noCameraMode = true;
+                this.gameState = 'no-camera';
+
+                // 隐藏摄像头相关的提示文本
+                var infoText = document.getElementById('info-text');
+                if (infoText) {
+                    infoText.textContent = '🎵 无摄像头模式 - 使用编辑器创作音乐';
+                    infoText.style.fontSize = 'clamp(18px, 3vw, 32px)';
+                }
+
+                // 添加音频上下文激活提示
+                this._showAudioActivationPrompt();
+
+                // 初始化音频系统
+                this.musicManager.start().then(function() {
+                    drumManager.startSequence();
+
+                    // Setup the waveform visualizer
+                    var analyser = _this.musicManager.getAnalyser();
+                    if (analyser) {
+                        _this.waveformVisualizer = new WaveformVisualizer(_this.scene, analyser, _this.renderDiv.clientWidth, _this.renderDiv.clientHeight);
+                    }
+
+                    // 初始化预设显示
+                    _this._updatePresetDisplay();
+                    _this._initPresetSelector();
+
+                    // 显示无摄像头模式的特殊提示
+                    _this._showNoCameraModeGuide();
+
+                    // 移除音频激活提示
+                    _this._hideAudioActivationPrompt();
+
+                    console.log('✅ 无摄像头模式启动完成');
+                }).catch(function(error) {
+                    console.error('音频初始化失败:', error);
+                    _this._showError('音频系统初始化失败，请刷新页面重试');
+                });
+
+                this.clock.start();
+            }
+        },
+        {
+            key: "_showNoCameraModeGuide",
+            value: function _showNoCameraModeGuide() {
+                // 创建无摄像头模式指南
+                var guideDiv = document.createElement('div');
+                guideDiv.id = 'no-camera-guide';
+                guideDiv.innerHTML = `
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h3 style="color: #7B4394; margin: 0 0 10px 0;">🎵 无摄像头模式</h3>
+                        <p style="margin: 0; font-size: 14px; color: #4ecdc4;">使用下方编辑器创作和测试音乐</p>
+                    </div>
+
+                    <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 15px;">
+                        <button onclick="window.customEditor?.openArpeggioEditor()" style="padding: 8px 16px; background: #7B4394; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">🎼 编辑琶音</button>
+                        <button onclick="window.customEditor?.openDrumEditor()" style="padding: 8px 16px; background: #FF5733; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">🥁 编辑鼓组</button>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button id="close-guide" style="padding: 6px 12px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; font-size: 11px;">关闭提示</button>
+                    </div>
+                `;
+
+                guideDiv.style.cssText = `
+                    position: absolute; top: 120px; left: 50%; transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.9); color: white; z-index: 1500;
+                    padding: 20px; border-radius: 12px; font-family: 'Segoe UI', sans-serif;
+                    border: 1px solid rgba(123, 67, 148, 0.5); backdrop-filter: blur(10px);
+                    max-width: 400px; width: 90%;
+                `;
+
+                this.renderDiv.appendChild(guideDiv);
+
+                // 添加关闭按钮事件
+                guideDiv.querySelector('#close-guide').onclick = function() {
+                    guideDiv.remove();
+                };
+
+                // 5秒后自动隐藏
+                setTimeout(function() {
+                    if (guideDiv.parentNode) {
+                        guideDiv.remove();
+                    }
+                }, 8000);
             }
         },
         {

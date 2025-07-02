@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音序点编辑器测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 10px;
+        }
+        
+        .sequence-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        
+        .sequence-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .sequence-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .step-point {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid #555;
+            background: linear-gradient(135deg, #333, #444);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .step-point.active {
+            border-color: #4CAF50;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+        }
+        
+        .step-point.inactive {
+            border-color: #666;
+            background: linear-gradient(135deg, #222, #333);
+        }
+        
+        .interval-value {
+            font-size: 12px;
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .step-number {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .root-note-btn {
+            background: #2196F3;
+        }
+        
+        .root-note-btn:hover {
+            background: #1976D2;
+        }
+        
+        .test-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎵 音序点编辑器测试</h1>
+        
+        <div class="sequence-controls">
+            <button id="root-note-selector" class="root-note-btn">根音: C4</button>
+            <button id="preview-sequence">🎵 预览</button>
+            <button id="randomize-sequence">🎲 随机</button>
+            <button id="reset-sequence">🔄 重置</button>
+        </div>
+        
+        <div class="sequence-grid">
+            <div class="sequence-step" data-step="0">
+                <div class="step-point active" data-interval="0">
+                    <div class="interval-value">0</div>
+                </div>
+                <div class="step-number">1</div>
+            </div>
+            <div class="sequence-step" data-step="1">
+                <div class="step-point active" data-interval="3">
+                    <div class="interval-value">+3</div>
+                </div>
+                <div class="step-number">2</div>
+            </div>
+            <div class="sequence-step" data-step="2">
+                <div class="step-point inactive" data-interval="null">
+                    <div class="interval-value">--</div>
+                </div>
+                <div class="step-number">3</div>
+            </div>
+            <div class="sequence-step" data-step="3">
+                <div class="step-point active" data-interval="7">
+                    <div class="interval-value">+7</div>
+                </div>
+                <div class="step-number">4</div>
+            </div>
+            <div class="sequence-step" data-step="4">
+                <div class="step-point active" data-interval="8">
+                    <div class="interval-value">+8</div>
+                </div>
+                <div class="step-number">5</div>
+            </div>
+            <div class="sequence-step" data-step="5">
+                <div class="step-point inactive" data-interval="null">
+                    <div class="interval-value">--</div>
+                </div>
+                <div class="step-number">6</div>
+            </div>
+            <div class="sequence-step" data-step="6">
+                <div class="step-point active" data-interval="7">
+                    <div class="interval-value">+7</div>
+                </div>
+                <div class="step-number">7</div>
+            </div>
+            <div class="sequence-step" data-step="7">
+                <div class="step-point inactive" data-interval="null">
+                    <div class="interval-value">--</div>
+                </div>
+                <div class="step-number">8</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button onclick="testSequenceEditor()">🧪 测试功能</button>
+            <button onclick="getSequenceData()">📊 获取数据</button>
+            <button onclick="loadTestData()">📋 加载测试数据</button>
+        </div>
+        
+        <div class="test-info">
+            <h3>测试说明：</h3>
+            <ul>
+                <li>点击音序点可以切换激活/非激活状态</li>
+                <li>拖拽激活的音序点可以调整音程（-12到+24）</li>
+                <li>根音按钮可以循环切换根音</li>
+                <li>预览按钮播放完整序列</li>
+                <li>随机按钮生成随机序列</li>
+                <li>重置按钮恢复默认序列</li>
+            </ul>
+            <div id="output"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as Tone from 'https://esm.sh/tone';
+        
+        let previewSynth = null;
+        
+        // 初始化合成器
+        async function initSynth() {
+            if (Tone.context.state !== 'running') {
+                await Tone.start();
+            }
+            
+            previewSynth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.5 }
+            }).toDestination();
+            
+            console.log('🎵 合成器初始化完成');
+        }
+        
+        // 测试函数
+        window.testSequenceEditor = function() {
+            console.log('🧪 开始测试音序点编辑器...');
+            const output = document.getElementById('output');
+            output.innerHTML = '<h4>测试结果：</h4>';
+            
+            // 测试点击切换
+            const firstStep = document.querySelector('.step-point');
+            if (firstStep) {
+                firstStep.click();
+                output.innerHTML += '<p>✅ 点击切换测试完成</p>';
+            }
+            
+            // 测试数据获取
+            const data = getSequenceData();
+            output.innerHTML += `<p>📊 当前序列数据: [${data.join(', ')}]</p>`;
+        };
+        
+        window.getSequenceData = function() {
+            const sequence = [];
+            for (let i = 0; i < 8; i++) {
+                const stepPoint = document.querySelector(`[data-step="${i}"] .step-point`);
+                if (stepPoint && stepPoint.classList.contains('active')) {
+                    const interval = stepPoint.dataset.interval;
+                    sequence.push(interval === 'null' ? null : parseInt(interval) || 0);
+                } else {
+                    sequence.push(null);
+                }
+            }
+            console.log('📊 序列数据:', sequence);
+            return sequence;
+        };
+        
+        window.loadTestData = function() {
+            const testData = [0, 5, null, 12, -3, null, 7, 2];
+            loadSequenceData(testData);
+            console.log('📋 测试数据已加载:', testData);
+        };
+        
+        function loadSequenceData(sequenceArray) {
+            for (let i = 0; i < 8; i++) {
+                const stepPoint = document.querySelector(`[data-step="${i}"] .step-point`);
+                if (!stepPoint) continue;
+                
+                const interval = sequenceArray[i];
+                
+                if (interval === null || interval === undefined) {
+                    stepPoint.classList.remove('active');
+                    stepPoint.classList.add('inactive');
+                    stepPoint.dataset.interval = 'null';
+                    stepPoint.querySelector('.interval-value').textContent = '--';
+                } else {
+                    stepPoint.classList.remove('inactive');
+                    stepPoint.classList.add('active');
+                    stepPoint.dataset.interval = interval.toString();
+                    
+                    const intervalValue = stepPoint.querySelector('.interval-value');
+                    if (interval === 0) {
+                        intervalValue.textContent = '0';
+                    } else if (interval > 0) {
+                        intervalValue.textContent = '+' + interval;
+                    } else {
+                        intervalValue.textContent = interval.toString();
+                    }
+                }
+            }
+        }
+        
+        // 初始化
+        initSynth();
+        
+        console.log('🎵 音序点编辑器测试页面已加载');
+    </script>
+</body>
+</html>

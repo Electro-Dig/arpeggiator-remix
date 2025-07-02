@@ -325,11 +325,46 @@ body {
     max-width: 400px;
 }
 
+.modal-content.drum-editor-layout {
+    max-width: 1200px;
+    width: 90%;
+    max-height: 75vh;
+    height: 75vh;
+    overflow: hidden;
+}
+
 .modal-content h2, .modal-content h3 {
     margin: 0 0 20px 0;
     color: #00ffff;
     text-align: center;
     font-weight: 600;
+}
+
+/* ===== 鼓组编辑器布局 ===== */
+.drum-editor-container {
+    display: flex;
+    gap: 20px;
+    height: calc(75vh - 120px);
+    overflow: hidden;
+}
+
+.drum-management-panel {
+    width: 280px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(26, 26, 26, 0.4));
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 12px;
+    padding: 15px;
+    overflow-y: auto;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.drum-editor-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    min-height: 0;
 }
 
 .close {
@@ -479,8 +514,9 @@ body {
 
 /* ===== 鼓组音序器 ===== */
 .drum-sequencer {
-    margin-top: 10px;
-    max-height: 280px;
+    margin-top: 8px;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 8px;
     background: rgba(0, 0, 0, 0.2);
@@ -580,27 +616,188 @@ body {
     transform: translateY(-1px);
 }
 
+/* ===== 鼓组管理面板 ===== */
+.management-section h3 {
+    margin: 0 0 15px 0;
+    color: #00ffff;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.drum-group-list {
+    margin-bottom: 20px;
+}
+
+.group-list-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+}
+
+.group-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.group-item:last-child {
+    border-bottom: none;
+}
+
+.group-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.group-item.active {
+    background: linear-gradient(90deg, rgba(0, 255, 255, 0.3), rgba(0, 255, 255, 0.1));
+    border-left: 4px solid #00ffff;
+    box-shadow: 0 2px 8px rgba(0, 255, 255, 0.2);
+}
+
+.group-item.preset {
+    background: rgba(138, 43, 226, 0.15);
+    border-left: 2px solid rgba(138, 43, 226, 0.5);
+}
+
+.group-item.preset.active {
+    background: linear-gradient(90deg, rgba(138, 43, 226, 0.4), rgba(138, 43, 226, 0.2));
+    border-left: 4px solid #8a2be2;
+    box-shadow: 0 2px 8px rgba(138, 43, 226, 0.3);
+}
+
+.group-name {
+    flex: 1;
+    color: white;
+    font-size: 14px;
+}
+
+.group-type {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-left: 8px;
+}
+
+.drum-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#drum-group-select {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 14px;
+    min-width: 200px;
+}
+
+#drum-group-select option {
+    background: #2a2a2a;
+    color: white;
+}
+
+.drum-group-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.management-btn {
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 60px;
+}
+
+.management-btn:hover {
+    background: rgba(0, 255, 255, 0.3);
+    border-color: #00ffff;
+    transform: translateY(-1px);
+}
+
+.management-btn:active {
+    transform: translateY(0);
+}
+
+/* ===== 新的管理面板样式 ===== */
+.management-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.position-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.position-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.position-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #ffa500;
+    transform: translateY(-1px);
+}
+
+.position-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* ===== 操作按钮 ===== */
 .editor-actions {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     justify-content: center;
-    margin-top: 24px;
-    padding-top: 20px;
+    margin-top: 15px;
+    padding-top: 15px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .action-btn {
-    padding: 12px 24px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
+    padding: 8px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
     background: rgba(255, 255, 255, 0.1);
     color: white;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
     transition: all 0.3s ease;
-    min-width: 80px;
+    min-width: 60px;
+    max-width: 120px;
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .action-btn:hover {
@@ -687,6 +884,38 @@ body {
         padding: 16px;
         max-height: 85vh;
     }
+
+    .modal-content.drum-editor-layout {
+        width: 98%;
+        max-height: 85vh;
+        height: 85vh;
+    }
+
+    .drum-editor-container {
+        flex-direction: column;
+        height: calc(85vh - 100px);
+    }
+
+    .drum-management-panel {
+        width: 100%;
+        margin-bottom: 10px;
+        max-height: 180px;
+    }
+
+    .management-actions {
+        grid-template-columns: 1fr 1fr 1fr 1fr;
+        gap: 6px;
+    }
+
+    .management-btn {
+        padding: 6px 8px;
+        font-size: 11px;
+    }
+
+    .position-actions {
+        margin-top: 10px;
+    }
+}
     
     .note-grid {
         grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
@@ -699,13 +928,17 @@ body {
     }
     
     .editor-actions {
-        flex-direction: column;
-        gap: 8px;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
     }
     
     .action-btn {
         padding: 10px 16px;
         font-size: 13px;
+        flex: 0 0 auto;
+        min-width: 60px;
+        max-width: 120px;
     }
     
     .step-btn {
@@ -738,6 +971,10 @@ body {
     border-left: 4px solid #2ecc71; /* 绿色 - Clap */
 }
 
+.drum-openhat {
+    border-left: 4px solid #9b59b6; /* 紫色 - Open Hat */
+}
+
 /* 鼓组步骤按钮颜色 */
 .drum-kick-step.active {
     background-color: #e74c3c !important;
@@ -757,6 +994,11 @@ body {
 .drum-clap-step.active {
     background-color: #2ecc71 !important;
     border-color: #27ae60 !important;
+}
+
+.drum-openhat-step.active {
+    background-color: #9b59b6 !important;
+    border-color: #8e44ad !important;
 }
 
 /* 播放时的高亮效果 */
@@ -780,6 +1022,11 @@ body {
     box-shadow: 0 0 15px #2ecc71 !important;
 }
 
+.drum-openhat-step.playing {
+    background-color: #9b59b6 !important;
+    box-shadow: 0 0 15px #9b59b6 !important;
+}
+
 /* 鼓组标签颜色 */
 .drum-kick .drum-label {
     color: #e74c3c;
@@ -801,17 +1048,25 @@ body {
     font-weight: bold;
 }
 
+.drum-openhat .drum-label {
+    color: #9b59b6;
+    font-weight: bold;
+}
+
 /* ===== 圆形音序器样式 ===== */
 #circular-sequencer-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
-    padding: 20px;
+    gap: 15px;
+    padding: 15px;
     background: linear-gradient(135deg, rgba(20, 20, 30, 0.9), rgba(10, 10, 20, 0.9));
-    border-radius: 15px;
+    border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    flex: 1;
+    min-height: 0;
+    overflow: visible;
 }
 
 #circular-sequencer-container canvas {
@@ -911,5 +1166,182 @@ body {
     .legend-item {
         font-size: 11px;
         padding: 4px 8px;
+    }
+}
+
+/* ===== 琶音序列编辑器样式 ===== */
+.sequence-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.control-btn {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+}
+
+.sequence-grid {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    padding: 20px 0;
+    flex-wrap: wrap;
+}
+
+.sequence-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.step-point {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    user-select: none;
+    border: 2px solid transparent;
+}
+
+.step-point.active {
+    background: linear-gradient(135deg, #4CAF50, #66BB6A);
+    border-color: rgba(76, 175, 80, 0.5);
+    box-shadow:
+        0 0 20px rgba(76, 175, 80, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.2);
+}
+
+.step-point.inactive {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.step-point:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
+}
+
+.step-point.dragging {
+    transform: scale(1.15);
+    box-shadow: 0 0 30px rgba(76, 175, 80, 0.6);
+    z-index: 10;
+}
+
+.interval-value {
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.step-point.active .interval-value {
+    color: white;
+}
+
+.step-point.inactive .interval-value {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.step-number {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+/* 音程值颜色编码 */
+.step-point[data-interval="0"] .interval-value {
+    color: #FFF;
+}
+
+.step-point[data-interval^="+"] .interval-value {
+    color: #81C784;
+}
+
+.step-point[data-interval^="-"] .interval-value {
+    color: #FFB74D;
+}
+
+/* 拖拽指示器 */
+.sequence-step::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sequence-step:hover::before {
+    opacity: 1;
+}
+
+.sequence-step::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.sequence-step:hover::after {
+    opacity: 1;
+}
+
+/* 序列编辑器响应式设计 */
+@media (max-width: 768px) {
+    .sequence-grid {
+        gap: 10px;
+    }
+
+    .step-point {
+        width: 40px;
+        height: 40px;
+    }
+
+    .interval-value {
+        font-size: 10px;
+    }
+
+    .control-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+
+    .sequence-controls {
+        gap: 8px;
     }
 }

@@ -145,53 +145,86 @@
             <div id="arpeggio-editor-modal" class="modal" style="display: none;">
                 <div class="modal-content">
                     <span class="close">&times;</span>
-                    <h2>🎼 自定义琶音编辑器</h2>
-                    
+                    <h2>🎼 琶音序列编辑器</h2>
+
+                    <!-- 预设和控制区域 -->
                     <div class="editor-section">
-                        <label>基础预设:</label>
+                        <label>预设模板:</label>
                         <select id="arpeggio-base-preset">
-                            <option value="0">C Minor Pentatonic</option>
-                            <option value="1">G Major Pentatonic</option>
-                            <option value="2">E Minor Blues</option>
-                            <option value="3">A Dorian Mode</option>
-                            <option value="4">Japanese Pentatonic</option>
-                    </select>
+                            <!-- 动态填充预设选项 -->
+                        </select>
                     </div>
 
                     <div class="editor-section">
-                        <label>速度 (BPM): <span id="tempo-value">100</span></label>
-                        <input type="range" id="arpeggio-tempo" min="60" max="160" value="100">
+                        <label>速度 (BPM): <span id="tempo-value">120</span></label>
+                        <input type="range" id="arpeggio-tempo" min="60" max="180" value="120">
                     </div>
 
+                    <!-- 音序点编辑区域 -->
                     <div class="editor-section">
-                        <label>音符选择:</label>
-                        <div id="note-grid" class="note-grid">
-                            <!-- 动态生成音符按钮 -->
+                        <label>音序编辑:</label>
+                        <div class="sequence-controls">
+                            <button id="root-note-selector" class="control-btn">根音: C4</button>
+                            <button id="preview-sequence" class="control-btn">🎵 预览</button>
+                            <button id="randomize-sequence" class="control-btn">🎲 随机</button>
+                            <button id="reset-sequence" class="control-btn">🔄 重置</button>
                         </div>
-                    </div>
 
-                    <div class="editor-section">
-                        <label>和弦间隔:</label>
-                        <div id="interval-inputs">
-                            <input type="number" class="interval-input" value="0" min="0" max="12">
-                            <input type="number" class="interval-input" value="3" min="0" max="12">
-                            <input type="number" class="interval-input" value="5" min="0" max="12">
-                            <input type="number" class="interval-input" value="7" min="0" max="12">
-                        </div>
-                    </div>
-
-                    <div class="editor-section">
-                        <label>琶音模式:</label>
-                        <div class="pattern-options">
-                            <label><input type="radio" name="arpeggio-pattern" value="up"> 上行</label>
-                            <label><input type="radio" name="arpeggio-pattern" value="down"> 下行</label>
-                            <label><input type="radio" name="arpeggio-pattern" value="upDown" checked> 上下行</label>
+                        <div class="sequence-grid">
+                            <!-- 8个音序点，动态生成 -->
+                            <div class="sequence-step" data-step="0">
+                                <div class="step-point active" data-interval="0">
+                                    <span class="interval-value">0</span>
+                                </div>
+                                <div class="step-number">1</div>
+                            </div>
+                            <div class="sequence-step" data-step="1">
+                                <div class="step-point active" data-interval="3">
+                                    <span class="interval-value">+3</span>
+                                </div>
+                                <div class="step-number">2</div>
+                            </div>
+                            <div class="sequence-step" data-step="2">
+                                <div class="step-point inactive" data-interval="null">
+                                    <span class="interval-value">--</span>
+                                </div>
+                                <div class="step-number">3</div>
+                            </div>
+                            <div class="sequence-step" data-step="3">
+                                <div class="step-point active" data-interval="7">
+                                    <span class="interval-value">+7</span>
+                                </div>
+                                <div class="step-number">4</div>
+                            </div>
+                            <div class="sequence-step" data-step="4">
+                                <div class="step-point active" data-interval="8">
+                                    <span class="interval-value">+8</span>
+                                </div>
+                                <div class="step-number">5</div>
+                            </div>
+                            <div class="sequence-step" data-step="5">
+                                <div class="step-point inactive" data-interval="null">
+                                    <span class="interval-value">--</span>
+                                </div>
+                                <div class="step-number">6</div>
+                            </div>
+                            <div class="sequence-step" data-step="6">
+                                <div class="step-point active" data-interval="7">
+                                    <span class="interval-value">+7</span>
+                                </div>
+                                <div class="step-number">7</div>
+                            </div>
+                            <div class="sequence-step" data-step="7">
+                                <div class="step-point inactive" data-interval="null">
+                                    <span class="interval-value">--</span>
+                                </div>
+                                <div class="step-number">8</div>
+                            </div>
                         </div>
                     </div>
 
                     <div class="editor-actions">
-                        <button id="preview-arpeggio" class="action-btn">预览</button>
-                        <button id="reset-arpeggio" class="action-btn reset">重置</button>
+                        <button id="test-arpeggio-synth" class="action-btn">🔊 测试合成器</button>
                         <button id="save-arpeggio" class="action-btn save">保存</button>
                         <button id="apply-arpeggio" class="action-btn apply">应用</button>
                     </div>
@@ -200,39 +233,61 @@
 
             <!-- 鼓组编辑器模态框 -->
             <div id="drum-editor-modal" class="modal" style="display: none;">
-                <div class="modal-content">
+                <div class="modal-content drum-editor-layout">
                     <span class="close">&times;</span>
                     <h2>🥁 自定义鼓组编辑器</h2>
-                    
-                    <div class="editor-section">
-                        <label>基础预设:</label>
-                        <select id="drum-base-preset">
-                            <option value="0">Hip Hop</option>
-                            <option value="1">House</option>
-                            <option value="2">Techno</option>
-                            <option value="3">Funk</option>
-                            <option value="4">Reggae</option>
-                    </select>
-                    </div>
 
-                    <div class="editor-section">
-                        <label>16步音序器:</label>
-                        <div class="drum-controls">
-                            <button onclick="clearAllDrums()" class="quick-btn">清空所有</button>
-                            <button onclick="randomizeDrums()" class="quick-btn">随机化</button>
-                            <button onclick="copyPattern()" class="quick-btn">复制</button>
-                            <button onclick="pastePattern()" class="quick-btn">粘贴</button>
-                        </div>
-                        <div id="drum-sequencer" class="drum-sequencer">
-                            <!-- 动态生成鼓组音序器 -->
-                        </div>
-                    </div>
+                    <div class="drum-editor-container">
+                        <!-- 左侧管理面板 -->
+                        <div class="drum-management-panel">
+                            <div class="management-section">
+                                <h3>🎵 鼓组管理</h3>
 
-                    <div class="editor-actions">
-                        <button id="preview-drum" class="action-btn">预览</button>
-                        <button id="reset-drum" class="action-btn reset">重置</button>
-                        <button id="save-drum" class="action-btn save">保存</button>
-                        <button id="apply-drum" class="action-btn apply">应用</button>
+                                <!-- 鼓组列表 -->
+                                <div class="drum-group-list">
+                                    <div class="group-list-container">
+                                        <!-- 动态生成鼓组列表 -->
+                                    </div>
+                                </div>
+
+                                <!-- 管理操作 -->
+                                <div class="management-actions">
+                                    <button id="add-drum-group" class="management-btn">➕ 新建</button>
+                                    <button id="duplicate-drum-group" class="management-btn">📋 复制</button>
+                                    <button id="rename-drum-group" class="management-btn">✏️ 重命名</button>
+                                    <button id="delete-drum-group" class="management-btn">🗑️ 删除</button>
+                                </div>
+
+                                <!-- 位置调整 -->
+                                <div class="position-actions">
+                                    <button id="move-up-drum-group" class="position-btn">⬆️ 上移</button>
+                                    <button id="move-down-drum-group" class="position-btn">⬇️ 下移</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 右侧编辑区域 -->
+                        <div class="drum-editor-main">
+                            <div class="editor-section">
+                                <label>16步音序器:</label>
+                                <div class="drum-controls">
+                                    <button onclick="clearAllDrums()" class="quick-btn">清空所有</button>
+                                    <button onclick="randomizeDrums()" class="quick-btn">随机化</button>
+                                    <button onclick="copyPattern()" class="quick-btn">复制</button>
+                                    <button onclick="pastePattern()" class="quick-btn">粘贴</button>
+                                    <button onclick="testAllDrumSounds()" class="quick-btn">🔊 测试音频</button>
+                                </div>
+                                <div id="drum-sequencer" class="drum-sequencer">
+                                    <!-- 动态生成鼓组音序器 -->
+                                </div>
+                            </div>
+
+                            <div class="editor-actions">
+                                <button id="realtime-drum" class="action-btn realtime">🥁 实时预览</button>
+                                <button id="reset-drum" class="action-btn reset">重置</button>
+                                <button id="apply-drum" class="action-btn apply">应用</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
