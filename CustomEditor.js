@@ -27,6 +27,7 @@ export class CustomEditor {
         this.initPreviewSynth();
             this.initRealTimePreview();
             this.initCircularSequencer();
+            this.initializeSequencePreviewSynth();
 
             console.log('✅ 自定义编辑器已初始化');
         } catch (error) {
@@ -60,20 +61,7 @@ export class CustomEditor {
             });
         }
 
-        // 为鼓组编辑器添加实时预览控制
-        const drumActions = document.querySelector('#drum-editor-modal .editor-actions');
-        if (drumActions) {
-            const realTimeToggle = document.createElement('button');
-            realTimeToggle.id = 'toggle-realtime-drum';
-            realTimeToggle.className = 'action-btn realtime';
-            realTimeToggle.textContent = '🥁 实时预览';
-            realTimeToggle.title = '开启/关闭实时预览';
-            drumActions.insertBefore(realTimeToggle, drumActions.firstChild);
-            
-            realTimeToggle.addEventListener('click', () => {
-                this.toggleRealTimePreview('drum');
-            });
-        }
+        // 鼓组编辑器的实时预览按钮现在在HTML中静态定义，通过统一的事件绑定处理
     }
 
     initCircularSequencer() {
@@ -88,8 +76,8 @@ export class CustomEditor {
         // 创建圆形音序器容器
         this.createCircularSequencerContainer();
 
-        // 默认显示传统模式
-        this.switchToMode('traditional');
+        // 默认显示圆形模式
+        this.switchToMode('circular');
     }
 
     createModeToggleButton() {
@@ -139,39 +127,75 @@ export class CustomEditor {
     }
 
     switchToMode(mode) {
+        console.log(`🔄 切换到${mode}模式`);
+
         const traditionalSequencer = document.getElementById('drum-sequencer');
         const circularContainer = document.getElementById('circular-sequencer-container');
+        // 查找原始的传统模式按钮（不包括圆形模式的按钮）
+        const traditionalActions = document.querySelector('#drum-editor-modal .editor-actions:not(.circular-actions)');
         const toggleBtn = document.getElementById('mode-toggle-btn');
 
         if (mode === 'circular') {
             // 切换到圆形模式
+            console.log('📊 切换前传统模式数据:', this.getTraditionalModePatterns());
+
             if (traditionalSequencer) traditionalSequencer.style.display = 'none';
             if (circularContainer) circularContainer.style.display = 'block';
+            if (traditionalActions) {
+                traditionalActions.style.display = 'none';
+                console.log('✅ 隐藏传统模式按钮');
+            } else {
+                console.log('❌ 找不到传统模式按钮');
+            }
             if (toggleBtn) {
                 toggleBtn.textContent = '📋 传统模式';
                 toggleBtn.title = '切换到传统音序器';
             }
 
-            // 创建圆形音序器
-            this.createCircularSequencer();
+            // 创建圆形音序器（如果不存在）
+            if (!this.circularSequencer) {
+                console.log('🔧 创建新的圆形音序器');
+                this.createCircularSequencer();
+            } else {
+                console.log('♻️ 使用现有的圆形音序器');
+            }
+
+            // 同步传统模式数据到圆形模式
+            console.log('🔄 同步数据到圆形模式...');
+            this.syncPatternsToCircular();
+
             this.isCircularMode = true;
 
         } else {
             // 切换到传统模式
+            console.log('📊 切换前圆形模式数据:', this.circularSequencer ? this.circularSequencer.getPatterns() : '无');
+
             if (traditionalSequencer) traditionalSequencer.style.display = 'block';
             if (circularContainer) circularContainer.style.display = 'none';
+            if (traditionalActions) {
+                traditionalActions.style.display = 'flex';
+                console.log('✅ 显示传统模式按钮');
+            } else {
+                console.log('❌ 找不到传统模式按钮');
+            }
             if (toggleBtn) {
                 toggleBtn.textContent = '🎯 圆形模式';
                 toggleBtn.title = '切换到圆形音序器';
             }
 
-            // 销毁圆形音序器
-            if (this.circularSequencer) {
-                this.circularSequencer.destroy();
-                this.circularSequencer = null;
-            }
+            // 同步圆形模式数据到传统模式
+            console.log('🔄 同步数据到传统模式...');
+            this.syncPatternsFromCircular();
+
+            // 不销毁圆形音序器，保持数据
+            // if (this.circularSequencer) {
+            //     this.circularSequencer.destroy();
+            //     this.circularSequencer = null;
+            // }
             this.isCircularMode = false;
         }
+
+        console.log(`✅ 已切换到${mode}模式`);
     }
 
     createCircularSequencer() {
@@ -190,20 +214,100 @@ export class CustomEditor {
 
         // 同步当前的鼓组模式到圆形音序器
         this.syncPatternsToCircular();
+
+        // 直接在圆形容器中添加操作按钮
+        this.addButtonsToCircularContainer();
     }
 
-    syncPatternsToCircular() {
-        if (!this.circularSequencer) return;
+    addButtonsToCircularContainer() {
+        const container = document.getElementById('circular-sequencer-container');
+        if (!container) {
+            console.error('❌ 找不到圆形音序器容器');
+            return;
+        }
 
-        const patterns = this.getDrumPatterns();
+        // 检查是否已经添加了按钮
+        if (container.querySelector('.circular-actions')) {
+            console.log('✅ 圆形按钮已存在，跳过创建');
+            return;
+        }
+
+        console.log('🔧 开始创建圆形模式按钮...');
+
+        // 创建按钮容器
+        const buttonsDiv = document.createElement('div');
+        buttonsDiv.className = 'circular-actions editor-actions';
+        buttonsDiv.style.marginTop = '20px';
+
+        // 创建按钮HTML - 只保留实时预览、重置和应用按钮
+        buttonsDiv.innerHTML = `
+            <button id="realtime-circular" class="action-btn realtime">🥁 实时预览</button>
+            <button id="reset-circular" class="action-btn reset">重置</button>
+            <button id="apply-circular" class="action-btn apply">应用</button>
+        `;
+
+        // 添加到容器
+        container.appendChild(buttonsDiv);
+        console.log('✅ 圆形模式按钮已添加到容器');
+
+        // 绑定事件 - 使用统一的按钮事件处理
+        this.bindUnifiedDrumButtonEvents();
+    }
+
+
+
+    syncPatternsToCircular() {
+        if (!this.circularSequencer) {
+            console.log('❌ 无法同步到圆形模式：圆形音序器不存在');
+            return;
+        }
+
+        // 强制从传统模式DOM获取数据，不依赖当前模式状态
+        const patterns = this.getTraditionalModePatterns();
+        console.log('📊 传统模式数据:', patterns);
+
         this.circularSequencer.setPatterns(patterns);
+        console.log('✅ 数据已同步到圆形模式');
+
+        // 验证同步结果
+        const circularPatterns = this.circularSequencer.getPatterns();
+        console.log('📊 圆形模式同步后数据:', circularPatterns);
     }
 
     syncPatternsFromCircular() {
-        if (!this.circularSequencer) return;
+        if (!this.circularSequencer) {
+            console.log('❌ 无法从圆形模式同步：圆形音序器不存在');
+            return;
+        }
 
         const patterns = this.circularSequencer.getPatterns();
+        console.log('📊 圆形模式数据:', patterns);
+
         this.updateDrumSequencer(patterns);
+        console.log('✅ 数据已同步到传统模式');
+
+        // 验证同步结果
+        const traditionalPatterns = this.getDrumPatterns();
+        console.log('📊 传统模式同步后数据:', traditionalPatterns);
+    }
+
+    // 专门从传统模式DOM获取数据的方法
+    getTraditionalModePatterns() {
+        const patterns = {};
+        const drums = ['kick', 'snare', 'hihat', 'clap', 'openhat'];
+
+        drums.forEach(drum => {
+            const stepBtns = document.querySelectorAll(`[data-drum="${drum}"] .step-btn`);
+            if (stepBtns.length > 0) {
+                patterns[drum] = Array.from(stepBtns).map(btn => btn.classList.contains('active'));
+            } else {
+                // 如果没有找到对应的按钮，创建默认的空模式
+                patterns[drum] = new Array(16).fill(false);
+            }
+        });
+
+        console.log('🔄 从传统模式DOM获取模式:', patterns);
+        return patterns;
     }
 
     setupEventListeners() {
@@ -267,54 +371,37 @@ export class CustomEditor {
         // 速度控制
         const tempoSlider = document.getElementById('arpeggio-tempo');
         const tempoValue = document.getElementById('tempo-value');
-        
+
         if (tempoSlider && tempoValue) {
             tempoSlider.addEventListener('input', (e) => {
                 tempoValue.textContent = e.target.value;
             });
         }
 
-        // 和弦间隔输入
-        document.querySelectorAll('.interval-input').forEach(input => {
-            input.addEventListener('input', () => {
-                this.updateArpeggioPreview();
-            });
-        });
-
-        // 琶音模式选择
-        document.querySelectorAll('input[name="arpeggio-pattern"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                this.updateArpeggioPreview();
-            });
-        });
+        // 新的音序点编辑器事件
+        this.setupSequenceEditorEvents();
 
         // 按钮事件
-        const previewBtn = document.getElementById('preview-arpeggio');
-        const resetBtn = document.getElementById('reset-arpeggio');
         const saveBtn = document.getElementById('save-arpeggio');
         const applyBtn = document.getElementById('apply-arpeggio');
-        
-        if (previewBtn) {
-            previewBtn.addEventListener('click', () => {
-                this.previewArpeggio();
-            });
-        }
-        
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                this.resetArpeggioEditor();
-            });
-        }
-        
+
         if (saveBtn) {
             saveBtn.addEventListener('click', () => {
                 this.openSavePresetModal('arpeggio');
             });
         }
-        
+
         if (applyBtn) {
             applyBtn.addEventListener('click', () => {
                 this.applyArpeggioChanges();
+            });
+        }
+
+        // 测试合成器按钮
+        const testSynthBtn = document.getElementById('test-arpeggio-synth');
+        if (testSynthBtn) {
+            testSynthBtn.addEventListener('click', () => {
+                this.testArpeggioSynth();
             });
         }
     }
@@ -328,35 +415,53 @@ export class CustomEditor {
             });
         }
 
-        // 按钮事件
-        const previewBtn = document.getElementById('preview-drum');
-        const resetBtn = document.getElementById('reset-drum');
-        const saveBtn = document.getElementById('save-drum');
-        const applyBtn = document.getElementById('apply-drum');
-        
-        if (previewBtn) {
-            previewBtn.addEventListener('click', () => {
-                this.previewDrum();
-            });
-        }
-        
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                this.resetDrumEditor();
-            });
-        }
-        
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => {
-                this.openSavePresetModal('drum');
-            });
-        }
-        
-        if (applyBtn) {
-            applyBtn.addEventListener('click', () => {
-                this.applyDrumChanges();
-            });
-        }
+        // 统一的按钮事件处理 - 传统模式和圆形模式使用相同逻辑
+        this.bindUnifiedDrumButtonEvents();
+    }
+
+    // 统一的鼓组按钮事件绑定
+    bindUnifiedDrumButtonEvents() {
+        // 实时预览按钮 - 支持传统模式和圆形模式
+        const realtimeButtons = [
+            document.getElementById('realtime-drum'),      // 传统模式
+            document.getElementById('realtime-circular')   // 圆形模式
+        ];
+
+        realtimeButtons.forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    this.toggleRealTimePreview('drum');
+                });
+            }
+        });
+
+        // 重置按钮 - 支持传统模式和圆形模式
+        const resetButtons = [
+            document.getElementById('reset-drum'),         // 传统模式
+            document.getElementById('reset-circular')      // 圆形模式
+        ];
+
+        resetButtons.forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    this.resetDrumEditor();
+                });
+            }
+        });
+
+        // 应用按钮 - 支持传统模式和圆形模式
+        const applyButtons = [
+            document.getElementById('apply-drum'),         // 传统模式
+            document.getElementById('apply-circular')      // 圆形模式
+        ];
+
+        applyButtons.forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    this.applyUnifiedDrumChanges();
+                });
+            }
+        });
     }
 
     setupSavePresetEvents() {
@@ -411,7 +516,8 @@ export class CustomEditor {
             { id: 'kick', name: 'Kick', emoji: '🦵', color: 'drum-kick' },
             { id: 'snare', name: 'Snare', emoji: '🥁', color: 'drum-snare' },
             { id: 'hihat', name: 'Hi-hat', emoji: '🎩', color: 'drum-hihat' },
-            { id: 'clap', name: 'Clap', emoji: '👏', color: 'drum-clap' }
+            { id: 'clap', name: 'Clap', emoji: '👏', color: 'drum-clap' },
+            { id: 'openhat', name: 'Open Hat', emoji: '🎩', color: 'drum-openhat' }
         ];
         
         drums.forEach(drum => {
@@ -474,20 +580,93 @@ export class CustomEditor {
                 oscillator: { type: 'sine' },
                 envelope: { attack: 0.1, decay: 0.2, sustain: 0.5, release: 0.8 }
             }).toDestination();
-            
+
             this.previewSynth.volume.value = -10; // 降低预览音量
+            console.log('✅ 琶音预览合成器已创建');
         } catch (error) {
-            console.warn('无法创建预览合成器:', error);
+            console.warn('❌ 无法创建预览合成器:', error);
+        }
+    }
+
+    // 测试琶音合成器功能
+    testArpeggioSynth() {
+        console.log('🎵 开始测试琶音合成器...');
+
+        try {
+            // 确保合成器已创建
+            if (!this.previewSynth) {
+                console.log('🔧 创建预览合成器...');
+                this.createPreviewSynth();
+            }
+
+            if (!this.previewSynth) {
+                throw new Error('无法创建预览合成器');
+            }
+
+            // 测试音符序列
+            const testNotes = ['C4', 'E4', 'G4', 'C5'];
+            let noteIndex = 0;
+
+            console.log('🎼 播放测试音符序列:', testNotes);
+
+            const playNextNote = () => {
+                if (noteIndex >= testNotes.length) {
+                    console.log('✅ 琶音合成器测试完成');
+                    return;
+                }
+
+                const note = testNotes[noteIndex];
+                console.log(`🎵 播放音符: ${note}`);
+
+                try {
+                    this.previewSynth.triggerAttackRelease(note, "4n");
+                    console.log(`✅ ${note} 播放成功`);
+                } catch (error) {
+                    console.error(`❌ ${note} 播放失败:`, error);
+                }
+
+                noteIndex++;
+                setTimeout(playNextNote, 500); // 每个音符间隔500ms
+            };
+
+            playNextNote();
+
+        } catch (error) {
+            console.error('❌ 琶音合成器测试失败:', error);
+            alert('琶音合成器测试失败：' + error.message);
         }
     }
 
     openArpeggioEditor() {
-        this.currentEditingType = 'arpeggio';
-        this.populateArpeggioPresets(); // 填充预设选项
-        this.loadArpeggioPreset('0'); // 默认加载第一个预设
-        const modal = document.getElementById('arpeggio-editor-modal');
-        if (modal) {
-            modal.style.display = 'block';
+        console.log('🎵 打开琶音编辑器...');
+
+        try {
+            this.currentEditingType = 'arpeggio';
+
+            // 检查游戏和音乐管理器是否已初始化
+            if (!window.game || !window.game.musicManager) {
+                console.error('❌ 游戏或音乐管理器未初始化');
+                alert('琶音编辑器无法打开：游戏未正确初始化。请刷新页面重试。');
+                return;
+            }
+
+            console.log('🔧 填充琶音预设选项...');
+            this.populateArpeggioPresets(); // 填充预设选项
+
+            console.log('📋 加载默认预设...');
+            this.loadArpeggioPreset('0'); // 默认加载第一个预设
+
+            const modal = document.getElementById('arpeggio-editor-modal');
+            if (modal) {
+                modal.style.display = 'block';
+                console.log('✅ 琶音编辑器已打开');
+            } else {
+                console.error('❌ 找不到琶音编辑器模态框');
+                alert('琶音编辑器界面未找到，请检查页面是否正确加载。');
+            }
+        } catch (error) {
+            console.error('❌ 打开琶音编辑器时发生错误:', error);
+            alert('琶音编辑器打开失败：' + error.message);
         }
     }
 
@@ -499,6 +678,9 @@ export class CustomEditor {
         // 初始化圆形音序器
         this.initCircularSequencerInModal();
 
+        // 初始化鼓组管理
+        this.initDrumGroupManagement();
+
         const modal = document.getElementById('drum-editor-modal');
         if (modal) {
             modal.style.display = 'block';
@@ -507,6 +689,11 @@ export class CustomEditor {
 
     closeModal(modal) {
         if (modal) {
+            // 如果是鼓组编辑器，保存当前鼓组模式
+            if (modal.id === 'drum-editor-modal' && this.drumGroups) {
+                this.saveDrumGroupPatterns();
+            }
+
             modal.style.display = 'none';
             this.stopPreview();
             this.stopRealTimePreview(); // 停止实时预览
@@ -521,34 +708,52 @@ export class CustomEditor {
     }
 
     loadArpeggioPreset(presetIndex) {
+        console.log('🎵 加载琶音预设:', presetIndex);
+
         if (presetIndex === 'custom') {
-            this.resetArpeggioEditor();
+            console.log('🔧 重置为自定义模式');
+            this.resetSequence();
             return;
         }
 
         // 从MusicManager获取预设
         if (window.game && window.game.musicManager && window.game.musicManager.musicPresets[presetIndex]) {
             const preset = window.game.musicManager.musicPresets[presetIndex];
-            
-            // 更新音符选择
-            this.updateNoteSelection(preset.scale);
-            
-            // 更新和弦间隔
-            this.updateIntervalInputs(preset.chordIntervals);
-            
-            // 更新琶音模式
-            const patternRadio = document.querySelector(`input[name="arpeggio-pattern"][value="${preset.arpeggioPattern}"]`);
-            if (patternRadio) {
-                patternRadio.checked = true;
+            console.log('📋 加载的预设数据:', preset);
+
+            // 优先使用sequence字段，如果没有则从chordIntervals生成
+            let sequence = null;
+            if (preset.sequence && Array.isArray(preset.sequence)) {
+                sequence = preset.sequence;
+                console.log('🎵 使用预设的sequence:', sequence);
+            } else if (preset.chordIntervals && Array.isArray(preset.chordIntervals)) {
+                // 从chordIntervals生成简单的序列
+                sequence = this.generateSequenceFromIntervals(preset.chordIntervals);
+                console.log('🎵 从chordIntervals生成sequence:', sequence);
+            } else {
+                // 使用默认序列
+                sequence = [0, 3, null, 7, 8, null, 7, null];
+                console.log('🎵 使用默认sequence:', sequence);
             }
-            
+
+            // 加载序列到编辑器
+            this.loadSequenceData(sequence);
+
             // 更新速度
+            const tempo = preset.tempo || 120;
             const tempoSlider = document.getElementById('arpeggio-tempo');
             const tempoValue = document.getElementById('tempo-value');
             if (tempoSlider && tempoValue) {
-                tempoSlider.value = preset.tempo;
-                tempoValue.textContent = preset.tempo;
+                tempoSlider.value = tempo;
+                tempoValue.textContent = tempo;
+                console.log('🎵 设置速度:', tempo);
             }
+
+            console.log('✅ 琶音预设加载完成');
+        } else {
+            console.error('❌ 无法获取琶音预设:', presetIndex);
+            console.log('🔍 可用的预设:', window.game?.musicManager?.musicPresets?.length || 0);
+            this.resetSequence();
         }
     }
 
@@ -583,15 +788,34 @@ export class CustomEditor {
     }
 
     updateIntervalInputs(intervals) {
+        console.log('🎵 更新和弦间隔输入:', intervals);
+
         const inputs = document.querySelectorAll('.interval-input');
+
+        // 安全检查：确保intervals是数组
+        if (!intervals || !Array.isArray(intervals)) {
+            console.warn('⚠️ intervals不是有效数组，使用默认值');
+            intervals = [0, 3, 5, 7]; // 默认大七和弦
+        }
+
+        // 清空所有输入框
+        inputs.forEach(input => {
+            input.value = '';
+        });
+
+        // 填充新的间隔值
         intervals.forEach((interval, index) => {
-            if (inputs[index]) {
+            if (inputs[index] && interval !== undefined && interval !== null) {
                 inputs[index].value = interval;
+                console.log(`✅ 设置间隔 ${index}: ${interval}`);
             }
         });
+
+        console.log('✅ 和弦间隔输入已更新');
     }
 
     updateDrumSequencer(patterns) {
+        // 更新传统模式的按钮
         Object.entries(patterns).forEach(([drum, pattern]) => {
             const stepBtns = document.querySelectorAll(`[data-drum="${drum}"] .step-btn`);
             stepBtns.forEach((btn, index) => {
@@ -602,6 +826,12 @@ export class CustomEditor {
                 }
             });
         });
+
+        // 更新圆形音序器
+        if (this.circularSequencer) {
+            this.circularSequencer.setPatterns(patterns);
+            console.log('已更新圆形音序器预设:', patterns);
+        }
     }
 
     toggleNote(noteBtn) {
@@ -611,6 +841,33 @@ export class CustomEditor {
 
     toggleStep(stepBtn) {
         stepBtn.classList.toggle('active');
+
+        // 测试播放这个鼓声 - 添加调试信息
+        const drumType = stepBtn.dataset.drum;
+        const stepIndex = stepBtn.dataset.step;
+        const isActive = stepBtn.classList.contains('active');
+
+        console.log(`🥁 点击步骤: ${drumType}[${stepIndex}], 激活状态: ${isActive}`);
+
+        // 立即播放这个鼓声进行测试（只在激活时播放）
+        if (isActive) {
+            if (this.previewDrumPlayers && this.previewDrumPlayers.player(drumType)) {
+                console.log(`🔊 播放 ${drumType} 音频`);
+                this.previewDrumPlayers.player(drumType).start();
+            } else {
+                console.error(`❌ 无法播放 ${drumType}: 播放器不存在或未加载`);
+
+                // 检查播放器状态
+                if (!this.previewDrumPlayers) {
+                    console.error('❌ previewDrumPlayers 未初始化');
+                    // 尝试创建播放器
+                    this.createPreviewDrumPlayers();
+                } else if (!this.previewDrumPlayers.player(drumType)) {
+                    console.error(`❌ ${drumType} 播放器不存在`);
+                    console.log('🔍 可用的播放器:', Object.keys(this.previewDrumPlayers._players || {}));
+                }
+            }
+        }
     }
 
     resetArpeggioEditor() {
@@ -638,10 +895,19 @@ export class CustomEditor {
     }
 
     resetDrumEditor() {
-        // 清除所有步骤
+        console.log('🔄 重置鼓组编辑器...', { isCircularMode: this.isCircularMode });
+
+        // 清除传统模式的步骤
         document.querySelectorAll('.step-btn').forEach(btn => {
             btn.classList.remove('active');
         });
+
+        // 清除圆形模式的步骤
+        if (this.circularSequencer) {
+            this.circularSequencer.clearAll();
+        }
+
+        console.log('✅ 鼓组编辑器已重置');
     }
 
     updateArpeggioPreview() {
@@ -663,14 +929,36 @@ export class CustomEditor {
 
     startRealTimePreview(type) {
         this.isRealTimePreview = true;
-        
-        // 更新按钮状态
-        const button = document.getElementById(`toggle-realtime-${type}`);
-        if (button) {
-            button.textContent = type === 'arpeggio' ? '⏹️ 停止预览' : '⏹️ 停止预览';
-            button.classList.add('active');
+
+        // 更新按钮状态 - 优先查找圆形模式按钮
+        let button = null;
+
+        // 如果是圆形模式，优先使用圆形按钮
+        if (this.isCircularMode) {
+            button = document.querySelector('#realtime-circular');
         }
-        
+
+        // 如果没找到圆形按钮，查找传统模式按钮
+        if (!button) {
+            const buttonSelectors = [
+                `#toggle-realtime-${type}`,
+                `#preview-${type}`
+            ];
+
+            for (const selector of buttonSelectors) {
+                button = document.querySelector(selector);
+                if (button) break;
+            }
+        }
+
+        if (button) {
+            button.textContent = '⏹️ 停止预览';
+            button.classList.add('active');
+            console.log(`✅ 实时预览按钮已激活: ${button.id} (圆形模式: ${this.isCircularMode})`);
+        } else {
+            console.warn('⚠️ 找不到实时预览按钮');
+        }
+
         if (type === 'arpeggio') {
             this.startRealTimeArpeggioPreview();
         } else if (type === 'drum') {
@@ -680,32 +968,54 @@ export class CustomEditor {
 
     stopRealTimePreview() {
         this.isRealTimePreview = false;
-        
+
         // 清除预览循环
         if (this.realTimePreviewInterval) {
             clearInterval(this.realTimePreviewInterval);
             this.realTimePreviewInterval = null;
         }
-        
+
         // 停止预览音频
         this.stopPreview();
-        
-        // 重置按钮状态
-        const arpeggioBtn = document.getElementById('toggle-realtime-arpeggio');
-        const drumBtn = document.getElementById('toggle-realtime-drum');
-        
-        if (arpeggioBtn) {
-            arpeggioBtn.textContent = '🎵 实时预览';
-            arpeggioBtn.classList.remove('active');
+
+        // 重置按钮状态 - 优先处理圆形模式按钮
+        let button = null;
+
+        if (this.isCircularMode) {
+            button = document.querySelector('#realtime-circular');
+            if (button) {
+                button.textContent = '🥁 实时预览';
+                button.classList.remove('active');
+                console.log(`✅ 圆形实时预览按钮已重置: ${button.id}`);
+            }
         }
-        
-        if (drumBtn) {
-            drumBtn.textContent = '🥁 实时预览';
-            drumBtn.classList.remove('active');
-        }
-        
+
+        // 重置传统模式按钮
+        const buttonSelectors = [
+            '#toggle-realtime-arpeggio',
+            '#toggle-realtime-drum'
+        ];
+
+        buttonSelectors.forEach(selector => {
+            const btn = document.querySelector(selector);
+            if (btn) {
+                if (selector.includes('arpeggio')) {
+                    btn.textContent = '🎵 实时预览';
+                } else {
+                    btn.textContent = '🥁 实时预览';
+                }
+                btn.classList.remove('active');
+                console.log(`✅ 传统实时预览按钮已重置: ${btn.id}`);
+            }
+        });
+
         // 清除视觉反馈
         this.clearPreviewHighlights();
+
+        // 重置圆形编辑器的播放指针
+        if (this.circularSequencer && this.isCircularMode) {
+            this.circularSequencer.setPlayPosition(-1);
+        }
     }
 
     startRealTimeArpeggioPreview() {
@@ -739,21 +1049,35 @@ export class CustomEditor {
         if (this.realTimePreviewInterval) {
             clearInterval(this.realTimePreviewInterval);
         }
-        
+
         const patterns = this.getDrumPatterns();
-        const drumSounds = ['kick', 'snare', 'hihat', 'clap'];
-        
+        const drumSounds = ['kick', 'snare', 'hihat', 'clap', 'openhat'];
+
+        // 验证模式数据
+        console.log('🎵 开始实时鼓组预览，当前模式:', patterns);
+
+        // 检查是否有有效的模式数据
+        const hasValidPatterns = Object.keys(patterns).length > 0 &&
+            drumSounds.some(drum => patterns[drum] && patterns[drum].some(step => step === true));
+
+        if (!hasValidPatterns) {
+            console.warn('⚠️ 没有有效的鼓组模式数据，使用默认模式');
+            // 使用默认模式
+            const defaultPatterns = this.getDefaultDrumPatterns();
+            Object.assign(patterns, defaultPatterns);
+        }
+
         // 确保有预览鼓声播放器
         if (!this.previewDrumPlayers) {
             this.createPreviewDrumPlayers();
         }
-        
+
         let stepIndex = 0;
-        
+
         // 计算与Tone.Transport相同的16分音符间隔
         const currentBPM = Tone.Transport.bpm.value;
         const sixteenthNoteInterval = (60 / currentBPM / 4) * 1000; // 转换为毫秒
-        
+
         this.realTimePreviewInterval = setInterval(() => {
             // 播放当前步骤的鼓声
             drumSounds.forEach(drum => {
@@ -764,10 +1088,15 @@ export class CustomEditor {
                     }
                 }
             });
-            
+
             // 视觉反馈
             this.highlightCurrentStep(stepIndex);
-            
+
+            // 更新圆形编辑器的播放指针
+            if (this.circularSequencer && this.isCircularMode) {
+                this.circularSequencer.setPlayPosition(stepIndex);
+            }
+
             stepIndex = (stepIndex + 1) % 16;
         }, sixteenthNoteInterval);
     }
@@ -779,20 +1108,41 @@ export class CustomEditor {
                 kick: 'assets/kick.wav',
                 snare: 'assets/snare.wav',
                 hihat: 'assets/hihat.wav',
-                clap: 'assets/clap.wav'
+                clap: 'assets/clap.wav',
+                openhat: 'assets/openhat.wav' // 使用专门的openhat音频文件
             },
             onload: () => {
-                // 设置与原版相同的音量
-                this.previewDrumPlayers.player('kick').volume.value = -6;
-                this.previewDrumPlayers.player('snare').volume.value = 0;
-                this.previewDrumPlayers.player('hihat').volume.value = -2;
-                this.previewDrumPlayers.player('clap').volume.value = 0;
-                console.log("预览鼓声样本加载完成");
+                try {
+                    // 检查每个音频是否加载成功
+                    const drums = ['kick', 'snare', 'hihat', 'clap', 'openhat'];
+                    drums.forEach(drum => {
+                        const player = this.previewDrumPlayers.player(drum);
+                        if (player && player.loaded) {
+                            console.log(`✅ ${drum} 音频加载成功`);
+                        } else {
+                            console.error(`❌ ${drum} 音频加载失败`);
+                        }
+                    });
+
+                    // 设置与原版相同的音量
+                    this.previewDrumPlayers.player('kick').volume.value = -6;
+                    this.previewDrumPlayers.player('snare').volume.value = 0;
+                    this.previewDrumPlayers.player('hihat').volume.value = -2;
+                    this.previewDrumPlayers.player('clap').volume.value = 0;
+                    this.previewDrumPlayers.player('openhat').volume.value = -1; // Open hat略大声
+                    this.drumPlayersLoaded = true;
+                    console.log("🔊 预览鼓声样本加载完成，包括OpenHat");
+                } catch (error) {
+                    console.error("设置鼓声音量失败:", error);
+                }
             },
             onerror: (error) => {
                 console.error("预览鼓声样本加载失败:", error);
+                this.drumPlayersLoaded = false;
             }
         }).toDestination();
+
+        this.drumPlayersLoaded = false;
     }
 
     highlightCurrentNote(note) {
@@ -833,8 +1183,13 @@ export class CustomEditor {
     }
 
     populateArpeggioPresets() {
+        console.log('🔧 填充琶音预设选项...');
+
         const select = document.getElementById('arpeggio-base-preset');
-        if (!select) return;
+        if (!select) {
+            console.error('❌ 找不到琶音预设选择器');
+            return;
+        }
 
         // 清空现有选项
         select.innerHTML = '';
@@ -842,27 +1197,21 @@ export class CustomEditor {
         // 获取音乐预设
         if (window.game && window.game.musicManager && window.game.musicManager.musicPresets) {
             const presets = window.game.musicManager.musicPresets;
+            console.log(`📋 找到 ${presets.length} 个音乐预设:`, presets.map(p => p.name));
+
             presets.forEach((preset, index) => {
                 const option = document.createElement('option');
                 option.value = index;
                 option.textContent = preset.name;
                 select.appendChild(option);
+                console.log(`✅ 添加预设选项 ${index}: ${preset.name}`);
             });
         } else {
-            // 默认预设（如果无法获取）
-            const defaultPresets = [
-                'C Minor Pentatonic',
-                'G Major Pentatonic', 
-                'E Minor Blues',
-                'A Dorian Mode',
-                'Japanese Pentatonic'
-            ];
-            
-            defaultPresets.forEach((name, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = name;
-                select.appendChild(option);
+            console.error('❌ 无法获取音乐预设');
+            console.log('🔍 检查状态:', {
+                game: !!window.game,
+                musicManager: !!window.game?.musicManager,
+                musicPresets: !!window.game?.musicManager?.musicPresets
             });
         }
 
@@ -871,6 +1220,9 @@ export class CustomEditor {
         customOption.value = 'custom';
         customOption.textContent = '🎨 自定义';
         select.appendChild(customOption);
+        console.log('✅ 添加自定义选项');
+
+        console.log('✅ 琶音预设选项填充完成');
     }
 
     populateDrumPresets() {
@@ -887,22 +1239,6 @@ export class CustomEditor {
                 const option = document.createElement('option');
                 option.value = index;
                 option.textContent = preset.name;
-                select.appendChild(option);
-            });
-        } else {
-            // 默认预设（如果无法获取）
-            const defaultPresets = [
-                'Hip Hop',
-                'House',
-                'Techno', 
-                'Funk',
-                'Reggae'
-            ];
-            
-            defaultPresets.forEach((name, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = name;
                 select.appendChild(option);
             });
         }
@@ -990,6 +1326,12 @@ export class CustomEditor {
                         this.previewDrumPlayers.player(drumType).start(time);
                     }
                 });
+
+                // 更新圆形编辑器的播放指针
+                if (this.circularSequencer && this.isCircularMode) {
+                    this.circularSequencer.setPlayPosition(stepIndex);
+                }
+
                 stepIndex = (stepIndex + 1) % 16;
             }, new Array(16).fill(0), "16n");
             
@@ -1013,9 +1355,14 @@ export class CustomEditor {
             this.previewSequence.dispose();
             this.previewSequence = null;
         }
-        
+
         // 清理预览高亮
         this.clearPreviewHighlights();
+
+        // 重置圆形编辑器的播放指针
+        if (this.circularSequencer && this.isCircularMode) {
+            this.circularSequencer.setPlayPosition(-1);
+        }
     }
 
     getSelectedNotes() {
@@ -1033,7 +1380,19 @@ export class CustomEditor {
     getDrumPatterns() {
         // 如果是圆形模式，从圆形音序器获取数据
         if (this.isCircularMode && this.circularSequencer) {
-            return this.circularSequencer.getPatterns();
+            const patterns = this.circularSequencer.getPatterns();
+            console.log('🔄 从圆形音序器获取模式:', patterns);
+
+            // 验证数据完整性
+            const drums = ['kick', 'snare', 'hihat', 'clap', 'openhat'];
+            drums.forEach(drum => {
+                if (!patterns[drum] || !Array.isArray(patterns[drum])) {
+                    patterns[drum] = new Array(16).fill(false);
+                    console.warn(`⚠️ 修复缺失的鼓声模式: ${drum}`);
+                }
+            });
+
+            return patterns;
         }
 
         // 传统模式：从DOM获取数据
@@ -1050,6 +1409,7 @@ export class CustomEditor {
             }
         });
 
+        console.log('🔄 从传统模式获取模式:', patterns);
         return patterns;
     }
 
@@ -1215,96 +1575,411 @@ export class CustomEditor {
         this.closeModal(document.getElementById('arpeggio-editor-modal'));
     }
 
-    applyDrumChanges() {
+
+
+
+
+    // 统一的应用方法 - 传统模式和圆形模式都使用这个
+    applyUnifiedDrumChanges() {
+        console.log('🔄 应用鼓组变更...', {
+            isCircularMode: this.isCircularMode,
+            currentGroupId: this.currentDrumGroupId
+        });
+
+        // 获取当前模式的鼓组数据
         const patterns = this.getDrumPatterns();
-        
-        // 检查是否有激活的步骤
-        const hasActiveSteps = Object.values(patterns).some(pattern => 
+
+        // 检查是否有有效的模式数据
+        const hasActiveSteps = Object.values(patterns).some(pattern =>
             pattern.some(step => step === true)
         );
-        
+
         if (!hasActiveSteps) {
             alert('请至少激活一个鼓点！');
             return;
         }
-        
-        // 将预设应用到游戏中
-        if (window.drumManager) {
-            const drumPresets = window.drumManager.getAllDrumPresets();
-            const currentIndex = window.drumManager.currentDrumPresetIndex || 0;
-            const currentPreset = drumPresets[currentIndex];
-            
-            // 修改现有预设或创建新的
-            let presetName;
-            let newBPM = currentPreset ? currentPreset.bpm : 120;
-            
-            if (currentPreset) {
-                // 修改现有预设
-                presetName = currentPreset.name + " (已修改)";
-                // 保持现有的BPM
-                newBPM = currentPreset.bpm;
-                
-                // 更新现有预设
-                const updatedPreset = {
-                    ...currentPreset,
-                    name: presetName,
-                    patterns: patterns,
-                    modified: true
-                };
-                
-                // 直接修改drumPresets数组中的预设
-                if (window.drumManager.updateDrumPreset) {
-                    window.drumManager.updateDrumPreset(currentIndex, updatedPreset);
-                } else {
-                    // 如果没有更新方法，直接修改
-                    window.drumManager.drumPresets[currentIndex] = updatedPreset;
-                }
-            } else {
-                // 创建新预设
-                presetName = "自定义鼓组预设";
-                newBPM = 120; // 默认BPM
-                
-                const newPreset = {
-                    name: presetName,
-                    bpm: newBPM,
-                    patterns: patterns,
-                    custom: true
-                };
-                
-                if (window.drumManager.addDrumPreset) {
-                    window.drumManager.addDrumPreset(newPreset);
-                } else {
-                    window.drumManager.drumPresets.push(newPreset);
-                    window.drumManager.currentDrumPresetIndex = window.drumManager.drumPresets.length - 1;
-                }
-            }
-            
-            // 应用鼓组模式
-            if (window.drumManager.setDrumPreset) {
-                window.drumManager.setDrumPreset(currentIndex);
-            } else {
-                window.drumManager.drumPattern = patterns;
-            }
-            
-            // 应用BPM - 以最后修改的鼓组BPM为准
-            Tone.Transport.bpm.value = newBPM;
-            console.log(`BPM已更新为鼓组预设: ${newBPM}`);
-            
-            // 更新UI显示
-            if (window.game && window.game._generateDrumPresetOptions) {
-                window.game._generateDrumPresetOptions();
-            }
-            if (window.game && window.game._showPresetChangeNotification) {
-                window.game._showPresetChangeNotification(`鼓组: ${presetName} (${newBPM} BPM)`, 'drum');
-            }
-            
-            console.log('✅ 鼓组预设已应用:', { name: presetName, bpm: newBPM, patterns });
-            alert('鼓组设置已应用！');
-        } else {
-            alert('无法应用预设：鼓组管理器未正确初始化');
+
+        // 保存到当前鼓组
+        this.saveDrumGroupPatterns();
+
+        // 如果当前鼓组是自定义鼓组，保存到本地存储
+        const currentGroup = this.drumGroups.find(g => g.id === this.currentDrumGroupId);
+        if (currentGroup && currentGroup.type === 'custom') {
+            this.saveCustomDrumGroupsToStorage();
+            console.log(`✅ 自定义鼓组 "${currentGroup.name}" 已保存`);
         }
-        
-        this.closeModal(document.getElementById('drum-editor-modal'));
+
+        // 同步两种模式的数据
+        if (this.isCircularMode) {
+            // 圆形模式 -> 传统模式
+            this.syncPatternsFromCircular();
+        } else {
+            // 传统模式 -> 圆形模式
+            this.syncPatternsToCircular();
+        }
+
+        // 显示成功消息
+        alert(`鼓组 "${currentGroup?.name || '未知'}" 的编辑已保存！`);
+
+        console.log('✅ 统一鼓组变更已应用', {
+            mode: this.isCircularMode ? '圆形' : '传统',
+            groupId: this.currentDrumGroupId,
+            groupName: currentGroup?.name,
+            patterns: patterns
+        });
+    }
+
+    // 保存自定义鼓组到本地存储
+    saveCustomDrumGroupsToStorage() {
+        try {
+            const customGroups = this.drumGroups.filter(group => group.type === 'custom');
+            localStorage.setItem('customDrumGroups', JSON.stringify(customGroups));
+            console.log('✅ 自定义鼓组已保存到本地存储', customGroups);
+        } catch (error) {
+            console.error('❌ 保存自定义鼓组失败:', error);
+        }
+    }
+
+    // 从本地存储加载自定义鼓组
+    loadCustomDrumGroupsFromStorage() {
+        try {
+            const saved = localStorage.getItem('customDrumGroups');
+            if (saved) {
+                const customGroups = JSON.parse(saved);
+                console.log('✅ 从本地存储加载自定义鼓组', customGroups);
+                return customGroups;
+            }
+        } catch (error) {
+            console.error('❌ 加载自定义鼓组失败:', error);
+        }
+        return [];
+    }
+
+    // ===== 鼓组管理功能 =====
+    initDrumGroupManagement() {
+        // 初始化鼓组数据，整合预设和自定义鼓组
+        if (!this.drumGroups) {
+            this.drumGroups = [];
+
+            // 添加基础预设
+            const drumPresets = window.drumManager?.getAllDrumPresets() || [];
+            drumPresets.forEach((preset, index) => {
+                this.drumGroups.push({
+                    id: `preset_${index}`,
+                    name: preset.name,
+                    type: 'preset',
+                    patterns: preset.patterns || this.getEmptyDrumPatterns(),
+                    bpm: preset.bpm || 120
+                });
+            });
+
+            // 加载保存的自定义鼓组
+            const savedCustomGroups = this.loadCustomDrumGroupsFromStorage();
+            if (savedCustomGroups.length > 0) {
+                this.drumGroups.push(...savedCustomGroups);
+            } else {
+                // 如果没有保存的鼓组，添加默认自定义鼓组
+                this.drumGroups.push(
+                    { id: 'custom_default', name: '我的鼓组 1', type: 'custom', patterns: this.getDefaultDrumPatterns() }
+                );
+            }
+        }
+
+        this.currentDrumGroupId = this.drumGroups[0]?.id || 'custom_default';
+        this.updateDrumGroupList();
+        this.setupDrumGroupEvents();
+        this.updatePositionButtons();
+    }
+
+    getDefaultDrumPatterns() {
+        return {
+            kick: [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false],
+            snare: [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false],
+            hihat: [true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false],
+            clap: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+            openhat: [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]
+        };
+    }
+
+    getEmptyDrumPatterns() {
+        return {
+            kick: new Array(16).fill(false),
+            snare: new Array(16).fill(false),
+            hihat: new Array(16).fill(false),
+            clap: new Array(16).fill(false),
+            openhat: new Array(16).fill(false)
+        };
+    }
+
+    updateDrumGroupList() {
+        const container = document.querySelector('.group-list-container');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        this.drumGroups.forEach(group => {
+            const groupItem = document.createElement('div');
+            groupItem.className = `group-item ${group.type || 'custom'}`;
+            if (group.id === this.currentDrumGroupId) {
+                groupItem.classList.add('active');
+            }
+
+            groupItem.innerHTML = `
+                <span class="group-name">${group.name}</span>
+                <span class="group-type">${group.type === 'preset' ? '预设' : '自定义'}</span>
+            `;
+
+            groupItem.addEventListener('click', () => {
+                this.switchDrumGroup(group.id);
+            });
+
+            container.appendChild(groupItem);
+        });
+    }
+
+    setupDrumGroupEvents() {
+        // 管理按钮事件
+        const addBtn = document.getElementById('add-drum-group');
+        const renameBtn = document.getElementById('rename-drum-group');
+        const deleteBtn = document.getElementById('delete-drum-group');
+        const duplicateBtn = document.getElementById('duplicate-drum-group');
+        const moveUpBtn = document.getElementById('move-up-drum-group');
+        const moveDownBtn = document.getElementById('move-down-drum-group');
+
+        if (addBtn) {
+            addBtn.addEventListener('click', () => this.addDrumGroup());
+        }
+
+        if (renameBtn) {
+            renameBtn.addEventListener('click', () => this.renameDrumGroup());
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => this.deleteDrumGroup());
+        }
+
+        if (duplicateBtn) {
+            duplicateBtn.addEventListener('click', () => this.duplicateDrumGroup());
+        }
+
+        if (moveUpBtn) {
+            moveUpBtn.addEventListener('click', () => this.moveDrumGroupUp());
+        }
+
+        if (moveDownBtn) {
+            moveDownBtn.addEventListener('click', () => this.moveDrumGroupDown());
+        }
+    }
+
+    switchDrumGroup(groupId) {
+        // 保存当前鼓组的模式
+        this.saveDrumGroupPatterns();
+
+        // 切换到新鼓组
+        this.currentDrumGroupId = groupId;
+        const group = this.drumGroups.find(g => g.id === groupId);
+
+        if (group) {
+            // 确保模式数据完整
+            if (!group.patterns) {
+                group.patterns = this.getEmptyDrumPatterns();
+                console.log(`🔧 为鼓组 ${group.name} 创建空模式`);
+            }
+
+            // 验证每个鼓声的数据完整性
+            const drums = ['kick', 'snare', 'hihat', 'clap', 'openhat'];
+            drums.forEach(drum => {
+                if (!group.patterns[drum] || !Array.isArray(group.patterns[drum]) || group.patterns[drum].length !== 16) {
+                    group.patterns[drum] = new Array(16).fill(false);
+                    console.warn(`⚠️ 修复鼓组 ${group.name} 的 ${drum} 数据`);
+                }
+            });
+
+            this.loadDrumGroupPatterns(group.patterns);
+            this.updateDrumGroupList(); // 更新列表显示
+            this.updatePositionButtons(); // 更新位置按钮状态
+
+            // 强制同步到圆形音序器
+            if (this.circularSequencer) {
+                this.circularSequencer.setPatterns(group.patterns);
+                console.log(`🔄 已同步鼓组 ${group.name} 到圆形音序器`);
+            }
+
+            console.log(`✅ 切换到鼓组: ${group.name} (${group.type})`, group.patterns);
+        } else {
+            console.error(`❌ 找不到鼓组: ${groupId}`);
+        }
+    }
+
+    saveDrumGroupPatterns() {
+        const currentGroup = this.drumGroups.find(g => g.id === this.currentDrumGroupId);
+        if (currentGroup) {
+            currentGroup.patterns = this.getDrumPatterns();
+        }
+    }
+
+    loadDrumGroupPatterns(patterns) {
+        // 更新传统模式的按钮状态
+        Object.keys(patterns).forEach(drumType => {
+            patterns[drumType].forEach((active, stepIndex) => {
+                const stepBtn = document.querySelector(`.step-btn[data-drum="${drumType}"][data-step="${stepIndex}"]`);
+                if (stepBtn) {
+                    if (active) {
+                        stepBtn.classList.add('active');
+                    } else {
+                        stepBtn.classList.remove('active');
+                    }
+                }
+            });
+        });
+
+        // 更新圆形模式
+        if (this.circularSequencer) {
+            this.circularSequencer.setPatterns(patterns);
+        }
+    }
+
+    addDrumGroup() {
+        const name = prompt('请输入新鼓组名称:');
+        if (!name || name.trim() === '') return;
+
+        const newId = 'custom_' + Date.now();
+        const newGroup = {
+            id: newId,
+            name: name.trim(),
+            type: 'custom',
+            patterns: this.getDefaultDrumPatterns() // 使用默认模式而不是空模式，这样新鼓组有基础节拍
+        };
+
+        this.drumGroups.push(newGroup);
+
+        // 立即更新列表显示
+        this.updateDrumGroupList();
+
+        // 切换到新鼓组
+        this.switchDrumGroup(newId);
+
+        // 保存到本地存储
+        this.saveCustomDrumGroupsToStorage();
+
+        console.log(`✅ 添加新鼓组: ${name}`, newGroup.patterns);
+    }
+
+    renameDrumGroup() {
+        const currentGroup = this.drumGroups.find(g => g.id === this.currentDrumGroupId);
+        if (!currentGroup) return;
+
+        if (currentGroup.type === 'preset') {
+            alert('预设鼓组不能重命名！请复制后重命名。');
+            return;
+        }
+
+        const newName = prompt('请输入新名称:', currentGroup.name);
+        if (!newName || newName.trim() === '') return;
+
+        currentGroup.name = newName.trim();
+        this.updateDrumGroupList();
+
+        // 保存到本地存储
+        this.saveCustomDrumGroupsToStorage();
+
+        console.log(`重命名鼓组为: ${newName}`);
+    }
+
+    deleteDrumGroup() {
+        const currentGroup = this.drumGroups.find(g => g.id === this.currentDrumGroupId);
+        if (!currentGroup) return;
+
+        if (currentGroup.type === 'preset') {
+            alert('预设鼓组不能删除！');
+            return;
+        }
+
+        const customGroups = this.drumGroups.filter(g => g.type === 'custom');
+        if (customGroups.length <= 1) {
+            alert('至少需要保留一个自定义鼓组！');
+            return;
+        }
+
+        if (!confirm(`确定要删除鼓组 "${currentGroup.name}" 吗？`)) return;
+
+        // 删除当前鼓组
+        this.drumGroups = this.drumGroups.filter(g => g.id !== this.currentDrumGroupId);
+
+        // 切换到第一个鼓组
+        this.currentDrumGroupId = this.drumGroups[0].id;
+        this.switchDrumGroup(this.currentDrumGroupId);
+
+        // 保存到本地存储
+        this.saveCustomDrumGroupsToStorage();
+
+        console.log(`删除鼓组: ${currentGroup.name}`);
+    }
+
+    duplicateDrumGroup() {
+        const currentGroup = this.drumGroups.find(g => g.id === this.currentDrumGroupId);
+        if (!currentGroup) return;
+
+        const newName = prompt('请输入复制鼓组的名称:', currentGroup.name + ' 副本');
+        if (!newName || newName.trim() === '') return;
+
+        // 保存当前模式
+        this.saveDrumGroupPatterns();
+
+        const newId = 'custom_' + Date.now();
+        const newGroup = {
+            id: newId,
+            name: newName.trim(),
+            type: 'custom', // 复制的都是自定义鼓组
+            patterns: JSON.parse(JSON.stringify(currentGroup.patterns)) // 深拷贝
+        };
+
+        this.drumGroups.push(newGroup);
+        this.switchDrumGroup(newId);
+
+        // 保存到本地存储
+        this.saveCustomDrumGroupsToStorage();
+
+        console.log(`复制鼓组: ${newName}`);
+    }
+
+    // 新增：位置调整方法
+    moveDrumGroupUp() {
+        const currentIndex = this.drumGroups.findIndex(g => g.id === this.currentDrumGroupId);
+        if (currentIndex <= 0) return;
+
+        // 交换位置
+        [this.drumGroups[currentIndex], this.drumGroups[currentIndex - 1]] =
+        [this.drumGroups[currentIndex - 1], this.drumGroups[currentIndex]];
+
+        this.updateDrumGroupList();
+        this.updatePositionButtons();
+    }
+
+    moveDrumGroupDown() {
+        const currentIndex = this.drumGroups.findIndex(g => g.id === this.currentDrumGroupId);
+        if (currentIndex >= this.drumGroups.length - 1) return;
+
+        // 交换位置
+        [this.drumGroups[currentIndex], this.drumGroups[currentIndex + 1]] =
+        [this.drumGroups[currentIndex + 1], this.drumGroups[currentIndex]];
+
+        this.updateDrumGroupList();
+        this.updatePositionButtons();
+    }
+
+    updatePositionButtons() {
+        const currentIndex = this.drumGroups.findIndex(g => g.id === this.currentDrumGroupId);
+        const moveUpBtn = document.getElementById('move-up-drum-group');
+        const moveDownBtn = document.getElementById('move-down-drum-group');
+
+        if (moveUpBtn) {
+            moveUpBtn.disabled = currentIndex <= 0;
+        }
+
+        if (moveDownBtn) {
+            moveDownBtn.disabled = currentIndex >= this.drumGroups.length - 1;
+        }
     }
 }
 
@@ -1350,6 +2025,56 @@ window.pastePattern = function() {
         alert('模式已粘贴！');
     } else {
         alert('剪贴板中没有模式！');
+    }
+};
+
+// 测试所有鼓声音频
+window.testAllDrumSounds = function() {
+    if (!window.customEditor) {
+        console.error('❌ CustomEditor 未初始化');
+        return;
+    }
+
+    console.log('🔊 开始测试所有鼓声音频...');
+
+    // 确保预览播放器已创建
+    if (!window.customEditor.previewDrumPlayers) {
+        console.log('🔧 创建预览播放器...');
+        window.customEditor.createPreviewDrumPlayers();
+
+        // 等待播放器加载
+        setTimeout(() => {
+            testDrumSoundsSequence();
+        }, 1000);
+    } else {
+        testDrumSoundsSequence();
+    }
+
+    function testDrumSoundsSequence() {
+        const drums = ['kick', 'snare', 'hihat', 'clap', 'openhat'];
+        let index = 0;
+
+        function playNext() {
+            if (index >= drums.length) {
+                console.log('✅ 所有鼓声测试完成');
+                return;
+            }
+
+            const drum = drums[index];
+            console.log(`🥁 测试 ${drum}...`);
+
+            if (window.customEditor.previewDrumPlayers && window.customEditor.previewDrumPlayers.player(drum)) {
+                window.customEditor.previewDrumPlayers.player(drum).start();
+                console.log(`✅ ${drum} 播放成功`);
+            } else {
+                console.error(`❌ ${drum} 播放失败`);
+            }
+
+            index++;
+            setTimeout(playNext, 800); // 每个鼓声间隔800ms
+        }
+
+        playNext();
     }
 };
 
@@ -1409,8 +2134,17 @@ class CircularSequencer {
     createCanvas() {
         // 创建canvas元素
         this.canvas = document.createElement('canvas');
-        this.canvas.width = this.config.centerX * 2;
-        this.canvas.height = this.config.centerY * 2;
+
+        // 设置canvas的实际尺寸 - 简化版本
+        const canvasWidth = this.config.centerX * 2;
+        const canvasHeight = this.config.centerY * 2;
+
+        this.canvas.width = canvasWidth;
+        this.canvas.height = canvasHeight;
+
+        // 设置CSS尺寸
+        this.canvas.style.width = canvasWidth + 'px';
+        this.canvas.style.height = canvasHeight + 'px';
         this.canvas.style.border = '1px solid #333';
         this.canvas.style.borderRadius = '50%';
         this.canvas.style.background = 'radial-gradient(circle, #1a1a1a 0%, #000 100%)';
@@ -1447,14 +2181,45 @@ class CircularSequencer {
     }
 
     setupEventListeners() {
-        this.canvas.addEventListener('click', (e) => this.handleClick(e));
+        // 鼠标事件 - 移除click事件，避免与mousedown冲突
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
         this.canvas.addEventListener('mouseleave', (e) => this.handleMouseUp(e));
+
+        // 触摸事件（移动设备支持）
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // 防止默认的滚动行为
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            this.handleMouseDown(mouseEvent);
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            this.handleMouseMove(mouseEvent);
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.handleMouseUp(e);
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            this.handleMouseUp(e);
+        }, { passive: false });
     }
 
-    // 获取鼠标在canvas中的坐标
+    // 获取鼠标在canvas中的坐标 - 简化版本
     getMousePos(e) {
         const rect = this.canvas.getBoundingClientRect();
         return {
@@ -1512,31 +2277,34 @@ class CircularSequencer {
     }
 
     handleMouseDown(e) {
-        this.isDragging = true;
+        this.isDragging = false; // 重置拖动状态
+        this.mouseDownPos = this.getMousePos(e); // 记录按下位置
+        this.mouseDownTime = Date.now(); // 记录按下时间
+
+        // 立即处理点击
         this.handleClick(e);
     }
 
     handleMouseMove(e) {
-        if (!this.isDragging) return;
+        if (!this.mouseDownPos) return;
 
-        const mousePos = this.getMousePos(e);
-        const polar = this.cartesianToPolar(mousePos.x, mousePos.y);
-        const segment = this.getSegmentFromPolar(polar.distance, polar.angle);
+        const currentPos = this.getMousePos(e);
+        const distance = Math.sqrt(
+            Math.pow(currentPos.x - this.mouseDownPos.x, 2) +
+            Math.pow(currentPos.y - this.mouseDownPos.y, 2)
+        );
 
-        if (segment && this.lastClickedSegment) {
-            const key = `${segment.ring}-${segment.segment}`;
-            const lastKey = `${this.lastClickedSegment.ring}-${this.lastClickedSegment.segment}`;
-
-            if (key !== lastKey) {
-                this.toggleSegment(segment.ring, segment.segment);
-                this.lastClickedSegment = segment;
-            }
+        // 如果移动距离超过5像素，认为是拖动
+        if (distance > 5) {
+            this.isDragging = true;
+            this.handleClick(e); // 拖动时也处理点击
         }
     }
 
     handleMouseUp(e) {
         this.isDragging = false;
-        this.lastClickedSegment = null;
+        this.mouseDownPos = null;
+        this.mouseDownTime = null;
     }
 
     // 切换段的激活状态
@@ -1570,12 +2338,12 @@ class CircularSequencer {
                 const isActive = this.patterns[drumType.id][segmentIndex];
                 const isCurrentPlay = segmentIndex === this.currentPlayPosition;
 
-                // 设置颜色
+                // 设置颜色 - 增强对比度
                 let color = drumType.color;
-                let alpha = isActive ? 0.8 : 0.2;
+                let alpha = isActive ? 1.0 : 0.15;  // 激活状态更亮，非激活状态更暗
 
                 if (isCurrentPlay) {
-                    alpha = Math.min(alpha + 0.3, 1.0);
+                    alpha = Math.min(alpha + 0.2, 1.0);
                 }
 
                 // 绘制段
@@ -1593,12 +2361,18 @@ class CircularSequencer {
                 ctx.lineWidth = 1;
                 ctx.stroke();
 
-                // 如果是激活状态，添加发光效果
+                // 如果是激活状态，添加发光效果和边框
                 if (isActive) {
+                    // 发光效果
                     ctx.shadowColor = color;
-                    ctx.shadowBlur = 8;
+                    ctx.shadowBlur = 12;
                     ctx.fill();
                     ctx.shadowBlur = 0;
+
+                    // 亮边框
+                    ctx.strokeStyle = this.hexToRgba('#ffffff', 0.8);
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
                 }
             }
         });
@@ -1711,3 +2485,548 @@ class CircularSequencer {
         }
     }
 }
+
+// ===== 音序点编辑器相关方法 =====
+// 在CustomEditor类中添加以下方法
+
+// 在CustomEditor类的原型上添加音序点编辑器方法
+CustomEditor.prototype.setupSequenceEditorEvents = function() {
+    console.log('🎵 设置音序点编辑器事件...');
+
+    // 根音切换按钮
+    const rootNoteBtn = document.getElementById('root-note-selector');
+    if (rootNoteBtn) {
+        rootNoteBtn.addEventListener('click', () => {
+            this.cycleRootNote();
+        });
+    }
+
+    // 预览按钮
+    const previewBtn = document.getElementById('preview-sequence');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', () => {
+            this.previewSequence();
+        });
+    }
+
+    // 随机按钮
+    const randomBtn = document.getElementById('randomize-sequence');
+    if (randomBtn) {
+        randomBtn.addEventListener('click', () => {
+            this.randomizeSequence();
+        });
+    }
+
+    // 重置按钮
+    const resetBtn = document.getElementById('reset-sequence');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            this.resetSequence();
+        });
+    }
+
+    // 音序点事件
+    this.setupSequenceStepEvents();
+
+    console.log('✅ 音序点编辑器事件设置完成');
+};
+
+CustomEditor.prototype.setupSequenceStepEvents = function() {
+    const sequenceSteps = document.querySelectorAll('.sequence-step');
+
+    sequenceSteps.forEach((stepElement, stepIndex) => {
+        const stepPoint = stepElement.querySelector('.step-point');
+        if (!stepPoint) return;
+
+        // 点击切换激活状态
+        stepPoint.addEventListener('click', () => {
+            this.toggleSequenceStep(stepIndex);
+        });
+
+        // 拖拽调整音程
+        this.setupStepDragEvents(stepPoint, stepIndex);
+    });
+};
+
+CustomEditor.prototype.setupStepDragEvents = function(stepPoint, stepIndex) {
+    let isDragging = false;
+    let startY = 0;
+    let startInterval = 0;
+
+    // 鼠标事件
+    stepPoint.addEventListener('mousedown', (e) => {
+        if (!stepPoint.classList.contains('active')) return;
+
+        isDragging = true;
+        startY = e.clientY;
+        startInterval = this.getStepInterval(stepIndex);
+        stepPoint.classList.add('dragging');
+
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+
+        const deltaY = startY - e.clientY; // 向上为正
+        const newInterval = Math.max(-12, Math.min(24,
+            startInterval + Math.round(deltaY / 3))); // 每3px一个半音
+
+        this.updateStepInterval(stepIndex, newInterval);
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            stepPoint.classList.remove('dragging');
+        }
+    });
+
+    // 触摸事件（移动端支持）
+    stepPoint.addEventListener('touchstart', (e) => {
+        if (!stepPoint.classList.contains('active')) return;
+
+        isDragging = true;
+        startY = e.touches[0].clientY;
+        startInterval = this.getStepInterval(stepIndex);
+        stepPoint.classList.add('dragging');
+
+        e.preventDefault();
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+
+        const deltaY = startY - e.touches[0].clientY;
+        const newInterval = Math.max(-12, Math.min(24,
+            startInterval + Math.round(deltaY / 3)));
+
+        this.updateStepInterval(stepIndex, newInterval);
+        e.preventDefault();
+    });
+
+    document.addEventListener('touchend', () => {
+        if (isDragging) {
+            isDragging = false;
+            stepPoint.classList.remove('dragging');
+        }
+    });
+};
+
+CustomEditor.prototype.toggleSequenceStep = function(stepIndex) {
+    const stepElement = document.querySelector(`.sequence-step[data-step="${stepIndex}"]`);
+    const stepPoint = stepElement?.querySelector('.step-point');
+    if (!stepPoint) return;
+
+    const isActive = stepPoint.classList.contains('active');
+
+    if (isActive) {
+        // 切换为非激活状态
+        stepPoint.classList.remove('active');
+        stepPoint.classList.add('inactive');
+        stepPoint.dataset.interval = 'null';
+        stepPoint.querySelector('.interval-value').textContent = '--';
+    } else {
+        // 切换为激活状态，使用默认间隔0
+        stepPoint.classList.remove('inactive');
+        stepPoint.classList.add('active');
+        stepPoint.dataset.interval = '0';
+        stepPoint.querySelector('.interval-value').textContent = '0';
+    }
+
+    // 实时预览单个音符
+    if (stepPoint.classList.contains('active')) {
+        this.previewStepNote(stepIndex);
+    }
+
+    console.log(`🎵 步骤 ${stepIndex + 1} ${isActive ? '关闭' : '激活'}`);
+};
+
+CustomEditor.prototype.getStepInterval = function(stepIndex) {
+    const stepElement = document.querySelector(`.sequence-step[data-step="${stepIndex}"]`);
+    const stepPoint = stepElement?.querySelector('.step-point');
+    if (!stepPoint) return 0;
+
+    const interval = stepPoint.dataset.interval;
+    return interval === 'null' ? 0 : parseInt(interval) || 0;
+};
+
+CustomEditor.prototype.updateStepInterval = function(stepIndex, newInterval) {
+    const stepElement = document.querySelector(`.sequence-step[data-step="${stepIndex}"]`);
+    const stepPoint = stepElement?.querySelector('.step-point');
+    if (!stepPoint || !stepPoint.classList.contains('active')) return;
+
+    // 更新数据和显示
+    stepPoint.dataset.interval = newInterval.toString();
+    const intervalValue = stepPoint.querySelector('.interval-value');
+    if (intervalValue) {
+        if (newInterval === 0) {
+            intervalValue.textContent = '0';
+        } else if (newInterval > 0) {
+            intervalValue.textContent = '+' + newInterval;
+        } else {
+            intervalValue.textContent = newInterval.toString();
+        }
+    }
+
+    // 实时预览音符
+    this.previewStepNote(stepIndex);
+};
+
+CustomEditor.prototype.previewStepNote = function(stepIndex) {
+    if (!this.previewSynth) return;
+
+    const interval = this.getStepInterval(stepIndex);
+    const rootNote = this.getCurrentRootNote();
+
+    try {
+        // 计算目标音符
+        const rootFreq = Tone.Frequency(rootNote + '4');
+        const targetFreq = rootFreq.transpose(interval);
+        const targetNote = targetFreq.toNote();
+
+        // 播放音符
+        this.previewSynth.triggerAttackRelease(targetNote, '8n');
+        console.log(`🎵 预览音符: ${targetNote} (根音: ${rootNote}, 间隔: ${interval})`);
+    } catch (error) {
+        console.warn('预览音符失败:', error);
+    }
+};
+
+CustomEditor.prototype.getCurrentRootNote = function() {
+    const rootNoteBtn = document.getElementById('root-note-selector');
+    if (!rootNoteBtn) return 'C';
+
+    const text = rootNoteBtn.textContent;
+    const match = text.match(/根音:\s*([A-G][#b]?)/);
+    return match ? match[1] : 'C';
+};
+
+CustomEditor.prototype.cycleRootNote = function() {
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const currentNote = this.getCurrentRootNote();
+    const currentIndex = notes.indexOf(currentNote);
+    const nextIndex = (currentIndex + 1) % notes.length;
+    const nextNote = notes[nextIndex];
+
+    const rootNoteBtn = document.getElementById('root-note-selector');
+    if (rootNoteBtn) {
+        rootNoteBtn.textContent = `根音: ${nextNote}4`;
+    }
+
+    console.log(`🎵 根音切换: ${currentNote} → ${nextNote}`);
+};
+
+CustomEditor.prototype.previewSequence = function() {
+    console.log('🎵 预览完整序列...');
+
+    if (!this.previewSynth) {
+        this.createPreviewSynth();
+    }
+
+    const sequence = this.getSequenceData();
+    const rootNote = this.getCurrentRootNote();
+    const tempo = document.getElementById('arpeggio-tempo')?.value || 120;
+
+    // 过滤出有效的音符
+    const validNotes = sequence.map((interval, index) => {
+        if (interval === null) return null;
+
+        try {
+            const rootFreq = Tone.Frequency(rootNote + '4');
+            const targetFreq = rootFreq.transpose(interval);
+            return targetFreq.toNote();
+        } catch (error) {
+            console.warn(`计算音符失败 (步骤 ${index + 1}, 间隔 ${interval}):`, error);
+            return null;
+        }
+    });
+
+    console.log('🎼 序列音符:', validNotes);
+
+    // 播放序列
+    let stepIndex = 0;
+    const stepInterval = (60 / tempo / 4) * 1000; // 16分音符间隔
+
+    const playStep = () => {
+        if (stepIndex >= sequence.length) {
+            console.log('✅ 序列预览完成');
+            return;
+        }
+
+        const note = validNotes[stepIndex];
+        if (note) {
+            this.previewSynth.triggerAttackRelease(note, '8n');
+            console.log(`🎵 播放步骤 ${stepIndex + 1}: ${note}`);
+        }
+
+        stepIndex++;
+        setTimeout(playStep, stepInterval);
+    };
+
+    playStep();
+};
+
+CustomEditor.prototype.randomizeSequence = function() {
+    console.log('🎲 随机生成序列...');
+
+    const commonIntervals = [0, 2, 3, 5, 7, 8, 10, 12]; // 常用音程
+
+    for (let i = 0; i < 8; i++) {
+        const stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
+        const stepPoint = stepElement?.querySelector('.step-point');
+        if (!stepPoint) continue;
+
+        // 70%概率激活，30%概率为空拍
+        if (Math.random() > 0.3) {
+            stepPoint.classList.remove('inactive');
+            stepPoint.classList.add('active');
+
+            // 随机选择音程
+            const randomInterval = commonIntervals[Math.floor(Math.random() * commonIntervals.length)];
+            stepPoint.dataset.interval = randomInterval.toString();
+
+            const intervalValue = stepPoint.querySelector('.interval-value');
+            if (intervalValue) {
+                if (randomInterval === 0) {
+                    intervalValue.textContent = '0';
+                } else {
+                    intervalValue.textContent = '+' + randomInterval;
+                }
+            }
+        } else {
+            stepPoint.classList.remove('active');
+            stepPoint.classList.add('inactive');
+            stepPoint.dataset.interval = 'null';
+
+            const intervalValue = stepPoint.querySelector('.interval-value');
+            if (intervalValue) {
+                intervalValue.textContent = '--';
+            }
+        }
+    }
+
+    console.log('✅ 随机序列生成完成');
+};
+
+CustomEditor.prototype.resetSequence = function() {
+    console.log('🔄 重置序列...');
+
+    // 默认序列：[0, 3, null, 7, 8, null, 7, null]
+    const defaultSequence = [0, 3, null, 7, 8, null, 7, null];
+
+    for (let i = 0; i < 8; i++) {
+        const stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
+        const stepPoint = stepElement?.querySelector('.step-point');
+        if (!stepPoint) continue;
+
+        const interval = defaultSequence[i];
+
+        if (interval === null) {
+            stepPoint.classList.remove('active');
+            stepPoint.classList.add('inactive');
+            stepPoint.dataset.interval = 'null';
+
+            const intervalValue = stepPoint.querySelector('.interval-value');
+            if (intervalValue) {
+                intervalValue.textContent = '--';
+            }
+        } else {
+            stepPoint.classList.remove('inactive');
+            stepPoint.classList.add('active');
+            stepPoint.dataset.interval = interval.toString();
+
+            const intervalValue = stepPoint.querySelector('.interval-value');
+            if (intervalValue) {
+                if (interval === 0) {
+                    intervalValue.textContent = '0';
+                } else {
+                    intervalValue.textContent = '+' + interval;
+                }
+            }
+        }
+    }
+
+    console.log('✅ 序列已重置为默认值');
+};
+
+CustomEditor.prototype.getSequenceData = function() {
+    const sequence = [];
+
+    for (let i = 0; i < 8; i++) {
+        const stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
+        const stepPoint = stepElement?.querySelector('.step-point');
+        if (!stepPoint) {
+            sequence.push(null);
+            continue;
+        }
+
+        if (stepPoint.classList.contains('active')) {
+            const interval = stepPoint.dataset.interval;
+            sequence.push(interval === 'null' ? null : parseInt(interval) || 0);
+        } else {
+            sequence.push(null);
+        }
+    }
+
+    console.log('📊 当前序列数据:', sequence);
+    return sequence;
+};
+
+CustomEditor.prototype.loadSequenceData = function(sequenceArray) {
+    console.log('📋 加载序列数据:', sequenceArray);
+
+    if (!sequenceArray || !Array.isArray(sequenceArray)) {
+        console.warn('⚠️ 无效的序列数据，使用默认序列');
+        sequenceArray = [0, 3, null, 7, 8, null, 7, null];
+    }
+
+    // 确保有8个步骤
+    while (sequenceArray.length < 8) {
+        sequenceArray.push(null);
+    }
+
+    for (let i = 0; i < 8; i++) {
+        const stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
+        const stepPoint = stepElement?.querySelector('.step-point');
+        if (!stepPoint) continue;
+
+        const interval = sequenceArray[i];
+
+        if (interval === null || interval === undefined) {
+            stepPoint.classList.remove('active');
+            stepPoint.classList.add('inactive');
+            stepPoint.dataset.interval = 'null';
+
+            const intervalValue = stepPoint.querySelector('.interval-value');
+            if (intervalValue) {
+                intervalValue.textContent = '--';
+            }
+        } else {
+            stepPoint.classList.remove('inactive');
+            stepPoint.classList.add('active');
+            stepPoint.dataset.interval = interval.toString();
+
+            const intervalValue = stepPoint.querySelector('.interval-value');
+            if (intervalValue) {
+                if (interval === 0) {
+                    intervalValue.textContent = '0';
+                } else if (interval > 0) {
+                    intervalValue.textContent = '+' + interval;
+                } else {
+                    intervalValue.textContent = interval.toString();
+                }
+            }
+        }
+    }
+
+    console.log('✅ 序列数据加载完成');
+};
+
+// 更新现有的loadArpeggioPreset方法以支持新的序列编辑器
+CustomEditor.prototype.loadArpeggioPresetWithSequence = function(presetIndex) {
+    console.log('🎵 加载琶音预设到序列编辑器:', presetIndex);
+
+    if (presetIndex === 'custom') {
+        console.log('🔧 重置为自定义模式');
+        this.resetSequence();
+        return;
+    }
+
+    // 从MusicManager获取预设
+    if (window.game && window.game.musicManager && window.game.musicManager.musicPresets[presetIndex]) {
+        const preset = window.game.musicManager.musicPresets[presetIndex];
+        console.log('📋 加载的预设数据:', preset);
+
+        // 优先使用sequence字段，如果没有则从chordIntervals生成
+        let sequence = null;
+        if (preset.sequence && Array.isArray(preset.sequence)) {
+            sequence = preset.sequence;
+            console.log('🎵 使用预设的sequence:', sequence);
+        } else if (preset.chordIntervals && Array.isArray(preset.chordIntervals)) {
+            // 从chordIntervals生成简单的序列
+            sequence = this.generateSequenceFromIntervals(preset.chordIntervals);
+            console.log('🎵 从chordIntervals生成sequence:', sequence);
+        } else {
+            // 使用默认序列
+            sequence = [0, 3, null, 7, 8, null, 7, null];
+            console.log('🎵 使用默认sequence:', sequence);
+        }
+
+        // 加载序列到编辑器
+        this.loadSequenceData(sequence);
+
+        // 更新速度
+        const tempo = preset.tempo || 120;
+        const tempoSlider = document.getElementById('arpeggio-tempo');
+        const tempoValue = document.getElementById('tempo-value');
+        if (tempoSlider && tempoValue) {
+            tempoSlider.value = tempo;
+            tempoValue.textContent = tempo;
+            console.log('🎵 设置速度:', tempo);
+        }
+
+        console.log('✅ 琶音预设加载到序列编辑器完成');
+    } else {
+        console.error('❌ 无法获取琶音预设:', presetIndex);
+        this.resetSequence();
+    }
+};
+
+CustomEditor.prototype.generateSequenceFromIntervals = function(intervals) {
+    // 从和弦间隔生成8步序列
+    const sequence = new Array(8).fill(null);
+
+    if (!intervals || intervals.length === 0) {
+        return [0, 3, null, 7, 8, null, 7, null]; // 默认序列
+    }
+
+    // 简单的模式：在偶数步骤放置间隔
+    let intervalIndex = 0;
+    for (let i = 0; i < 8; i += 2) {
+        if (intervalIndex < intervals.length) {
+            sequence[i] = intervals[intervalIndex];
+            intervalIndex++;
+        }
+    }
+
+    return sequence;
+};
+
+// 为音序点编辑器创建预览合成器
+CustomEditor.prototype.createSequencePreviewSynth = function() {
+    if (this.previewSynth) {
+        this.previewSynth.dispose();
+    }
+
+    try {
+        // 创建简单的合成器用于预览
+        this.previewSynth = new Tone.Synth({
+            oscillator: {
+                type: 'triangle'
+            },
+            envelope: {
+                attack: 0.01,
+                decay: 0.1,
+                sustain: 0.3,
+                release: 0.5
+            }
+        }).toDestination();
+
+        console.log('🎵 音序点预览合成器创建成功');
+    } catch (error) {
+        console.error('❌ 创建音序点预览合成器失败:', error);
+    }
+};
+
+// 在CustomEditor构造函数中初始化预览合成器
+CustomEditor.prototype.initializeSequencePreviewSynth = function() {
+    // 延迟创建，确保Tone.js已加载
+    setTimeout(() => {
+        if (typeof Tone !== 'undefined') {
+            this.createSequencePreviewSynth();
+        } else {
+            console.warn('⚠️ Tone.js未加载，无法创建音序点预览合成器');
+        }
+    }, 100);
+};
