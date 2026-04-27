@@ -4,6 +4,8 @@ const FINGER_ELEMENTS = [
     drum: 'openhat',
     sample: 'Orchestral_Drum.wav',
     label: 'Resonance',
+    role: 'gong-frame pulse',
+    description: 'Slow ceremonial weight and long low resonance.',
     color: '#6aa9ff',
     element: 'Metal'
   },
@@ -12,6 +14,8 @@ const FINGER_ELEMENTS = [
     drum: 'kick',
     sample: 'Rimshot.wav',
     label: 'Pulse',
+    role: 'beat marker',
+    description: 'Clear board-like attack that anchors the phrase.',
     color: '#ff8a5b',
     element: 'Earth'
   },
@@ -19,7 +23,9 @@ const FINGER_ELEMENTS = [
     finger: 'middle',
     drum: 'snare',
     sample: 'Flam.wav',
-    label: 'Strike',
+    label: 'Accent',
+    role: 'lift and answer',
+    description: 'Short accented lift used as a rhythmic reply.',
     color: '#ffd166',
     element: 'Fire'
   },
@@ -28,6 +34,8 @@ const FINGER_ELEMENTS = [
     drum: 'hihat',
     sample: 'Shaker.wav',
     label: 'Flow',
+    role: 'grain motion',
+    description: 'Continuous shaker grain for dance-like flow.',
     color: '#6ed3b4',
     element: 'Wood'
   },
@@ -35,7 +43,9 @@ const FINGER_ELEMENTS = [
     finger: 'pinky',
     drum: 'clap',
     sample: 'Indian_Percussion.wav',
-    label: 'Spirit',
+    label: 'Ornament',
+    role: 'color inflection',
+    description: 'Decorative syncopated colour at phrase edges.',
     color: '#c084fc',
     element: 'Water'
   }
