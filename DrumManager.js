@@ -4,7 +4,13 @@ import { DRUM_SAMPLE_MAP, FINGER_TO_DRUM_MAP } from './FingerElements.js';
 
 const DRUM_IDS = ['kick', 'snare', 'hihat', 'openhat', 'clap'];
 const DEFAULT_PATTERN_LENGTH = 16;
-const DEFAULT_DRUM_VOLUMES = { kick: -9, snare: -3, hihat: -5, openhat: -9, clap: -18 };
+const DEFAULT_DRUM_VOLUMES = {
+  kick: -8,      // Rimshot pulse
+  snare: -10,    // Flam accent
+  hihat: -13,    // Shaker flow
+  openhat: -15,  // Orchestral drum resonance
+  clap: -14      // Indian percussion ornament
+};
 
 function createEmptyPatterns() {
   return Object.fromEntries(DRUM_IDS.map((drum) => [drum, new Array(DEFAULT_PATTERN_LENGTH).fill(false)]));
