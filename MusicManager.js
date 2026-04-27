@@ -84,7 +84,7 @@ export class MusicManager {
     this.currentMusicPresetIndex = 0;
 
     this.synthPresets = createDefaultSynthPresets();
-    this.currentSynthIndex = 0;
+    this.currentSynthIndex = this._getSceneSynthIndex(this.musicPresets[this.currentMusicPresetIndex]);
 
     this.delayManualOverride = false;
     this.delayBeats = 0;
@@ -92,6 +92,21 @@ export class MusicManager {
 
     this.noteLengthLevels = [0.2, 0.4, 0.6, 0.8, 1.0];
     this.noteLengthLevelIndex = 4;
+  }
+
+  _getSceneSynthIndex(scene) {
+    if (typeof scene?.synthPreset === 'number' && scene.synthPreset >= 0 && scene.synthPreset < this.synthPresets.length) {
+      return scene.synthPreset;
+    }
+    return 0;
+  }
+
+  _getPatternInterval(preset = this.getCurrentMusicPreset()) {
+    return preset?.stepInterval || '16n';
+  }
+
+  _getPatternBaseSeconds(preset = this.getCurrentMusicPreset()) {
+    return Tone.Time(this._getPatternInterval(preset)).toSeconds();
   }
 
   async start() {
@@ -179,18 +194,20 @@ export class MusicManager {
   startArpeggio(handId, rootNote) {
     if (!this.polySynth || this.activePatterns.has(handId)) return;
 
-    const arpeggioNotes = this._buildPatternNotes(rootNote);
+    const preset = this.getCurrentMusicPreset();
+    const arpeggioNotes = this._buildPatternNotes(rootNote, preset);
+    const stepInterval = this._getPatternInterval(preset);
     const pattern = new Tone.Pattern((time, note) => {
       const velocity = this.handVolumes.get(handId) || 0.2;
       if (note === null) return;
 
-      const baseStepSec = Tone.Time('16n').toSeconds();
+      const baseStepSec = this._getPatternBaseSeconds(preset);
       const lengthFactor = this.noteLengthLevels[this.noteLengthLevelIndex] || 1;
       const durationSeconds = Math.max(0.02, baseStepSec * lengthFactor);
       this.polySynth.triggerAttackRelease(note, durationSeconds, time, velocity);
-    }, arpeggioNotes, this.getCurrentMusicPreset().arpeggioPattern || 'up');
+    }, arpeggioNotes, preset.arpeggioPattern || 'up');
 
-    pattern.interval = '16n';
+    pattern.interval = stepInterval;
     pattern.start(0);
 
     this.activePatterns.set(handId, {
