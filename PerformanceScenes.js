@@ -73,9 +73,9 @@ function buildScene(scene) {
 
 const FOLK_SONG_SCENES = [
   {
-    name: 'ÜÔÀò»¨ / Jasmine Flower',
+    name: 'èŒ‰è‰èŠ± / Jasmine Flower',
     description: 'Recognisable Jiangsu jasmine melody, lyrical and airy.',
-    canonicalVersion: 'Common Jiangsu / ÁùºÏ mainstream singing version',
+    canonicalVersion: 'Common Jiangsu / å…­åˆ mainstream singing version',
     sources: [
       'https://www.everyonepiano.cn/N-10.html',
       'https://yllhj.beijing.gov.cn/ztxx/bjhx/hhzs/201806/t20180606_118616.shtml'
@@ -96,9 +96,9 @@ const FOLK_SONG_SCENES = [
     }
   },
   {
-    name: '¿µ¶¨Çé¸è / Kangding Love Song',
-    description: 'The familiar ¡°ÅÜÂíÁïÁïµÄÉ½ÉÏ¡± contour with a walking pulse.',
-    canonicalVersion: 'Mainstream ¡°ÅÜÂíÁïÁïµÄÉ½ÉÏ¡± singing version',
+    name: 'åº·å®šæƒ…æ­Œ / Kangding Love Song',
+    description: 'The familiar â€œè·‘é©¬æºœæºœçš„å±±ä¸Šâ€ contour with a walking pulse.',
+    canonicalVersion: 'Mainstream â€œè·‘é©¬æºœæºœçš„å±±ä¸Šâ€ singing version',
     sources: [
       'https://www.everyonepiano.cn/N-14906.html',
       'https://sc.weather.com.cn/bdly/yzsc/703119.shtml'
@@ -119,9 +119,9 @@ const FOLK_SONG_SCENES = [
     }
   },
   {
-    name: 'Ğ¡ºÓÌÊË® / Flowing River',
+    name: 'å°æ²³æ·Œæ°´ / Flowing River',
     description: 'Midu-style moonlit river contour with sparse breathing space.',
-    canonicalVersion: 'Midu singing version beginning ¡°ÔÂÁÁ³öÀ´ÁÁÍôÍô¡±',
+    canonicalVersion: 'Midu singing version beginning â€œæœˆäº®å‡ºæ¥äº®æ±ªæ±ªâ€',
     sources: [
       'https://www.everyonepiano.cn/Piano-970.html',
       'https://www.ynxc.gov.cn/html/2024/ddyn_0618/3012919.html'
@@ -142,9 +142,9 @@ const FOLK_SONG_SCENES = [
     }
   },
   {
-    name: 'Çà´ºÎèÇú / Youth Dance',
+    name: 'é’æ˜¥èˆæ›² / Youth Dance',
     description: 'Lively Xinjiang dance hook with stronger shaker flow.',
-    canonicalVersion: 'Mainstream ÍõÂå±öÕûÀí´«²¥°æ',
+    canonicalVersion: 'Mainstream ç‹æ´›å®¾æ•´ç†ä¼ æ’­ç‰ˆ',
     sources: [
       'https://www.everyonepiano.cn/Piano-208.html',
       'https://fashion.chinadaily.com.cn/a/202106/08/WS60bf51eea3101e7ce9753fdd.html'
