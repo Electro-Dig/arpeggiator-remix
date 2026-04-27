@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { PERFORMANCE_SCENES, clonePerformanceScenes, jianpuToIntervals } from '../PerformanceScenes.js';
 
 test('jianpuToIntervals converts octave-aware numbered notation into semitone intervals', () => {
@@ -12,10 +13,10 @@ test('jianpuToIntervals converts octave-aware numbered notation into semitone in
 test('folk-song scenes lead the preset library with canonical names and melody metadata', () => {
   const names = PERFORMANCE_SCENES.slice(0, 4).map((scene) => scene.name);
   assert.deepEqual(names, [
-    'ÜÔÀò»¨ / Jasmine Flower',
-    '¿µ¶¨Çé¸è / Kangding Love Song',
-    'Ð¡ºÓÌÊË® / Flowing River',
-    'Çà´ºÎèÇú / Youth Dance'
+    'èŒ‰èŽ‰èŠ± / Jasmine Flower',
+    'åº·å®šæƒ…æ­Œ / Kangding Love Song',
+    'å°æ²³æ·Œæ°´ / Flowing River',
+    'é’æ˜¥èˆžæ›² / Youth Dance'
   ]);
 
   PERFORMANCE_SCENES.slice(0, 4).forEach((scene) => {
@@ -41,4 +42,11 @@ test('scene cloning preserves drum pattern lengths for every layer', () => {
       assert.equal(pattern.length, 16);
     });
   });
+});
+
+test('PerformanceScenes.js is stored as UTF-8 so Chinese scene names survive browser delivery', () => {
+  const source = fs.readFileSync(new URL('../PerformanceScenes.js', import.meta.url), 'utf8');
+  assert.ok(source.includes('èŒ‰èŽ‰èŠ± / Jasmine Flower'));
+  assert.ok(source.includes('åº·å®šæƒ…æ­Œ / Kangding Love Song'));
+  assert.ok(!source.includes('ï¿½'));
 });
