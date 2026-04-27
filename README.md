@@ -32,6 +32,15 @@ The goal of this version is:
 
 ## Demo scenes
 
+### Canonical folk-song presets
+
+- 茉莉花 / Jasmine Flower
+- 康定情歌 / Kangding Love Song
+- 小河淌水 / Flowing River
+- 青春舞曲 / Youth Dance
+
+### Atmospheric presets kept for contrast
+
 - Mountain Resonance
 - Wind over Bamboo
 - Silk and Strings
@@ -87,6 +96,7 @@ Older experiment, debug, and report files have been moved to:
 
 Completed checks for this demo-first branch:
 
+- data-level regression tests for canonical folk-scene melodies
 - syntax checks with `node --check`
 - local server smoke test (`HTTP 200`)
 - verified demo page contains runtime container and tempo slider
