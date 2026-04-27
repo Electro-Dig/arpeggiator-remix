@@ -1,6 +1,4 @@
 import { Game } from './game.js';
-import { CustomEditor } from './CustomEditor.js';
-import { ArpeggioEditor } from './ArpeggioEditor.js';
 import * as drumManager from './DrumManager.js';
 import { stateManager } from './StateManager.js';
 import { container, errorHandler } from './DIContainer.js';
@@ -59,16 +57,21 @@ class RealTimeStatusSync {
         
         const checkInterval = setInterval(() => {
             this.errorHandler.safeExecute(() => {
+                const currentPreset = musicManager.getCurrentMusicPreset();
+                const currentTempo = (typeof Tone !== 'undefined' && Tone.Transport?.bpm)
+                    ? Math.round(Tone.Transport.bpm.value)
+                    : currentPreset?.tempo;
                 const currentState = {
                     synthName: musicManager.getSynthName(),
-                    preset: musicManager.getCurrentMusicPreset()
+                    presetName: currentPreset?.name,
+                    tempo: currentTempo
                 };
                 
                 if (!lastMusicState || this.hasChanged(lastMusicState, currentState)) {
                     this.stateManager.setState({
                         synthName: currentState.synthName,
-                        musicPresetName: currentState.preset.name,
-                        tempo: currentState.preset.tempo
+                        musicPresetName: currentState.presetName,
+                        tempo: currentState.tempo
                     });
                     lastMusicState = currentState;
                 }
@@ -109,20 +112,23 @@ class RealTimeStatusSync {
         const synthName = game.musicManager.getSynthName();
         const musicPreset = game.musicManager.getCurrentMusicPreset();
         const drumPreset = drumMgr.getCurrentDrumPreset();
+        const liveTempo = (typeof Tone !== 'undefined' && Tone.Transport?.bpm)
+            ? Math.round(Tone.Transport.bpm.value)
+            : musicPreset?.tempo;
         
         this.stateManager.setState({
             synthName: synthName,
             musicPresetName: musicPreset.name,
             drumPresetName: drumPreset.name,
-            tempo: musicPreset.tempo
+            tempo: liveTempo
         });
     }
     
     hasChanged(oldState, newState) {
         return (
             oldState.synthName !== newState.synthName ||
-            oldState.preset?.name !== newState.preset?.name ||
-            oldState.preset?.tempo !== newState.preset?.tempo
+            oldState.presetName !== newState.presetName ||
+            oldState.tempo !== newState.tempo
         );
     }
 }
@@ -157,8 +163,6 @@ function initializeApp() {
         // Initialize the game with the render target
         var game = new Game(renderDiv);
         
-        // Initialize the custom editor
-        var customEditor = new CustomEditor();
 
         // Check Tone.js availability
         if (window.Tone) {
@@ -168,19 +172,12 @@ function initializeApp() {
             console.error('❌ [MAIN] Tone.js 未加载！音频功能将不可用');
         }
 
-        // Initialize the arpeggio editor
-        var arpeggioEditor = new ArpeggioEditor();
-
         // 注册核心服务
         container.register('game', () => game, { singleton: true });
-        container.register('customEditor', () => customEditor, { singleton: true });
-        container.register('arpeggioEditor', () => arpeggioEditor, { singleton: true });
         container.register('drumManager', () => drumManager, { singleton: true });
 
         // Make everything available globally (向后兼容)
         window.game = game;
-        window.customEditor = customEditor;
-        window.arpeggioEditor = arpeggioEditor;
         window.drumManager = drumManager;
         window.stateManager = stateManager;
         window.errorHandler = errorHandler;

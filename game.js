@@ -1454,7 +1454,7 @@ export var Game = /*#__PURE__*/ function() {
                     // 初始化预设显示
                     _this._updatePresetDisplay();
                     // 初始化预设选择器
-                    _this._initPresetSelector();
+                    _this._initDemoControls();
                     
                     // 游戏初始化完成，状态面板将由main.js中的StatusUpdater处理
                     
@@ -1485,7 +1485,7 @@ export var Game = /*#__PURE__*/ function() {
                 // 隐藏摄像头相关的提示文本
                 var infoText = document.getElementById('info-text');
                 if (infoText) {
-                    infoText.textContent = '🎵 无摄像头模式 - 使用编辑器创作音乐';
+                    infoText.textContent = 'No-camera mode - use the scene menu and tempo slider below';
                     infoText.style.fontSize = 'clamp(18px, 3vw, 32px)';
                 }
 
@@ -1504,7 +1504,7 @@ export var Game = /*#__PURE__*/ function() {
 
                     // 初始化预设显示
                     _this._updatePresetDisplay();
-                    _this._initPresetSelector();
+                    _this._initDemoControls();
 
                     // 显示无摄像头模式的特殊提示
                     _this._showNoCameraModeGuide();
@@ -1528,18 +1528,19 @@ export var Game = /*#__PURE__*/ function() {
                 var guideDiv = document.createElement('div');
                 guideDiv.id = 'no-camera-guide';
                 guideDiv.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <h3 style="color: #7B4394; margin: 0 0 10px 0;">🎵 无摄像头模式</h3>
-                        <p style="margin: 0; font-size: 14px; color: #4ecdc4;">使用下方编辑器创作和测试音乐</p>
+                    <div style="text-align: center; margin-bottom: 16px;">
+                        <h3 style="color: #7B4394; margin: 0 0 10px 0;">No-camera mode</h3>
+                        <p style="margin: 0; font-size: 14px; color: #4ecdc4;">Camera unavailable? You can still audition scenes and rhythm from the bottom controls.</p>
                     </div>
 
-                    <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 15px;">
-                        <button onclick="window.customEditor?.openArpeggioEditor()" style="padding: 8px 16px; background: #7B4394; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">🎼 编辑琶音</button>
-                        <button onclick="window.customEditor?.openDrumEditor()" style="padding: 8px 16px; background: #FF5733; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">🥁 编辑鼓组</button>
+                    <div style="font-size: 12px; line-height: 1.6; margin-bottom: 14px; color: #e2e8f0;">
+                        <div>- use the bottom menu to switch music scenes and rhythm scenes</div>
+                        <div>- use the tempo slider to adjust overall speed</div>
+                        <div>- the full hand-gesture grammar remains the main live-demo interaction</div>
                     </div>
 
                     <div style="text-align: center;">
-                        <button id="close-guide" style="padding: 6px 12px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; font-size: 11px;">关闭提示</button>
+                        <button id="close-guide" style="padding: 6px 12px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; font-size: 11px;">Close</button>
                     </div>
                 `;
 
@@ -2360,267 +2361,71 @@ export var Game = /*#__PURE__*/ function() {
                 window.addEventListener('resize', this._onResize.bind(this));
 
                 // 初始化 Delay 控制 UI
-                this._initDelayControlUI();
-
                 // 初始化 鼓组音量 控制 UI
-                this._initDrumVolumeUI();
-
                 // 初始化 FM 参数自定义 UI
-                this._initFMEditorUI();
-
                 // 绑定编辑器打开/关闭与实时循环的暂停/恢复
-                this._wireEditorPauseResume();
+                this._initDemoControls();
             }
         },
         {
-            key: "_initFMEditorUI",
-            value: function _initFMEditorUI() {
-                var tgl = document.getElementById('fm-toggle');
-                var pnl = document.getElementById('fm-panel');
-                if (!tgl || !pnl || !this.musicManager) return;
-                tgl.addEventListener('click', function(){
-                    pnl.style.display = (pnl.style.display === 'none') ? 'flex' : 'none';
-                });
-
-                var select = document.getElementById('fm-synth-select');
-                var ids = { harm:'fm-harm', midx:'fm-midx', a:'fm-a', d:'fm-d', s:'fm-s', r:'fm-r', ma:'fm-ma', md:'fm-md', ms:'fm-ms', mr:'fm-mr' };
-                function loadFields(preset){
-                    if (!preset) return;
-                    document.getElementById(ids.harm).value = preset.harmonicity ?? 1;
-                    document.getElementById(ids.midx).value = preset.modulationIndex ?? 1;
-                    var env = preset.envelope || {}; var menv = preset.modulationEnvelope || {};
-                    document.getElementById(ids.a).value = env.attack ?? 0.01;
-                    document.getElementById(ids.d).value = env.decay ?? 0.2;
-                    document.getElementById(ids.s).value = env.sustain ?? 0.5;
-                    document.getElementById(ids.r).value = env.release ?? 1.0;
-                    document.getElementById(ids.ma).value = menv.attack ?? 0.01;
-                    document.getElementById(ids.md).value = menv.decay ?? 0.2;
-                    document.getElementById(ids.ms).value = menv.sustain ?? 0.5;
-                    document.getElementById(ids.mr).value = menv.release ?? 0.5;
+            key: "_initDemoControls",
+            value: function _initDemoControls() {
+                if (this._demoControlsInitialized) {
+                    this._syncBpmControls();
+                    return;
                 }
-                // 初始载入当前选项的预设
-                var currentIndex = parseInt(select.value || '0');
-                loadFields(this.musicManager.synthPresets[currentIndex]);
-                select.addEventListener('change', () => {
-                    var idx = parseInt(select.value || '0');
-                    loadFields(this.musicManager.synthPresets[idx]);
-                });
 
-                var applyBtn = document.getElementById('fm-apply');
-                var saveBtn = document.getElementById('fm-save');
-                var self = this;
-                function collectPreset(){
-                    return {
-                        harmonicity: parseFloat(document.getElementById(ids.harm).value),
-                        modulationIndex: parseFloat(document.getElementById(ids.midx).value),
-                        oscillator: { type: 'sine' },
-                        envelope: {
-                            attack: parseFloat(document.getElementById(ids.a).value),
-                            decay: parseFloat(document.getElementById(ids.d).value),
-                            sustain: parseFloat(document.getElementById(ids.s).value),
-                            release: parseFloat(document.getElementById(ids.r).value)
-                        },
-                        modulation: { type: 'sine' },
-                        modulationEnvelope: {
-                            attack: parseFloat(document.getElementById(ids.ma).value),
-                            decay: parseFloat(document.getElementById(ids.md).value),
-                            sustain: parseFloat(document.getElementById(ids.ms).value),
-                            release: parseFloat(document.getElementById(ids.mr).value)
-                        },
-                        effects: (self.musicManager.synthPresets[self.musicManager.currentSynthIndex] && self.musicManager.synthPresets[self.musicManager.currentSynthIndex].effects) || { reverbWet: 0.3, delayWet: 0.05 }
-                    };
-                }
-                if (applyBtn) applyBtn.addEventListener('click', () => {
-                    var idx = parseInt(select.value || '0');
-                    var preset = collectPreset();
-                    // 更新内存并立即应用到当前合成器
-                    self.musicManager.synthPresets[idx] = preset;
-                    self.musicManager.currentSynthIndex = idx;
-                    if (typeof self.musicManager._updateSynth === 'function') {
-                        self.musicManager._updateSynth();
-                    }
-                    self._showPresetChangeNotification(`音色参数已应用: ${self.musicManager.getSynthName()}`, 'music');
-                });
-                if (saveBtn) saveBtn.addEventListener('click', () => {
-                    var idx = parseInt(select.value || '0');
-                    var preset = collectPreset();
-                    try {
-                        var key = `fmPreset_${idx}`;
-                        localStorage.setItem(key, JSON.stringify(preset));
-                        self._showInfoTransient('✅ FM preset saved', 1200);
-                    } catch (e) {
-                        console.warn('save fm preset failed', e);
-                    }
-                });
-                // 页面加载时尝试恢复所有保存的预设
-                try {
-                    for (var i = 0; i < 8; i++) {
-                        var k = `fmPreset_${i}`;
-                        var raw = localStorage.getItem(k);
-                        if (raw) {
-                            var p = JSON.parse(raw);
-                            if (p && typeof p === 'object') {
-                                this.musicManager.synthPresets[i] = Object.assign({}, this.musicManager.synthPresets[i], p);
-                            }
-                        }
-                    }
-                } catch (e) {}
+                this._demoControlsInitialized = true;
+                this._initPresetSelector();
+                this._initBpmControl();
+                this._syncBpmControls();
             }
         },
         {
-            key: "_wireEditorPauseResume",
-            value: function _wireEditorPauseResume() {
+            key: "_initBpmControl",
+            value: function _initBpmControl() {
                 var _this = this;
-                // 打开按钮 -> 暂停
-                var openArp = document.getElementById('open-arpeggio-editor');
-                if (openArp) {
-                    openArp.addEventListener('click', function() { _this._pauseRealtime(); });
-                }
-                var openDrum = document.getElementById('open-drum-editor');
-                if (openDrum) {
-                    openDrum.addEventListener('click', function() { _this._pauseRealtime(); });
-                }
-                // 关闭控件/背景点击 -> 恢复
-                var arpModal = document.getElementById('arpeggio-editor-modal');
-                if (arpModal) {
-                    var closeSpan = arpModal.querySelector('.close');
-                    if (closeSpan) closeSpan.addEventListener('click', function() { _this._resumeRealtime(); });
-                    var closeBtn = document.getElementById('closeBtn');
-                    if (closeBtn) closeBtn.addEventListener('click', function() { _this._resumeRealtime(); });
-                    arpModal.addEventListener('click', function(e) {
-                        if (e.target === arpModal) { _this._resumeRealtime(); }
-                    });
-                }
-                var drumModal = document.getElementById('drum-editor-modal');
-                if (drumModal) {
-                    var dClose = drumModal.querySelector('.close');
-                    if (dClose) dClose.addEventListener('click', function() { _this._resumeRealtime(); });
-                    drumModal.addEventListener('click', function(e) {
-                        if (e.target === drumModal) { _this._resumeRealtime(); }
-                    });
-                }
-            }
-        },
-        {
-            key: "_pauseRealtime",
-            value: function _pauseRealtime() {
-                if (this._isPaused) return;
-                this._isPaused = true;
-                this._prevGameState = this.gameState;
-                this.gameState = 'paused';
-                // 可选：暂停波形更新不需要其它操作，因为 _animate 中已按 gameState 判断
-                console.log('⏸️ Realtime paused for editor');
-            }
-        },
-        {
-            key: "_resumeRealtime",
-            value: function _resumeRealtime() {
-                if (!this._isPaused) return;
-                this._isPaused = false;
-                // 若之前是 tracking 则恢复，否则也强制恢复到 tracking（排除 error/no-camera）
-                if (this._prevGameState === 'tracking' || this._prevGameState === 'paused') {
-                    this.gameState = 'tracking';
-                } else if (this._prevGameState === 'no-camera') {
-                    this.gameState = 'no-camera';
-                } else if (this._prevGameState === 'error') {
-                    this.gameState = 'error';
-                } else {
-                    this.gameState = 'tracking';
-                }
-                console.log('▶️ Realtime resumed after editor');
-            }
-        },
-        {
-            key: "_initDelayControlUI",
-            value: function _initDelayControlUI() {
-                var panel = document.getElementById('delay-control-panel');
-                if (!panel) return;
-                var autoToggle = document.getElementById('delay-auto-toggle');
-                var wetSlider = document.getElementById('delay-wet-slider');
-                var collapseBtn = document.getElementById('delay-collapse');
-                var levelLabel = document.getElementById('delay-level-label');
-                if (autoToggle) {
-                    autoToggle.checked = this.delayCtrl.auto;
-                    autoToggle.addEventListener('change', () => {
-                        this.delayCtrl.auto = !!autoToggle.checked;
-                    });
-                }
-                if (wetSlider) {
-                    var v = parseFloat(wetSlider.value);
-                    if (!isNaN(v)) this.delayCtrl.baseWet = v;
-                    wetSlider.addEventListener('input', () => {
-                        var val = Math.max(0, Math.min(1, parseFloat(wetSlider.value)));
-                        // 限制最大 0.7，与 HTML 属性一致
-                        val = Math.min(val, 0.7);
-                        this.delayCtrl.baseWet = val;
-                        // 立即应用当前湿度（不再随档位线性变化）
-                        var wet = this.delayCtrl.baseWet;
-                        if (window.game && this.musicManager && this.musicManager.setDelayWet) {
-                            this.musicManager.setDelayWet(wet);
-                        }
-                    });
-                }
-                if (collapseBtn) {
-                    collapseBtn.addEventListener('click', () => {
-                        var collapsed = panel.getAttribute('data-collapsed') === '1';
-                        if (!collapsed) {
-                            // 折叠除 Level/折叠按钮 以外的控件
-                            Array.from(panel.children).forEach((el) => {
-                                if (el.id !== 'delay-level-label' && el.id !== 'delay-collapse') {
-                                    el.style.display = 'none';
-                                }
-                            });
-                            panel.setAttribute('data-collapsed', '1');
-                            collapseBtn.textContent = '▸';
-                        } else {
-                            Array.from(panel.children).forEach((el) => {
-                                el.style.display = '';
-                            });
-                            panel.setAttribute('data-collapsed', '0');
-                            collapseBtn.textContent = '▾';
-                        }
-                    });
-                }
-                // 更新一次显示
-                if (levelLabel) levelLabel.textContent = 'Level: ' + this.delayCtrl.level;
-            }
-        },
-        {
-            key: "_initDrumVolumeUI",
-            value: function _initDrumVolumeUI() {
-                var panel = document.getElementById('drum-volume-panel');
-                if (!panel || !window.drumManager) return;
-                var toggle = document.getElementById('drum-volume-toggle');
-                var sliders = document.getElementById('drum-volume-sliders');
-                if (toggle && sliders) {
-                    toggle.addEventListener('click', function() {
-                        sliders.style.display = (sliders.style.display === 'none') ? 'flex' : 'none';
-                    });
-                }
-                // 初始值从 DrumManager 获取
-                try {
-                    var vols = (window.drumManager.getAllDrumVolumes && window.drumManager.getAllDrumVolumes()) || null;
-                    var ids = ['kick','snare','hihat','clap','openhat'];
-                    ids.forEach(function(id){
-                        var el = document.getElementById('vol-' + id);
-                        if (el && vols && typeof vols[id] === 'number') {
-                            el.value = Math.round(vols[id]);
-                        }
-                    });
-                } catch (e) {}
+                var slider = document.getElementById('demo-bpm-slider');
+                if (!slider) return;
 
-                // 绑定滑杆事件：将滑杆值(分贝)写回 DrumManager.setDrumVolume
-                function bind(id){
-                    var el = document.getElementById('vol-' + id);
-                    if (!el) return;
-                    el.addEventListener('input', function(){
-                        var dB = parseFloat(el.value);
-                        if (window.drumManager && window.drumManager.setDrumVolume) {
-                            window.drumManager.setDrumVolume(id, dB);
-                        }
-                    });
+                this._syncBpmControls();
+
+                slider.addEventListener('input', function() {
+                    _this._syncBpmControls(parseInt(slider.value, 10));
+                });
+
+                slider.addEventListener('change', function() {
+                    var bpm = parseInt(slider.value, 10);
+                    if (isNaN(bpm)) return;
+                    if (typeof Tone !== 'undefined' && Tone.Transport && Tone.Transport.bpm) {
+                        Tone.Transport.bpm.value = bpm;
+                    }
+                    _this._syncBpmControls(bpm);
+                    _this._showInfoTransient(`Tempo ${bpm} BPM`, 1200);
+                });
+            }
+        },
+        {
+            key: "_syncBpmControls",
+            value: function _syncBpmControls(tempo) {
+                var bpm = parseInt(tempo, 10);
+                if (isNaN(bpm)) {
+                    if (typeof Tone !== 'undefined' && Tone.Transport && Tone.Transport.bpm) {
+                        bpm = Math.round(Tone.Transport.bpm.value);
+                    } else if (this.musicManager && this.musicManager.getCurrentMusicPreset) {
+                        bpm = this.musicManager.getCurrentMusicPreset().tempo;
+                    } else {
+                        bpm = 108;
+                    }
                 }
-                ['kick','snare','hihat','clap','openhat'].forEach(bind);
+
+                var slider = document.getElementById('demo-bpm-slider');
+                var valueEl = document.getElementById('demo-bpm-value');
+                var currentTempoEl = document.getElementById('current-tempo');
+
+                if (slider) slider.value = String(bpm);
+                if (valueEl) valueEl.textContent = `${bpm} BPM`;
+                if (currentTempoEl) currentTempoEl.textContent = `${bpm} BPM`;
             }
         },
         {
@@ -2786,7 +2591,7 @@ export var Game = /*#__PURE__*/ function() {
                         
                         clearInterval(checkInterval);
                         console.log('所有管理器已成功初始化，设置UI组件');
-                        this._setupPresetSelectors();
+                        this._initDemoControls();
                     } else {
                         console.log('等待管理器初始化...');
                     }
@@ -2796,7 +2601,7 @@ export var Game = /*#__PURE__*/ function() {
                 setTimeout(() => {
                     clearInterval(checkInterval);
                     console.warn('初始化超时，使用默认设置');
-                    this._setupPresetSelectors();
+                    this._initDemoControls();
                 }, 5000);
             }
         },
@@ -3023,67 +2828,47 @@ export var Game = /*#__PURE__*/ function() {
             }
         },
         {
-            // 选择琶音风格
+            // manual music scene selection
             key: "_selectMusicPreset",
             value: function _selectMusicPreset(index) {
                 if (this.musicManager) {
-                    // 设置预设索引
-                    this.musicManager.currentMusicPresetIndex = index;
-                    var preset = this.musicManager.getCurrentMusicPreset();
-                    
-                    // 应用预设
-                    Tone.Transport.bpm.value = preset.tempo;
-                    this.musicManager.currentSynthIndex = preset.synthPreset;
-                    // 直接设置合成器而不是循环切换
-                    this.musicManager._updateSynth();
-                    
-                    // 更新显示
+                    var preset = this.musicManager.setMusicPreset
+                        ? this.musicManager.setMusicPreset(index)
+                        : this.musicManager.getCurrentMusicPreset();
+                    if (!preset) return;
+
+                    this._syncBpmControls(preset.tempo);
                     this._updatePresetDisplay();
                     this._generateMusicPresetOptions();
-                    
-                    // 显示通知
-                    this._showPresetChangeNotification(`琶音风格: ${preset.name} (${preset.tempo} BPM)`, 'music');
-                    
+                    this._showPresetChangeNotification(`Music scene: ${preset.name} (${preset.tempo} BPM)`, 'music');
 
-                    
-                    // 关闭菜单
-                    document.getElementById('preset-menu').style.display = 'none';
+                    var menu = document.getElementById('preset-menu');
+                    if (menu) menu.style.display = 'none';
                 }
             }
         },
         {
-            // 选择鼓组预设  
+            // manual music scene selection  
             key: "_selectDrumPreset",
             value: function _selectDrumPreset(targetIndex) {
-                var currentIndex = drumManager.getAllDrumPresets().findIndex(preset => 
-                    preset.name === drumManager.getCurrentDrumPreset().name
-                );
-                
-                // 循环到目标索引
-                while (currentIndex !== targetIndex) {
-                    drumManager.cycleDrumPreset();
-                    currentIndex = (currentIndex + 1) % drumManager.getAllDrumPresets().length;
+                var currentPreset = (this.drumManager && this.drumManager.setDrumPreset)
+                    ? this.drumManager.setDrumPreset(targetIndex)
+                    : null;
+                if (!currentPreset) {
+                    currentPreset = drumManager.getCurrentDrumPreset();
                 }
-                
-                var currentPreset = drumManager.getCurrentDrumPreset();
-                
-                // 更新BPM - 以最后切换的鼓组BPM为准
-                if (currentPreset.bpm) {
+
+                if (currentPreset && currentPreset.bpm) {
                     Tone.Transport.bpm.value = currentPreset.bpm;
-                    console.log(`BPM已更新为鼓组预设: ${currentPreset.bpm}`);
                 }
-                
-                // 更新显示
+
+                this._syncBpmControls(currentPreset && currentPreset.bpm);
                 this._updatePresetDisplay();
                 this._generateDrumPresetOptions();
-                
-                // 显示通知
-                this._showPresetChangeNotification(`鼓组: ${currentPreset.name}`, 'drum');
-                
+                this._showPresetChangeNotification(`Rhythm scene: ${currentPreset.name}`, 'drum');
 
-                
-                // 关闭菜单
-                document.getElementById('preset-menu').style.display = 'none';
+                var menu = document.getElementById('preset-menu');
+                if (menu) menu.style.display = 'none';
             }
         },
         {

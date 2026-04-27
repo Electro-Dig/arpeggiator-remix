@@ -90,8 +90,8 @@ function startHttpServer() {
     });
 }
 
-console.log('=' * 50);
+console.log('='.repeat(50));
 console.log('🎵 Arpeggiator 本地服务器');
-console.log('=' * 50);
+console.log('='.repeat(50));
 
 startServer(); 

@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js --dev",
-    "python-server": "python server.py"
+    "dev": "node server.js --dev"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -24,4 +23,4 @@
   ],
   "author": "Your Name",
   "license": "MIT"
-} 
+}

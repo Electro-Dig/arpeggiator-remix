@@ -1709,3 +1709,138 @@ body {
         top: -18px;
     }
 }
+
+/* Demo-first simplification UI */
+.demo-control-bar {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.demo-panel {
+    background: rgba(7, 10, 20, 0.84);
+    border: 1px solid rgba(183, 148, 246, 0.28);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: #f7fafc;
+    backdrop-filter: blur(10px);
+}
+
+.demo-guide-panel {
+    background: rgba(7, 10, 20, 0.88) !important;
+    color: #f7fafc !important;
+    border: 1px solid rgba(183, 148, 246, 0.26);
+    min-width: 300px;
+}
+
+.demo-guide-header {
+    font-weight: 700;
+    font-size: 14px;
+    color: #d6bcfa;
+    margin-bottom: 10px;
+}
+
+.demo-guide-section + .demo-guide-section {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.demo-guide-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #9ae6b4;
+}
+
+.demo-guide-line {
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 4px;
+}
+
+.demo-guide-muted {
+    color: #cbd5e0;
+}
+
+.demo-finger-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 4px;
+}
+
+.finger-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.08);
+    color: #edf2f7;
+    font-size: 11px;
+}
+
+.demo-toggle-button {
+    background: rgba(123, 67, 148, 0.9);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 10px 15px;
+}
+
+.demo-preset-menu {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(7, 10, 20, 0.96);
+    color: white;
+    min-width: 230px;
+}
+
+.demo-preset-group {
+    padding: 10px 12px;
+}
+
+.demo-preset-group + .demo-preset-group {
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.demo-preset-list {
+    margin-top: 8px;
+}
+
+.demo-bpm-panel {
+    min-width: 260px;
+}
+
+.demo-panel-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #cbd5e0;
+    margin-bottom: 6px;
+}
+
+.demo-bpm-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#demo-bpm-slider {
+    width: 160px;
+}
+
+#demo-bpm-value {
+    min-width: 72px;
+    text-align: right;
+    font-weight: 600;
+}
