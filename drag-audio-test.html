@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拖动音频反馈测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .test-container {
+            width: 800px;
+            height: 400px;
+            background: #001122;
+            border: 2px solid #0ff;
+            position: relative;
+            margin: 20px auto;
+        }
+        
+        .sequence-point {
+            width: 20px;
+            height: 20px;
+            background: #0ff;
+            border-radius: 50%;
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        .sequence-point.active {
+            background: #ff0;
+            box-shadow: 0 0 15px #ff0;
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px;
+        }
+        
+        button {
+            background: #0ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        .info {
+            text-align: center;
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 拖动音频反馈测试</h1>
+    
+    <div class="info">
+        <p>拖动蓝色圆点来测试实时音频反馈</p>
+        <p>当前音符: <span id="currentNote">C4</span></p>
+        <p>当前音程: <span id="currentInterval">0</span></p>
+    </div>
+    
+    <div class="test-container" id="testContainer">
+        <!-- 序列点将在这里动态生成 -->
+    </div>
+    
+    <div class="controls">
+        <button onclick="testAudio()">测试音频</button>
+        <button onclick="resetPoints()">重置点位</button>
+    </div>
+
+    <script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
+    <script>
+        let isDragging = false;
+        let dragTarget = null;
+        let dragIndex = null;
+        let dragSynth = null;
+        let lastPlayTime = 0;
+        
+        const rootNote = 'C';
+        const octave = 4;
+        
+        // 初始化序列点
+        function initPoints() {
+            const container = document.getElementById('testContainer');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < 8; i++) {
+                const point = document.createElement('div');
+                point.className = 'sequence-point active';
+                point.dataset.index = i;
+                
+                // 水平位置：均匀分布
+                const x = 10 + (i * 80); // 10%, 20%, 30%...
+                const y = 50; // 中间位置
+                
+                point.style.left = x + 'px';
+                point.style.top = y + '%';
+                
+                // 添加事件监听器
+                point.addEventListener('mousedown', handleMouseDown);
+                
+                container.appendChild(point);
+            }
+        }
+        
+        // 鼠标事件处理
+        function handleMouseDown(e) {
+            isDragging = true;
+            dragTarget = e.target;
+            dragIndex = parseInt(e.target.dataset.index);
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            
+            e.preventDefault();
+        }
+        
+        function handleMouseMove(e) {
+            if (!isDragging || !dragTarget) return;
+            
+            const container = document.getElementById('testContainer');
+            const rect = container.getBoundingClientRect();
+            
+            // 计算相对位置
+            const relativeY = ((e.clientY - rect.top) / rect.height) * 100;
+            const clampedY = Math.max(5, Math.min(95, relativeY));
+            
+            // 更新位置
+            dragTarget.style.top = clampedY + '%';
+            
+            // 计算音程 (-24 到 +24)
+            const interval = Math.round((50 - clampedY) * 0.96); // 50% = 0, 0% = +24, 100% = -24
+            
+            // 播放音符
+            playDragNote(interval);
+            
+            // 更新显示
+            updateInfo(interval);
+        }
+        
+        function handleMouseUp(e) {
+            isDragging = false;
+            dragTarget = null;
+            dragIndex = null;
+            
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        }
+        
+        // 播放拖动音符
+        async function playDragNote(interval) {
+            try {
+                // 防止过于频繁的播放
+                const now = Date.now();
+                if (now - lastPlayTime < 100) return;
+                lastPlayTime = now;
+                
+                // 启动音频上下文
+                if (Tone.context.state !== 'running') {
+                    await Tone.start();
+                }
+                
+                // 创建合成器
+                if (!dragSynth) {
+                    dragSynth = new Tone.Synth().toDestination();
+                }
+                
+                // 计算音符
+                const note = calculateNote(interval);
+                
+                // 播放音符
+                dragSynth.triggerAttackRelease(note, '16n');
+                
+                console.log(`🎵 播放: ${note} (音程: ${interval})`);
+                
+            } catch (error) {
+                console.error('❌ 播放失败:', error);
+            }
+        }
+        
+        // 计算音符
+        function calculateNote(interval) {
+            const noteMap = {
+                'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5,
+                'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11
+            };
+            
+            const baseMidi = (octave + 1) * 12 + noteMap[rootNote];
+            const targetMidi = baseMidi + interval;
+            
+            const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const resultOctave = Math.floor(targetMidi / 12) - 1;
+            const resultNote = noteNames[targetMidi % 12];
+            
+            return resultNote + resultOctave;
+        }
+        
+        // 更新信息显示
+        function updateInfo(interval) {
+            const note = calculateNote(interval);
+            document.getElementById('currentNote').textContent = note;
+            document.getElementById('currentInterval').textContent = interval;
+        }
+        
+        // 测试音频
+        async function testAudio() {
+            try {
+                if (Tone.context.state !== 'running') {
+                    await Tone.start();
+                }
+                
+                if (!dragSynth) {
+                    dragSynth = new Tone.Synth().toDestination();
+                }
+                
+                dragSynth.triggerAttackRelease('C4', '8n');
+                console.log('🎵 测试音频播放: C4');
+                
+            } catch (error) {
+                console.error('❌ 测试音频失败:', error);
+            }
+        }
+        
+        // 重置点位
+        function resetPoints() {
+            initPoints();
+            updateInfo(0);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            console.log('🎵 拖动音频反馈测试页面加载完成');
+            initPoints();
+            updateInfo(0);
+        });
+    </script>
+</body>
+</html>

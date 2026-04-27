@@ -1,133 +1,201 @@
 import { Game } from './game.js';
 import { CustomEditor } from './CustomEditor.js';
-import * as drumManager from './DrumManager.js'; // 导入drumManager模块
+import { ArpeggioEditor } from './ArpeggioEditor.js';
+import * as drumManager from './DrumManager.js';
+import { stateManager } from './StateManager.js';
+import { container, errorHandler } from './DIContainer.js';
 
-// 简单的实时状态同步器
+// 改进的实时状态同步器 - 现在使用依赖注入
 class RealTimeStatusSync {
-    constructor() {
+    constructor(stateManager, errorHandler) {
+        this.stateManager = stateManager;
+        this.errorHandler = errorHandler;
         this.isRunning = false;
-        this.updateInterval = null;
-        this.lastStatus = {};
-        console.log('🔧 实时状态同步器初始化');
+        this.unsubscribeFunctions = [];
+        console.log('🔧 事件驱动状态同步器初始化');
     }
     
     start() {
         if (this.isRunning) return;
         
-        console.log('🚀 启动实时状态同步 (每500ms)');
+        console.log('🚀 启动事件驱动状态同步');
         this.isRunning = true;
         
-        // 立即执行一次
-        this.syncStatus();
-        
-        // 设置定时器，每500ms同步一次
-        this.updateInterval = setInterval(() => {
-            this.syncStatus();
-        }, 500);
+        // 安全执行初始化
+        this.errorHandler.safeExecute(() => {
+            this.stateManager.initDisplayBindings();
+            this.syncInitialState();
+            this.setupStateListeners();
+        }, '状态同步初始化');
     }
     
     stop() {
-        if (this.updateInterval) {
-            clearInterval(this.updateInterval);
-            this.updateInterval = null;
-        }
+        this.unsubscribeFunctions.forEach(unsubscribe => {
+            this.errorHandler.safeExecute(() => unsubscribe(), '取消订阅');
+        });
+        this.unsubscribeFunctions = [];
         this.isRunning = false;
-        console.log('⏹️ 停止实时状态同步');
+        console.log('⏹️ 停止状态同步');
     }
     
-    syncStatus() {
-        try {
-            // 检查必需对象是否存在
-            if (!window.game?.musicManager || !window.drumManager) {
-                return;
-            }
-            
-            // 获取当前状态
-            const synthName = window.game.musicManager.getSynthName();
-            const musicPreset = window.game.musicManager.getCurrentMusicPreset();
-            const drumPreset = window.drumManager.getCurrentDrumPreset();
-            
-            const currentStatus = {
-                synthName: synthName,
-                musicPresetName: musicPreset.name,
-                drumPresetName: drumPreset.name,
-                tempo: musicPreset.tempo
-            };
-            
-            // 检查是否有变化，只在有变化时更新DOM
-            if (this.hasStatusChanged(currentStatus)) {
-                this.updateStatusDisplay(currentStatus);
-                this.lastStatus = { ...currentStatus };
-            }
-            
-        } catch (error) {
-            // 静默处理错误
+    setupStateListeners() {
+        // 使用容器获取依赖
+        const game = container.has('game') ? container.get('game') : window.game;
+        const drumMgr = container.has('drumManager') ? container.get('drumManager') : window.drumManager;
+        
+        if (game?.musicManager) {
+            const unsubscribeMusic = this.observeMusicManager(game.musicManager);
+            this.unsubscribeFunctions.push(unsubscribeMusic);
+        }
+        
+        if (drumMgr) {
+            const unsubscribeDrum = this.observeDrumManager(drumMgr);
+            this.unsubscribeFunctions.push(unsubscribeDrum);
         }
     }
     
-    hasStatusChanged(newStatus) {
+    observeMusicManager(musicManager) {
+        let lastMusicState = null;
+        
+        const checkInterval = setInterval(() => {
+            this.errorHandler.safeExecute(() => {
+                const currentState = {
+                    synthName: musicManager.getSynthName(),
+                    preset: musicManager.getCurrentMusicPreset()
+                };
+                
+                if (!lastMusicState || this.hasChanged(lastMusicState, currentState)) {
+                    this.stateManager.setState({
+                        synthName: currentState.synthName,
+                        musicPresetName: currentState.preset.name,
+                        tempo: currentState.preset.tempo
+                    });
+                    lastMusicState = currentState;
+                }
+            }, '音乐状态检查');
+        }, 1000);
+        
+        return () => clearInterval(checkInterval);
+    }
+    
+    observeDrumManager(drumMgr) {
+        let lastDrumPreset = null;
+        
+        const checkInterval = setInterval(() => {
+            this.errorHandler.safeExecute(() => {
+                const currentPreset = drumMgr.getCurrentDrumPreset();
+                
+                if (!lastDrumPreset || lastDrumPreset.name !== currentPreset.name) {
+                    this.stateManager.setState({
+                        drumPresetName: currentPreset.name
+                    });
+                    lastDrumPreset = currentPreset;
+                }
+            }, '鼓组状态检查');
+        }, 1000);
+        
+        return () => clearInterval(checkInterval);
+    }
+    
+    syncInitialState() {
+        const game = container.has('game') ? container.get('game') : window.game;
+        const drumMgr = container.has('drumManager') ? container.get('drumManager') : window.drumManager;
+        
+        if (!game?.musicManager || !drumMgr) {
+            console.warn('⚠️ 初始状态同步：缺少必要的管理器');
+            return;
+        }
+        
+        const synthName = game.musicManager.getSynthName();
+        const musicPreset = game.musicManager.getCurrentMusicPreset();
+        const drumPreset = drumMgr.getCurrentDrumPreset();
+        
+        this.stateManager.setState({
+            synthName: synthName,
+            musicPresetName: musicPreset.name,
+            drumPresetName: drumPreset.name,
+            tempo: musicPreset.tempo
+        });
+    }
+    
+    hasChanged(oldState, newState) {
         return (
-            this.lastStatus.synthName !== newStatus.synthName ||
-            this.lastStatus.musicPresetName !== newStatus.musicPresetName ||
-            this.lastStatus.drumPresetName !== newStatus.drumPresetName ||
-            this.lastStatus.tempo !== newStatus.tempo
+            oldState.synthName !== newState.synthName ||
+            oldState.preset?.name !== newState.preset?.name ||
+            oldState.preset?.tempo !== newState.preset?.tempo
         );
-    }
-    
-    updateStatusDisplay(status) {
-        // 更新音色
-        const synthElement = document.getElementById('current-synth');
-        if (synthElement) {
-            synthElement.textContent = status.synthName;
-        }
-        
-        // 更新音乐预设
-        const musicElement = document.getElementById('current-music-preset');
-        if (musicElement) {
-            musicElement.textContent = status.musicPresetName;
-        }
-        
-        // 更新鼓组预设
-        const drumElement = document.getElementById('current-drum-preset');
-        if (drumElement) {
-            drumElement.textContent = status.drumPresetName;
-        }
-        
-        // 更新节拍
-        const tempoElement = document.getElementById('current-tempo');
-        if (tempoElement) {
-            tempoElement.textContent = status.tempo + ' BPM';
-        }
     }
 }
 
-// Get the render target div
-var renderDiv = document.getElementById('renderDiv');
-// Check if renderDiv exists
-if (!renderDiv) {
-    console.error('Fatal Error: renderDiv element not found.');
-} else {
-    // Initialize the game with the render target
-    var game = new Game(renderDiv);
-    
-    // Initialize the custom editor
-    var customEditor = new CustomEditor();
-    
-    // Initialize the real-time status sync
-    var statusSync = new RealTimeStatusSync();
-    
-    // Make everything available globally
-    window.game = game;
-    window.customEditor = customEditor;
-    window.statusSync = statusSync;
-    window.drumManager = drumManager; // 设置drumManager到全局
-    
-    // 等待所有组件初始化完成后启动状态同步
-    setTimeout(() => {
-        if (window.statusSync) {
-            statusSync.start();
-        }
-    }, 2000); // 给足够时间让所有组件完全初始化
-    
-    console.log('✅ 应用初始化完成：游戏引擎、自定义编辑器和实时状态同步器已加载');
+// 注册服务到容器
+function registerServices() {
+    container.register('stateManager', () => stateManager, { singleton: true });
+    container.register('errorHandler', () => errorHandler, { singleton: true });
+    container.register('statusSync', (container) => {
+        return new RealTimeStatusSync(
+            container.get('stateManager'),
+            container.get('errorHandler')
+        );
+    }, { singleton: true });
 }
+
+// 安全的应用初始化
+function initializeApp() {
+    // Get the render target div
+    var renderDiv = document.getElementById('renderDiv');
+    
+    // Check if renderDiv exists
+    if (!renderDiv) {
+        errorHandler.logError('初始化错误', new Error('renderDiv element not found'));
+        return;
+    }
+
+    errorHandler.safeExecute(() => {
+        // 注册服务
+        registerServices();
+        
+        // Initialize the game with the render target
+        var game = new Game(renderDiv);
+        
+        // Initialize the custom editor
+        var customEditor = new CustomEditor();
+
+        // Check Tone.js availability
+        if (window.Tone) {
+            console.log('🎵 [MAIN] Tone.js 已加载，版本:', window.Tone.version || 'unknown');
+            console.log('🎵 [MAIN] 音频上下文状态:', window.Tone.context.state);
+        } else {
+            console.error('❌ [MAIN] Tone.js 未加载！音频功能将不可用');
+        }
+
+        // Initialize the arpeggio editor
+        var arpeggioEditor = new ArpeggioEditor();
+
+        // 注册核心服务
+        container.register('game', () => game, { singleton: true });
+        container.register('customEditor', () => customEditor, { singleton: true });
+        container.register('arpeggioEditor', () => arpeggioEditor, { singleton: true });
+        container.register('drumManager', () => drumManager, { singleton: true });
+
+        // Make everything available globally (向后兼容)
+        window.game = game;
+        window.customEditor = customEditor;
+        window.arpeggioEditor = arpeggioEditor;
+        window.drumManager = drumManager;
+        window.stateManager = stateManager;
+        window.errorHandler = errorHandler;
+        
+        // 启动状态同步
+        setTimeout(() => {
+            const statusSync = container.get('statusSync');
+            window.statusSync = statusSync;
+            statusSync.start();
+        }, 2000);
+        
+        console.log('✅ 应用初始化完成：所有组件已通过依赖注入容器管理');
+        
+    }, '应用初始化');
+}
+
+// 启动应用
+initializeApp();

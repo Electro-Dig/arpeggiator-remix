@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tone.js 检查</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #0ff;
+            border-radius: 5px;
+        }
+        
+        .success {
+            border-color: #0f0;
+            color: #0f0;
+        }
+        
+        .error {
+            border-color: #f00;
+            color: #f00;
+        }
+        
+        button {
+            background: #0ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Tone.js 可用性检查</h1>
+    
+    <div id="status-container">
+        <!-- 状态信息将在这里显示 -->
+    </div>
+    
+    <div>
+        <button onclick="testTone()">测试 Tone.js</button>
+        <button onclick="testAudio()">测试音频播放</button>
+        <button onclick="checkContext()">检查音频上下文</button>
+    </div>
+
+    <!-- 加载 Tone.js -->
+    <script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
+    
+    <script>
+        function addStatus(message, isError = false) {
+            const container = document.getElementById('status-container');
+            const div = document.createElement('div');
+            div.className = `status ${isError ? 'error' : 'success'}`;
+            div.textContent = message;
+            container.appendChild(div);
+            console.log(message);
+        }
+        
+        function testTone() {
+            addStatus('=== 开始 Tone.js 检查 ===');
+            
+            if (window.Tone) {
+                addStatus('✅ Tone.js 已加载');
+                addStatus(`📦 版本: ${Tone.version || 'unknown'}`);
+                addStatus(`🎵 音频上下文状态: ${Tone.context.state}`);
+                
+                // 检查基本功能
+                try {
+                    const synth = new Tone.Synth();
+                    addStatus('✅ 合成器创建成功');
+                    synth.dispose();
+                    addStatus('✅ 合成器销毁成功');
+                } catch (error) {
+                    addStatus(`❌ 合成器测试失败: ${error.message}`, true);
+                }
+                
+            } else {
+                addStatus('❌ Tone.js 未加载', true);
+            }
+        }
+        
+        async function testAudio() {
+            if (!window.Tone) {
+                addStatus('❌ Tone.js 不可用', true);
+                return;
+            }
+            
+            try {
+                addStatus('🎵 启动音频上下文...');
+                await Tone.start();
+                addStatus(`✅ 音频上下文已启动: ${Tone.context.state}`);
+                
+                addStatus('🎵 创建合成器...');
+                const synth = new Tone.Synth().toDestination();
+                
+                addStatus('🎵 播放测试音符 C4...');
+                synth.triggerAttackRelease('C4', '8n');
+                
+                setTimeout(() => {
+                    synth.dispose();
+                    addStatus('✅ 音频测试完成');
+                }, 1000);
+                
+            } catch (error) {
+                addStatus(`❌ 音频测试失败: ${error.message}`, true);
+            }
+        }
+        
+        function checkContext() {
+            if (!window.Tone) {
+                addStatus('❌ Tone.js 不可用', true);
+                return;
+            }
+            
+            addStatus('=== 音频上下文详细信息 ===');
+            addStatus(`状态: ${Tone.context.state}`);
+            addStatus(`采样率: ${Tone.context.sampleRate}`);
+            addStatus(`当前时间: ${Tone.context.currentTime.toFixed(3)}`);
+            addStatus(`基础延迟: ${Tone.context.baseLatency || 'unknown'}`);
+            addStatus(`输出延迟: ${Tone.context.outputLatency || 'unknown'}`);
+        }
+        
+        // 页面加载完成后自动检查
+        window.addEventListener('load', () => {
+            setTimeout(testTone, 100);
+        });
+    </script>
+</body>
+</html>

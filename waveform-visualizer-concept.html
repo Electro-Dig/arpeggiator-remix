@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音序器波形可视化概念演示</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            font-family: 'Courier New', monospace;
+            color: #00ff88;
+        }
+
+        .visualizer-container {
+            width: 800px;
+            height: 400px;
+            margin: 20px auto;
+            background:
+                /* 示波器深色背景 */
+                radial-gradient(ellipse at center, #001122 0%, #000811 100%),
+                /* 水平网格线 */
+                linear-gradient(to bottom, transparent 0%, transparent 49px, rgba(0, 255, 136, 0.1) 49px, rgba(0, 255, 136, 0.1) 51px, transparent 51px, transparent 100%),
+                /* 垂直网格线 */
+                linear-gradient(to right, transparent 0%, transparent 49px, rgba(0, 255, 136, 0.1) 49px, rgba(0, 255, 136, 0.1) 51px, transparent 51px, transparent 100%);
+            background-size: 100% 100%, 100% 50px, 100px 100%;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow:
+                inset 0 0 50px rgba(0, 255, 136, 0.1),
+                0 0 20px rgba(0, 255, 136, 0.2);
+        }
+
+        .circuit-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.3;
+        }
+
+        .circuit-line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, #00ff88, transparent);
+            height: 1px;
+        }
+
+        .circuit-line.horizontal {
+            width: 100%;
+            left: 0;
+        }
+
+        .circuit-line.vertical {
+            width: 1px;
+            height: 100%;
+            top: 0;
+            background: linear-gradient(0deg, transparent, #00ff88, transparent);
+        }
+
+        .waveform-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sequence-points {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .sequence-point {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00ff88, #004d2a);
+            border: 2px solid #00ff88;
+            box-shadow: 
+                0 0 10px #00ff88,
+                inset 0 0 5px rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+
+        .sequence-point.active {
+            background: radial-gradient(circle, #00ff88, #00aa44);
+            box-shadow: 
+                0 0 20px #00ff88,
+                0 0 40px rgba(0, 255, 136, 0.5),
+                inset 0 0 5px rgba(255, 255, 255, 0.5);
+            animation: pulse 1s ease-in-out infinite alternate;
+        }
+
+        .sequence-point.inactive {
+            background: radial-gradient(circle, #222, #111);
+            border-color: #333;
+            box-shadow:
+                0 0 2px #222,
+                inset 0 0 2px rgba(255, 255, 255, 0.05);
+            opacity: 0.3; /* 降低透明度，让非激活点更低调 */
+            transform: translate(-50%, -50%) scale(0.7); /* 缩小非激活点 */
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            100% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        .current-position {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff6600, #cc3300);
+            border: 3px solid #ff6600;
+            box-shadow: 
+                0 0 30px #ff6600,
+                0 0 60px rgba(255, 102, 0, 0.7);
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            animation: currentPulse 0.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes currentPulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            100% { transform: translate(-50%, -50%) scale(1.3); }
+        }
+
+        .waveform-path {
+            fill: none;
+            stroke: #00ff88;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 5px #00ff88);
+            opacity: 0.8;
+        }
+
+        .waveform-glow {
+            fill: none;
+            stroke: #00ff88;
+            stroke-width: 8;
+            opacity: 0.3;
+            filter: blur(3px);
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #00ff88, #00aa44);
+            border: none;
+            color: #000;
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(45deg, #00aa44, #00ff88);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+
+        .info {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">🎵 音序器波形可视化概念演示</h1>
+    
+    <div class="info">
+        演示：曲线连接音序点 + 电路板背景 + 播放光点动画
+    </div>
+
+    <div class="visualizer-container">
+        <!-- 电路板背景线条 -->
+        <div class="circuit-lines">
+            <div class="circuit-line horizontal" style="top: 25%;"></div>
+            <div class="circuit-line horizontal" style="top: 50%;"></div>
+            <div class="circuit-line horizontal" style="top: 75%;"></div>
+            <div class="circuit-line vertical" style="left: 12.5%;"></div>
+            <div class="circuit-line vertical" style="left: 25%;"></div>
+            <div class="circuit-line vertical" style="left: 37.5%;"></div>
+            <div class="circuit-line vertical" style="left: 50%;"></div>
+            <div class="circuit-line vertical" style="left: 62.5%;"></div>
+            <div class="circuit-line vertical" style="left: 75%;"></div>
+            <div class="circuit-line vertical" style="left: 87.5%;"></div>
+        </div>
+
+        <!-- SVG波形 -->
+        <svg class="waveform-svg" viewBox="0 0 800 400">
+            <!-- 发光效果 -->
+            <path class="waveform-glow" id="waveform-glow" d=""></path>
+            <!-- 主波形 -->
+            <path class="waveform-path" id="waveform-path" d=""></path>
+        </svg>
+
+        <!-- 音序点 -->
+        <div class="sequence-points" id="sequence-points">
+            <!-- 动态生成 -->
+        </div>
+
+        <!-- 当前播放位置 -->
+        <div class="current-position" id="current-position" style="left: 12.5%; top: 50%;"></div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" onclick="startAnimation()">▶️ 开始播放</button>
+        <button class="control-btn" onclick="stopAnimation()">⏹️ 停止</button>
+        <button class="control-btn" onclick="randomizeSequence()">🎲 随机序列</button>
+        <button class="control-btn" onclick="resetSequence()">🔄 重置</button>
+    </div>
+
+    <div class="info">
+        💡 技术要点：SVG路径绘制 + CSS动画 + JavaScript控制<br>
+        🎯 实现难点：曲线平滑算法 + 音频同步 + 性能优化
+    </div>
+
+    <script>
+        // 示例序列数据 [音程值, null表示空拍]
+        let sequence = [0, 3, 5, 7, null, 10, 12, null];
+        let isPlaying = false;
+        let currentStep = 0;
+        let animationId;
+
+        // 初始化
+        function init() {
+            updateVisualization();
+        }
+
+        // 更新可视化
+        function updateVisualization() {
+            updateSequencePoints();
+            updateWaveform();
+        }
+
+        // 更新音序点
+        function updateSequencePoints() {
+            const container = document.getElementById('sequence-points');
+            container.innerHTML = '';
+
+            for (let i = 0; i < 8; i++) {
+                const point = document.createElement('div');
+                point.className = 'sequence-point';
+                
+                const x = (i + 1) * 12.5; // 百分比位置
+                const interval = sequence[i];
+                
+                if (interval !== null) {
+                    point.classList.add('active');
+                    // 音程值映射到Y位置 (-12到+24 -> 90%到10%)
+                    const y = 90 - ((interval + 12) / 36) * 80;
+                    point.style.top = y + '%';
+                } else {
+                    point.classList.add('inactive');
+                    point.style.top = '50%'; // 中间位置
+                }
+                
+                point.style.left = x + '%';
+                container.appendChild(point);
+            }
+        }
+
+        // 更新波形路径
+        function updateWaveform() {
+            const activePoints = [];
+
+            // 收集激活的点（跳过null值）
+            for (let i = 0; i < 8; i++) {
+                if (sequence[i] !== null) {
+                    const x = (i + 1) * 100; // 800px宽度中的位置
+                    const y = 360 - ((sequence[i] + 12) / 36) * 320; // 400px高度中的位置
+                    activePoints.push({x, y, step: i});
+                }
+            }
+
+            if (activePoints.length < 2) {
+                // 少于2个点，无法绘制曲线
+                document.getElementById('waveform-path').setAttribute('d', '');
+                document.getElementById('waveform-glow').setAttribute('d', '');
+                return;
+            }
+
+            // 简化连线逻辑：连接所有激活点，不管是否连续
+            let pathData = '';
+
+            if (activePoints.length >= 2) {
+                // 连接所有激活点
+                pathData = generateSmoothPath(activePoints);
+            } else if (activePoints.length === 1) {
+                // 单独的点，绘制一个小圆圈
+                const point = activePoints[0];
+                pathData = `M ${point.x - 3} ${point.y} A 3 3 0 1 1 ${point.x + 3} ${point.y} A 3 3 0 1 1 ${point.x - 3} ${point.y}`;
+            }
+
+            document.getElementById('waveform-path').setAttribute('d', pathData);
+            document.getElementById('waveform-glow').setAttribute('d', pathData);
+
+            // 调试信息
+            console.log(`🔗 连线更新: ${activePoints.length}个激活点`);
+            console.log('激活点位置:', activePoints.map(p => `步骤${p.step}(${p.x},${p.y})`));
+            console.log('路径数据:', pathData.substring(0, 100) + '...');
+        }
+
+        // 生成平滑连接所有激活点的路径
+        function generateSmoothPath(points) {
+            if (points.length < 2) return '';
+
+            let pathData = `M ${points[0].x} ${points[0].y}`;
+
+            for (let i = 1; i < points.length; i++) {
+                const prev = points[i - 1];
+                const curr = points[i];
+
+                // 根据点之间的距离调整张力
+                const distance = curr.step - prev.step;
+                let tension = 0.3;
+
+                // 如果点之间有空拍，增加张力让曲线更平滑
+                if (distance > 1) {
+                    tension = Math.min(0.5, 0.3 + (distance - 1) * 0.1);
+                }
+
+                const cp1x = prev.x + (curr.x - prev.x) * tension;
+                const cp1y = prev.y;
+                const cp2x = curr.x - (curr.x - prev.x) * tension;
+                const cp2y = curr.y;
+
+                pathData += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
+            }
+
+            return pathData;
+        }
+
+        // 开始动画
+        function startAnimation() {
+            if (isPlaying) return;
+            isPlaying = true;
+            currentStep = 0;
+            animatePlayback();
+        }
+
+        // 停止动画
+        function stopAnimation() {
+            isPlaying = false;
+            if (animationId) {
+                clearTimeout(animationId);
+            }
+        }
+
+        // 播放动画
+        function animatePlayback() {
+            if (!isPlaying) return;
+
+            const currentPos = document.getElementById('current-position');
+            const interval = sequence[currentStep];
+
+            if (interval !== null) {
+                // 只有激活的点才显示光点
+                const x = (currentStep + 1) * 12.5;
+                const y = 90 - ((interval + 12) / 36) * 80;
+
+                currentPos.style.left = x + '%';
+                currentPos.style.top = y + '%';
+                currentPos.style.display = 'block';
+
+                // 添加闪烁效果
+                currentPos.style.animation = 'currentPulse 0.3s ease-in-out';
+                setTimeout(() => {
+                    currentPos.style.animation = 'currentPulse 0.5s ease-in-out infinite alternate';
+                }, 300);
+            } else {
+                // 空拍时隐藏光点
+                currentPos.style.display = 'none';
+            }
+
+            // 下一步
+            currentStep = (currentStep + 1) % 8;
+
+            // 模拟120 BPM (500ms per step)
+            animationId = setTimeout(animatePlayback, 500);
+        }
+
+        // 随机序列
+        function randomizeSequence() {
+            const intervals = [0, 2, 3, 5, 7, 8, 10, 12];
+            sequence = [];
+
+            // 确保至少有2-3个激活点，避免全空或全满
+            let activeCount = 0;
+            const minActive = 2;
+            const maxActive = 6;
+
+            for (let i = 0; i < 8; i++) {
+                const shouldActivate = Math.random() > 0.4;
+
+                if (shouldActivate && activeCount < maxActive) {
+                    sequence.push(intervals[Math.floor(Math.random() * intervals.length)]);
+                    activeCount++;
+                } else {
+                    sequence.push(null);
+                }
+            }
+
+            // 如果激活点太少，随机激活一些
+            while (activeCount < minActive) {
+                const randomIndex = Math.floor(Math.random() * 8);
+                if (sequence[randomIndex] === null) {
+                    sequence[randomIndex] = intervals[Math.floor(Math.random() * intervals.length)];
+                    activeCount++;
+                }
+            }
+
+            updateVisualization();
+        }
+
+        // 重置序列
+        function resetSequence() {
+            sequence = [0, 3, 5, 7, null, 10, 12, null];
+            updateVisualization();
+        }
+
+        // 初始化
+        init();
+    </script>
+</body>
+</html>

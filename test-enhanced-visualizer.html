@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>增强琶音可视化器测试</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/tone@14.7.77/build/Tone.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 增强琶音可视化器测试</h1>
+        
+        <div class="test-section">
+            <h2>增强型音序可视化器</h2>
+            
+            <!-- 序列控制 -->
+            <div class="sequence-controls">
+                <select id="root-note">
+                    <option value="C">C</option>
+                    <option value="C#">C#</option>
+                    <option value="D">D</option>
+                    <option value="D#">D#</option>
+                    <option value="E">E</option>
+                    <option value="F">F</option>
+                    <option value="F#">F#</option>
+                    <option value="G">G</option>
+                    <option value="G#">G#</option>
+                    <option value="A">A</option>
+                    <option value="A#">A#</option>
+                    <option value="B">B</option>
+                </select>
+                <button class="control-btn" id="preview-sequence">预览</button>
+                <button class="control-btn" id="randomize-sequence">随机</button>
+                <button class="control-btn" id="reset-sequence">重置</button>
+            </div>
+
+            <!-- 增强可视化器 -->
+            <div class="sequence-visualizer">
+                <!-- 音程范围指示器 -->
+                <div class="interval-scale">
+                    <div class="scale-label scale-max">+24</div>
+                    <div class="scale-line scale-major"></div>
+                    <div class="scale-label scale-mid">+12</div>
+                    <div class="scale-line scale-major"></div>
+                    <div class="scale-label scale-zero">0</div>
+                    <div class="scale-line scale-major"></div>
+                    <div class="scale-label scale-mid">-12</div>
+                    <div class="scale-line scale-major"></div>
+                    <div class="scale-label scale-min">-24</div>
+                </div>
+                
+                <!-- 8个音序点垂直条形图 -->
+                <div class="sequence-grid-enhanced">
+                    <div class="sequence-column" data-step="0">
+                        <div class="step-track">
+                            <div class="step-handle active" data-interval="0" style="bottom: 50%;">
+                                <div class="handle-dot"></div>
+                                <div class="interval-display">0</div>
+                            </div>
+                            <div class="step-track-line"></div>
+                        </div>
+                        <div class="step-number">1</div>
+                    </div>
+                    <div class="sequence-column" data-step="1">
+                        <div class="step-track">
+                            <div class="step-handle active" data-interval="3" style="bottom: 56.25%;">
+                                <div class="handle-dot"></div>
+                                <div class="interval-display">+3</div>
+                            </div>
+                            <div class="step-track-line"></div>
+                        </div>
+                        <div class="step-number">2</div>
+                    </div>
+                    <div class="sequence-column" data-step="2">
+                        <div class="step-track">
+                            <div class="step-handle inactive" data-interval="null" style="bottom: 50%;">
+                                <div class="handle-dot"></div>
+                                <div class="interval-display">--</div>
+                            </div>
+                            <div class="step-track-line"></div>
+                        </div>
+                        <div class="step-number">3</div>
+                    </div>
+                    <div class="sequence-column" data-step="3">
+                        <div class="step-track">
+                            <div class="step-handle active" data-interval="7" style="bottom: 64.58%;">
+                                <div class="handle-dot"></div>
+                                <div class="interval-display">+7</div>
+                            </div>
+                            <div class="step-track-line"></div>
+                        </div>
+                        <div class="step-number">4</div>
+                    </div>
+                    <div class="sequence-column" data-step="4">
+                        <div class="step-track">
+                            <div class="step-handle active" data-interval="8" style="bottom: 66.67%;">
+                                <div class="handle-dot"></div>
+                                <div class="interval-display">+8</div>
+                            </div>
+                            <div class="step-track-line"></div>
+                        </div>
+                        <div class="step-number">5</div>
+                    </div>
+                    <div class="sequence-column" data-step="5">
+                        <div class="step-track">
+                            <div class="step-handle inactive" data-interval="null" style="bottom: 50%;">
+                                <div class="handle-dot"></div>
+                                <div class="interval-display">--</div>
+                            </div>
+                            <div class="step-track-line"></div>
+                        </div>
+                        <div class="step-number">6</div>
+                    </div>
+                    <div class="sequence-column" data-step="6">
+                        <div class="step-track">
+                            <div class="step-handle active" data-interval="7" style="bottom: 64.58%;">
+                                <div class="handle-dot"></div>
+                                <div class="interval-display">+7</div>
+                            </div>
+                            <div class="step-track-line"></div>
+                        </div>
+                        <div class="step-number">7</div>
+                    </div>
+                    <div class="sequence-column" data-step="7">
+                        <div class="step-track">
+                            <div class="step-handle inactive" data-interval="null" style="bottom: 50%;">
+                                <div class="handle-dot"></div>
+                                <div class="interval-display">--</div>
+                            </div>
+                            <div class="step-track-line"></div>
+                        </div>
+                        <div class="step-number">8</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 测试按钮 -->
+            <div class="test-controls">
+                <button class="control-btn" id="test-synth">测试合成器</button>
+                <button class="control-btn" id="test-drag">测试拖拽</button>
+                <button class="control-btn" id="test-toggle">测试切换</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="CustomEditor.js"></script>
+    <script src="test-enhanced-functionality.js"></script>
+    <script>
+        // 初始化测试
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🧪 初始化增强可视化器测试...');
+
+            // 等待Tone.js初始化
+            await Tone.start();
+
+            // 创建编辑器实例
+            const editor = new CustomEditor();
+
+            // 初始化音频
+            await editor.initializeSequencePreviewSynth();
+
+            // 设置事件
+            editor.setupSequenceStepEvents();
+
+            // 创建测试器实例
+            const tester = new EnhancedVisualizerTester();
+
+            // 测试按钮事件
+            document.getElementById('test-synth').addEventListener('click', async () => {
+                console.log('🎵 测试合成器...');
+                try {
+                    await editor.testArpeggioSynth();
+                    alert('✅ 合成器测试完成，请检查控制台输出');
+                } catch (error) {
+                    alert('❌ 合成器测试失败: ' + error.message);
+                }
+            });
+
+            document.getElementById('test-drag').addEventListener('click', () => {
+                console.log('🖱️ 测试拖拽功能...');
+                alert('请尝试拖拽音序点来调整音程\n- 向上拖拽增加音程\n- 向下拖拽减少音程\n- 点击切换激活/非激活状态');
+            });
+
+            document.getElementById('test-toggle').addEventListener('click', () => {
+                console.log('🔄 测试切换功能...');
+                // 切换第一个音序点
+                editor.toggleSequenceStep(0);
+                alert('✅ 已切换第一个音序点状态');
+            });
+
+            document.getElementById('preview-sequence').addEventListener('click', async () => {
+                console.log('▶️ 预览序列...');
+                try {
+                    await editor.previewCurrentSequence();
+                    alert('✅ 序列预览完成');
+                } catch (error) {
+                    alert('❌ 序列预览失败: ' + error.message);
+                }
+            });
+
+            document.getElementById('randomize-sequence').addEventListener('click', () => {
+                console.log('🎲 随机化序列...');
+                try {
+                    editor.randomizeSequence();
+                    alert('✅ 序列已随机化');
+                } catch (error) {
+                    alert('❌ 随机化失败: ' + error.message);
+                }
+            });
+
+            document.getElementById('reset-sequence').addEventListener('click', () => {
+                console.log('🔄 重置序列...');
+                try {
+                    editor.resetSequence();
+                    alert('✅ 序列已重置');
+                } catch (error) {
+                    alert('❌ 重置失败: ' + error.message);
+                }
+            });
+
+            // 添加自动测试按钮
+            const autoTestBtn = document.createElement('button');
+            autoTestBtn.className = 'control-btn';
+            autoTestBtn.textContent = '🧪 运行自动测试';
+            autoTestBtn.addEventListener('click', async () => {
+                console.log('🚀 开始自动测试...');
+                await tester.runAllTests();
+                alert('✅ 自动测试完成，请查看控制台输出');
+            });
+
+            document.querySelector('.test-controls').appendChild(autoTestBtn);
+
+            console.log('✅ 增强可视化器测试初始化完成');
+            console.log('💡 提示: 打开浏览器控制台查看详细测试信息');
+        });
+    </script>
+</body>
+</html>

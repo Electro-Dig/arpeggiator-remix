@@ -25,6 +25,10 @@
         <meta property="twitter:image" content="https://raw.githubusercontent.com/collidingScopes/arpeggiator/main/assets/siteOGImage.webp">
 
         <script defer src="https://cloud.umami.is/script.js" data-website-id="eb59c81c-27cb-4e1d-9e8c-bfbe70c48cd9"></script>
+
+        <!-- 加载 Tone.js 音频库 -->
+        <script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
+
         <script type="importmap">
             {
                 "imports": {
@@ -102,11 +106,11 @@
                         <div style="font-weight: bold; color: #f6ad55; margin-bottom: 6px;">
                             👉 右手控制 (鼓组)
                         </div>
-                        <div style="margin-bottom: 4px;">• <strong>大拇指</strong>：开踩镲 (Open Hat)</div>
-                        <div style="margin-bottom: 4px;">• <strong>食指</strong>：底鼓 (Kick)</div>
-                        <div style="margin-bottom: 4px;">• <strong>中指</strong>：军鼓 (Snare)</div>
-                        <div style="margin-bottom: 4px;">• <strong>无名指</strong>：踩镲 (Hi-hat)</div>
-                        <div style="margin-bottom: 4px;">• <strong>小指</strong>：拍手声 (Clap)</div>
+                        <div style="margin-bottom: 4px;">• <strong>大拇指</strong>：Orchestral_Drum</div>
+                        <div style="margin-bottom: 4px;">• <strong>食指</strong>：Rimshot</div>
+                        <div style="margin-bottom: 4px;">• <strong>中指</strong>：Flam</div>
+                        <div style="margin-bottom: 4px;">• <strong>无名指</strong>：Shaker</div>
+                        <div style="margin-bottom: 4px;">• <strong>小指</strong>：Indian_Percussion</div>
                         <div style="margin-bottom: 4px;">• <strong>4指竖直朝向屏幕</strong>：切换琶音风格</div>
                         <div style="margin-bottom: 4px;">• <strong>握拳</strong>：切换鼓组预设</div>
                     </div>
@@ -116,6 +120,35 @@
             <!-- 自定义编辑器按钮和预设选择器（居中靠下） -->
             <div id="custom-editor-buttons" style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; gap: 20px; align-items: center;">
                 <button id="open-arpeggio-editor" class="custom-btn" title="自定义琶音">🎼</button>
+
+                <!-- FM 自定义按钮与面板（靠左） -->
+                <div id="fm-editor" class="text-box" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background-color: rgba(0,0,0,0.85); color: white; font-size: 12px; border-radius: 8px;">
+                    <button id="fm-toggle" class="custom-btn" title="FM 参数">🎛️ FM</button>
+                    <div id="fm-panel" style="display:none; align-items:center; gap:10px;">
+                        <select id="fm-synth-select">
+                            <option value="0">Analog Pad</option>
+                            <option value="1">Bell Pad</option>
+                            <option value="2">Juno 80s Bell Tingle</option>
+                            <option value="3">Phlutterphase Hang</option>
+                            <option value="4">Afro Shimmer Pad</option>
+                            <option value="5">Ambient Flute Pad</option>
+                            <option value="6">Analog Choir Pad</option>
+                            <option value="7">Deep New Age Pad</option>
+                        </select>
+                        <label>harm <input id="fm-harm" type="number" step="0.1" style="width:64px"></label>
+                        <label>mIdx <input id="fm-midx" type="number" step="0.1" style="width:64px"></label>
+                        <label>a <input id="fm-a" type="number" step="0.001" style="width:60px"></label>
+                        <label>d <input id="fm-d" type="number" step="0.01" style="width:60px"></label>
+                        <label>s <input id="fm-s" type="number" step="0.01" style="width:60px"></label>
+                        <label>r <input id="fm-r" type="number" step="0.01" style="width:60px"></label>
+                        <label>ma <input id="fm-ma" type="number" step="0.001" style="width:60px"></label>
+                        <label>md <input id="fm-md" type="number" step="0.01" style="width:60px"></label>
+                        <label>ms <input id="fm-ms" type="number" step="0.01" style="width:60px"></label>
+                        <label>mr <input id="fm-mr" type="number" step="0.01" style="width:60px"></label>
+                        <button id="fm-apply" class="custom-btn">应用</button>
+                        <button id="fm-save" class="custom-btn">保存</button>
+                    </div>
+                </div>
                 
                 <!-- 预设选择器 -->
                 <div id="preset-selector" style="position: relative;">
@@ -139,94 +172,175 @@
                 </div>
                 
                 <button id="open-drum-editor" class="custom-btn" title="自定义鼓组">🥁</button>
+                
+                <!-- Delay 控制面板（靠右侧） -->
+                <div id="delay-control-panel" class="text-box" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background-color: rgba(0, 0, 0, 0.85); color: white; font-size: 12px; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="checkbox" id="delay-auto-toggle" checked>
+                        <span>Auto Delay</span>
+                    </label>
+                    <div id="delay-level-label">Level: 0</div>
+                    <label style="display: flex; align-items: center; gap: 6px;">
+                        <span>Wet</span>
+                        <input type="range" id="delay-wet-slider" min="0" max="0.7" step="0.01" value="0.18">
+                    </label>
+                    <button id="delay-collapse" class="custom-btn" title="折叠" style="padding: 4px 8px;">▾</button>
+                </div>
+
+                <!-- 鼓组音量控制（靠右，紧邻 Delay 面板右侧） -->
+                <div id="drum-volume-panel" class="text-box" style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; background-color: rgba(0, 0, 0, 0.85); color: white; font-size: 12px; border-radius: 8px;">
+                    <button id="drum-volume-toggle" class="custom-btn" title="鼓组音量">🥁 Vol</button>
+                    <div id="drum-volume-sliders" style="display:none; gap: 8px; align-items: center;">
+                        <label style="display:flex;align-items:center;gap:6px;">Rimshot <input type="range" id="vol-kick" min="-36" max="0" step="1" value="-9"></label>
+                        <label style="display:flex;align-items:center;gap:6px;">Flam <input type="range" id="vol-snare" min="-36" max="0" step="1" value="-3"></label>
+                        <label style="display:flex;align-items:center;gap:6px;">Shaker <input type="range" id="vol-hihat" min="-36" max="0" step="1" value="-5"></label>
+                        <label style="display:flex;align-items:center;gap:6px;">Indian <input type="range" id="vol-clap" min="-36" max="0" step="1" value="-18"></label>
+                        <label style="display:flex;align-items:center;gap:6px;">Orch <input type="range" id="vol-openhat" min="-36" max="0" step="1" value="-9"></label>
+                    </div>
+                </div>
             </div>
 
             <!-- 琶音编辑器模态框 -->
             <div id="arpeggio-editor-modal" class="modal" style="display: none;">
-                <div class="modal-content">
+                <div class="modal-content arpeggio-editor-layout">
                     <span class="close">&times;</span>
-                    <h2>🎼 琶音序列编辑器</h2>
 
-                    <!-- 预设和控制区域 -->
-                    <div class="editor-section">
-                        <label>预设模板:</label>
-                        <select id="arpeggio-base-preset">
-                            <!-- 动态填充预设选项 -->
-                        </select>
-                    </div>
+                    <div class="arpeggio-editor-container">
+                        <!-- 左侧主编辑区域 -->
+                        <div class="main-editor-panel">
+                            <div class="editor-header">
+                                <h2>🎼 琶音序列编辑器 v2.1</h2>
+                            </div>
 
-                    <div class="editor-section">
-                        <label>速度 (BPM): <span id="tempo-value">120</span></label>
-                        <input type="range" id="arpeggio-tempo" min="60" max="180" value="120">
-                    </div>
+                            <!-- 示波器风格的编辑区域 -->
+                            <div class="oscilloscope-container">
+                                <div id="oscilloscope-grid" class="oscilloscope-grid">
+                                    <!-- 网格背景 -->
+                                    <div class="grid-background"></div>
 
-                    <!-- 音序点编辑区域 -->
-                    <div class="editor-section">
-                        <label>音序编辑:</label>
-                        <div class="sequence-controls">
-                            <button id="root-note-selector" class="control-btn">根音: C4</button>
-                            <button id="preview-sequence" class="control-btn">🎵 预览</button>
-                            <button id="randomize-sequence" class="control-btn">🎲 随机</button>
-                            <button id="reset-sequence" class="control-btn">🔄 重置</button>
+                                    <!-- Y轴标签 -->
+                                    <div class="y-axis-labels">
+                                        <div class="y-label" style="top: 0%;">+24</div>
+                                        <div class="y-label" style="top: 25%;">+12</div>
+                                        <div class="y-label" style="top: 50%;">0</div>
+                                        <div class="y-label" style="top: 75%;">-12</div>
+                                        <div class="y-label" style="top: 100%;">-24</div>
+                                    </div>
+
+                                    <!-- X轴标签 -->
+                                    <div class="x-axis-labels">
+                                        <div class="axis-label" style="left: 10%;">1</div>
+                                        <div class="axis-label" style="left: 20%;">2</div>
+                                        <div class="axis-label" style="left: 30%;">3</div>
+                                        <div class="axis-label" style="left: 40%;">4</div>
+                                        <div class="axis-label" style="left: 50%;">5</div>
+                                        <div class="axis-label" style="left: 60%;">6</div>
+                                        <div class="axis-label" style="left: 70%;">7</div>
+                                        <div class="axis-label" style="left: 80%;">8</div>
+                                    </div>
+
+                                    <!-- 序列线条 -->
+                                    <div id="sequenceLines" class="sequence-lines"></div>
+
+                                    <!-- 连接线SVG -->
+                                    <svg id="connectionsSvg" class="connections-svg"></svg>
+
+                                    <!-- 音序点容器 -->
+                                    <div id="sequencePointsContainer" class="sequence-points-container"></div>
+                                </div>
+
+                                <!-- 控制按钮 -->
+                                <div class="control-buttons">
+                                    <button class="control-btn" id="previewBtn">▶ 预览</button>
+                                    <button class="control-btn" id="randomBtn">🎲 随机</button>
+                                    <button class="control-btn" id="resetBtn">🔄 重置</button>
+                                    <button class="control-btn" id="testBtn">🔧 测试</button>
+                                    <button class="control-btn" id="applyBtn">✅ 应用</button>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="sequence-grid">
-                            <!-- 8个音序点，动态生成 -->
-                            <div class="sequence-step" data-step="0">
-                                <div class="step-point active" data-interval="0">
-                                    <span class="interval-value">0</span>
+                        <!-- 右侧设置面板 -->
+                        <div class="settings-panel">
+                            <!-- 音色设置 -->
+                            <div class="settings-section">
+                                <h3>🎵 音色设置</h3>
+
+                                <div class="setting-group">
+                                    <label>合成器音色</label>
+                                    <select id="synthPresetSelect" class="select-input">
+                                        <option value="">选择音色...</option>
+                                    </select>
                                 </div>
-                                <div class="step-number">1</div>
                             </div>
-                            <div class="sequence-step" data-step="1">
-                                <div class="step-point active" data-interval="3">
-                                    <span class="interval-value">+3</span>
+
+                            <!-- 序列设置 -->
+                            <div class="settings-section">
+                                <h3>🎼 序列设置</h3>
+
+                                <div class="setting-group">
+                                    <label>节拍速度 (BPM)</label>
+                                    <div class="slider-container">
+                                        <input type="range" id="bpmSlider" min="60" max="200" value="120" class="slider">
+                                        <span id="bpmValue" class="value-display">120</span>
+                                    </div>
                                 </div>
-                                <div class="step-number">2</div>
+
+                                <div class="setting-group">
+                                    <label>根音</label>
+                                    <select id="rootNoteSelect" class="select-input">
+                                        <option value="C">C</option>
+                                        <option value="C#">C#</option>
+                                        <option value="D">D</option>
+                                        <option value="D#">D#</option>
+                                        <option value="E">E</option>
+                                        <option value="F">F</option>
+                                        <option value="F#">F#</option>
+                                        <option value="G">G</option>
+                                        <option value="G#">G#</option>
+                                        <option value="A">A</option>
+                                        <option value="A#">A#</option>
+                                        <option value="B">B</option>
+                                    </select>
+                                </div>
+
+                                <div class="setting-group">
+                                    <label>八度</label>
+                                    <div class="slider-container">
+                                        <input type="range" id="octaveSlider" min="2" max="6" value="4" class="slider">
+                                        <span id="octaveValue" class="value-display">4</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="sequence-step" data-step="2">
-                                <div class="step-point inactive" data-interval="null">
-                                    <span class="interval-value">--</span>
+
+                            <!-- 预设管理 -->
+                            <div class="settings-section">
+                                <h3>🎛️ 预设管理</h3>
+
+                                <div class="setting-group">
+                                    <label>琶音预设</label>
+                                    <select id="presetSelect" class="select-input">
+                                        <option value="">选择预设...</option>
+                                    </select>
                                 </div>
-                                <div class="step-number">3</div>
+
+                                <div class="preset-buttons">
+                                    <button id="savePresetBtn" class="preset-btn">💾 保存预设</button>
+                                    <button id="loadPresetBtn" class="preset-btn">📁 加载预设</button>
+                                </div>
                             </div>
-                            <div class="sequence-step" data-step="3">
-                                <div class="step-point active" data-interval="7">
-                                    <span class="interval-value">+7</span>
+
+                            <!-- 操作按钮 -->
+                            <div class="settings-section">
+                                <h3>⚙️ 操作</h3>
+                                <div class="action-buttons">
+                                    <button id="exportBtn" class="action-btn">📤 导出</button>
+                                    <button id="importBtn" class="action-btn">📥 导入</button>
+                                    <button id="clearBtn" class="action-btn">🗑 清空</button>
+                                    <button id="closeBtn" class="action-btn close-btn">✖ 关闭</button>
                                 </div>
-                                <div class="step-number">4</div>
-                            </div>
-                            <div class="sequence-step" data-step="4">
-                                <div class="step-point active" data-interval="8">
-                                    <span class="interval-value">+8</span>
-                                </div>
-                                <div class="step-number">5</div>
-                            </div>
-                            <div class="sequence-step" data-step="5">
-                                <div class="step-point inactive" data-interval="null">
-                                    <span class="interval-value">--</span>
-                                </div>
-                                <div class="step-number">6</div>
-                            </div>
-                            <div class="sequence-step" data-step="6">
-                                <div class="step-point active" data-interval="7">
-                                    <span class="interval-value">+7</span>
-                                </div>
-                                <div class="step-number">7</div>
-                            </div>
-                            <div class="sequence-step" data-step="7">
-                                <div class="step-point inactive" data-interval="null">
-                                    <span class="interval-value">--</span>
-                                </div>
-                                <div class="step-number">8</div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="editor-actions">
-                        <button id="test-arpeggio-synth" class="action-btn">🔊 测试合成器</button>
-                        <button id="save-arpeggio" class="action-btn save">保存</button>
-                        <button id="apply-arpeggio" class="action-btn apply">应用</button>
                     </div>
                 </div>
             </div>

@@ -317,6 +317,8 @@ export var Game = /*#__PURE__*/ function() {
             new THREE.Color("#D72828"),
             new THREE.Color("#66ffff")
         ];
+        // Delay visualization group (lazy init)
+        this.delayVizGroup = null;
         
         // 添加手部平滑处理相关属性
         this.smoothingFactor = 0.7; // 平滑系数，值越大响应越快
@@ -327,6 +329,27 @@ export var Game = /*#__PURE__*/ function() {
         this.notificationTimeout = null;
         this.lastNotificationTime = 0;
         this.pendingNotification = null;
+
+        // Delay 控制状态（低开销）
+        this.delayCtrl = {
+            active: false,
+            auto: true,
+            baseline: 0,
+            buffer: [], // 最近 50 次采样（约 5 秒，100ms/次）
+            bufferSize: 50,
+            sampleIntervalMs: 100,
+            lastSampleTs: 0,
+            stdThreshold: 0.01,
+            maxRange: 0.35,
+            hysteresis: 0.03,
+            level: 0, // 0..4
+            lastUpdateTs: 0,
+            updateCooldownMs: 200,
+            baseWet: 0.18 // UI 滑杆（最大湿度，对应 Level4）
+        };
+        // Note length control (5-level) via right hand Y position (global)
+        this.noteLenCtrl = null; // remove previous state machine usage
+        this.noteLenFactors = [0.2, 0.4, 0.6, 0.8, 1.0];
         // Initialize asynchronously
         this._init().catch(function(error) {
             console.error("Initialization failed:", error);
@@ -1039,6 +1062,19 @@ export var Game = /*#__PURE__*/ function() {
 
                                     }
                                     hand.isFist = isFistNow;
+
+                                    // 左手四指竖直：切换琶音风格（从右手迁移）
+                                    var fourFingersVerticalNow = _this1._isFourFingersVertical(smoothedLandmarks);
+                                    var fourFingersChanged = fourFingersVerticalNow !== hand.wasFourFingersVertical;
+                                    var now = performance.now();
+                                    var timeSinceLastChange = now - (hand.lastGestureChangeTime || 0);
+                                    var canTrigger = timeSinceLastChange > 300; // 300ms防抖
+                                    if (canTrigger && fourFingersChanged && fourFingersVerticalNow) {
+                                        var newMusicPreset = _this1.musicManager.cycleMusicPreset();
+                                        _this1._showPresetChangeNotification(`琶音风格: ${newMusicPreset.name} (${newMusicPreset.tempo} BPM)`, 'music');
+                                        hand.lastGestureChangeTime = now;
+                                    }
+                                    hand.wasFourFingersVertical = fourFingersVerticalNow;
                                     
                                     // 🎵 音阶识别逻辑（参考原版arpeggiator-main）
                                     
@@ -1075,6 +1111,9 @@ export var Game = /*#__PURE__*/ function() {
                                         velocity: velocity,
                                         isFist: isFistNow
                                     });
+
+                                    // 更新/创建 Delay 可视化（左/右拇指连线+数值）
+                                    _this1._updateDelayVisualization(canvasWidth, canvasHeight);
                                     
                                     // 🎵 简化的琶音播放逻辑 - 以根音为基础生成琶音
                                     if (!isFistNow) {
@@ -1108,22 +1147,20 @@ export var Game = /*#__PURE__*/ function() {
                                     var canTrigger = timeSinceLastChange > 300; // 300ms防抖
                                     
                                     // 执行切换逻辑
-                                                                         if (canTrigger && fourFingersChanged && fourFingersVerticalNow) {
-                                         // 4指竖直：切换琶音风格
-                                        var newMusicPreset = _this1.musicManager.cycleMusicPreset();
-                                         _this1._showPresetChangeNotification(`琶音风格: ${newMusicPreset.name} (${newMusicPreset.tempo} BPM)`, 'music');
-                                         hand.lastGestureChangeTime = now;
-                                     } else if (canTrigger && fistChanged && isFistNow) {
-                                         // 握拳：切换鼓组预设
+                                    if (canTrigger && fistChanged && isFistNow) {
+                                        // 握拳：切换鼓组预设
                                         var newDrumPreset = drumManager.cycleDrumPreset();
                                         _this1._showPresetChangeNotification(`鼓组: ${newDrumPreset.name}`, 'drum');
-                                         hand.lastGestureChangeTime = now;
+                                        hand.lastGestureChangeTime = now;
                                     }
                                     
                                     // 更新状态
                                     hand.wasFist = isFistNow;
                                     hand.wasFourFingersVertical = fourFingersVerticalNow;
                                     
+                                    // 实时：右手上下位置 → 全局 NoteLen 档位（5档），按当前帧计算
+                                    _this1._updateGlobalNoteLengthByRightHandY(smoothedLandmarks, videoParams, canvasWidth, canvasHeight);
+
                                     // 更新鼓组
                                     drumManager.updateActiveDrums(fingerStates);
                                     
@@ -2115,6 +2152,9 @@ export var Game = /*#__PURE__*/ function() {
                     if (this.waveformVisualizer) {
                         this.waveformVisualizer.update();
                     }
+                    // 低频率采样与更新（不会影响帧率）
+                    this._sampleDelayDistanceIfDue();
+                    this._updateDelayLevelIfDue();
                 }
                 this.renderer.render(this.scene, this.camera);
             }
@@ -2175,6 +2215,117 @@ export var Game = /*#__PURE__*/ function() {
             }
         },
         {
+            key: "_updateDelayVisualization",
+            value: function _updateDelayVisualization(canvasWidth, canvasHeight) {
+                // 需要两只手的拇指指尖
+                if (!this.hands || this.hands.length < 2) return;
+                var lmA = (this.hands[0] && this.hands[0].landmarks) ? this.hands[0].landmarks : null;
+                var lmB = (this.hands[1] && this.hands[1].landmarks) ? this.hands[1].landmarks : null;
+                if (!lmA || !lmB || lmA.length < 21 || lmB.length < 21) return;
+
+                var thumbA = lmA[4];
+                var thumbB = lmB[4];
+                if (!thumbA || !thumbB) return;
+
+                // 将归一化坐标转换到渲染坐标（与 _updateHandLines 同一坐标系）
+                var videoParams = this._getVisibleVideoParameters();
+                if (!videoParams) return;
+                var toCanvasXY = (lm) => {
+                    var lmOriginalX = lm.x * videoParams.videoNaturalWidth;
+                    var lmOriginalY = lm.y * videoParams.videoNaturalHeight;
+                    var normX = (lmOriginalX - videoParams.offsetX) / videoParams.visibleWidth;
+                    var normY = (lmOriginalY - videoParams.offsetY) / videoParams.visibleHeight;
+                    var x = (1 - normX) * canvasWidth - canvasWidth / 2;
+                    var y = (1 - normY) * canvasHeight - canvasHeight / 2;
+                    return new THREE.Vector3(x, y, 2);
+                };
+                var pA = toCanvasXY(thumbA);
+                var pB = toCanvasXY(thumbB);
+
+                // 延迟可视化容器（一次性创建）
+                if (!this.delayVizGroup) {
+                    this.delayVizGroup = new THREE.Group();
+                    this.scene.add(this.delayVizGroup);
+                    // 线
+                    var mat = new THREE.LineBasicMaterial({ color: 0x7B4394, linewidth: 2 });
+                    var geom = new THREE.BufferGeometry();
+                    geom.setAttribute('position', new THREE.Float32BufferAttribute([0,0,2, 0,0,2], 3));
+                    var line = new THREE.Line(geom, mat);
+                    line.name = 'delay_line';
+                    this.delayVizGroup.add(line);
+                    // 文本（用精灵显示数值）
+                    var label = this._createTextSprite('Delay: --', {
+                        fontsize: 16,
+                        backgroundColor: this.labelColors.evaPurple,
+                        textColor: this.labelColors.white
+                    });
+                    label.name = 'delay_label';
+                    this.delayVizGroup.add(label);
+                }
+
+                // 更新线条
+                var lineObj = this.delayVizGroup.getObjectByName('delay_line');
+                if (lineObj && lineObj.geometry && lineObj.geometry.attributes && lineObj.geometry.attributes.position) {
+                    var pos = lineObj.geometry.attributes.position.array;
+                    pos[0] = pA.x; pos[1] = pA.y; pos[2] = 2;
+                    pos[3] = pB.x; pos[4] = pB.y; pos[5] = 2;
+                    lineObj.geometry.attributes.position.needsUpdate = true;
+                }
+
+                // 计算显示文本（距离、Level、时值、湿度）
+                var normDx = Math.abs(thumbA.x - thumbB.x); // 归一化的水平距离（0..1）
+                var level = this.delayCtrl ? this.delayCtrl.level : 0;
+                var beatsMap = [0, 0.25, 0.5, 0.75, 1.0];
+                var beats = beatsMap[level];
+                // 当前湿度按 Level/4 * baseWet（与自动逻辑一致）
+                var wet = (level / 4) * (this.delayCtrl ? this.delayCtrl.baseWet : 0.18);
+                // 同屏显示 NoteLen 档位
+                var nl = (typeof this._currentNoteLenLevelApplied === 'number') ? this._currentNoteLenLevelApplied : 4;
+                var nlFactor = (this.noteLenFactors && this.noteLenFactors[nl] !== undefined) ? this.noteLenFactors[nl] : 1.0;
+                var text = `Dx: ${normDx.toFixed(3)} | Delay L${level} ${beats.toFixed(2)}b | NoteLen L${nl} (${nlFactor.toFixed(2)}x)`;
+
+                var labelObj = this.delayVizGroup.getObjectByName('delay_label');
+                if (labelObj) {
+                    // 重新创建精灵以更新文字（简单可靠）
+                    this.delayVizGroup.remove(labelObj);
+                    var newLabel = this._createTextSprite(text, {
+                        fontsize: 16,
+                        backgroundColor: this.labelColors.evaPurple,
+                        textColor: this.labelColors.white
+                    });
+                    newLabel.name = 'delay_label';
+                    // 放在连线中点稍上方
+                    var mid = new THREE.Vector3((pA.x + pB.x)/2, (pA.y + pB.y)/2 + 20, 2);
+                    newLabel.position.copy(mid);
+                    this.delayVizGroup.add(newLabel);
+                }
+            }
+        },
+        {
+            // 右手上下位置 → 全局 NoteLen 五档（0.2,0.4,0.6,0.8,1.0）;
+            // 使用可见视频区域的 Y 来划分 5 个等距区间
+            key: "_updateGlobalNoteLengthByRightHandY",
+            value: function _updateGlobalNoteLengthByRightHandY(rightHandLandmarks, videoParams, canvasWidth, canvasHeight) {
+                if (!rightHandLandmarks || rightHandLandmarks.length < 21) return;
+                // 取右手中指 MCP 作为手掌代表（更稳定）
+                var palm = rightHandLandmarks[9];
+                var lmOriginalY = palm.y * videoParams.videoNaturalHeight;
+                var normY = (lmOriginalY - videoParams.offsetY) / videoParams.visibleHeight; // 0..1（顶部0、底部1）
+                if (typeof normY !== 'number') return;
+                // 将可见高度分为五等分（顶部→L0=0.2x，底部→L4=1.0x）
+                var clamped = Math.max(0, Math.min(1, normY));
+                var idx = Math.floor(clamped * 5); // 0..5 → 0..4
+                if (idx > 4) idx = 4;
+                // 仅当档位变化时再应用
+                if (!this._currentNoteLenLevelApplied || this._currentNoteLenLevelApplied !== idx) {
+                    this._currentNoteLenLevelApplied = idx;
+                    if (this.musicManager && this.musicManager.setNoteLengthLevel) {
+                        this.musicManager.setNoteLengthLevel(idx);
+                    }
+                }
+            }
+        },
+        {
             key: "_setupEventListeners",
             value: function _setupEventListeners() {
                 var _this = this;
@@ -2207,6 +2358,422 @@ export var Game = /*#__PURE__*/ function() {
                 
                 // 窗口大小变化处理
                 window.addEventListener('resize', this._onResize.bind(this));
+
+                // 初始化 Delay 控制 UI
+                this._initDelayControlUI();
+
+                // 初始化 鼓组音量 控制 UI
+                this._initDrumVolumeUI();
+
+                // 初始化 FM 参数自定义 UI
+                this._initFMEditorUI();
+
+                // 绑定编辑器打开/关闭与实时循环的暂停/恢复
+                this._wireEditorPauseResume();
+            }
+        },
+        {
+            key: "_initFMEditorUI",
+            value: function _initFMEditorUI() {
+                var tgl = document.getElementById('fm-toggle');
+                var pnl = document.getElementById('fm-panel');
+                if (!tgl || !pnl || !this.musicManager) return;
+                tgl.addEventListener('click', function(){
+                    pnl.style.display = (pnl.style.display === 'none') ? 'flex' : 'none';
+                });
+
+                var select = document.getElementById('fm-synth-select');
+                var ids = { harm:'fm-harm', midx:'fm-midx', a:'fm-a', d:'fm-d', s:'fm-s', r:'fm-r', ma:'fm-ma', md:'fm-md', ms:'fm-ms', mr:'fm-mr' };
+                function loadFields(preset){
+                    if (!preset) return;
+                    document.getElementById(ids.harm).value = preset.harmonicity ?? 1;
+                    document.getElementById(ids.midx).value = preset.modulationIndex ?? 1;
+                    var env = preset.envelope || {}; var menv = preset.modulationEnvelope || {};
+                    document.getElementById(ids.a).value = env.attack ?? 0.01;
+                    document.getElementById(ids.d).value = env.decay ?? 0.2;
+                    document.getElementById(ids.s).value = env.sustain ?? 0.5;
+                    document.getElementById(ids.r).value = env.release ?? 1.0;
+                    document.getElementById(ids.ma).value = menv.attack ?? 0.01;
+                    document.getElementById(ids.md).value = menv.decay ?? 0.2;
+                    document.getElementById(ids.ms).value = menv.sustain ?? 0.5;
+                    document.getElementById(ids.mr).value = menv.release ?? 0.5;
+                }
+                // 初始载入当前选项的预设
+                var currentIndex = parseInt(select.value || '0');
+                loadFields(this.musicManager.synthPresets[currentIndex]);
+                select.addEventListener('change', () => {
+                    var idx = parseInt(select.value || '0');
+                    loadFields(this.musicManager.synthPresets[idx]);
+                });
+
+                var applyBtn = document.getElementById('fm-apply');
+                var saveBtn = document.getElementById('fm-save');
+                var self = this;
+                function collectPreset(){
+                    return {
+                        harmonicity: parseFloat(document.getElementById(ids.harm).value),
+                        modulationIndex: parseFloat(document.getElementById(ids.midx).value),
+                        oscillator: { type: 'sine' },
+                        envelope: {
+                            attack: parseFloat(document.getElementById(ids.a).value),
+                            decay: parseFloat(document.getElementById(ids.d).value),
+                            sustain: parseFloat(document.getElementById(ids.s).value),
+                            release: parseFloat(document.getElementById(ids.r).value)
+                        },
+                        modulation: { type: 'sine' },
+                        modulationEnvelope: {
+                            attack: parseFloat(document.getElementById(ids.ma).value),
+                            decay: parseFloat(document.getElementById(ids.md).value),
+                            sustain: parseFloat(document.getElementById(ids.ms).value),
+                            release: parseFloat(document.getElementById(ids.mr).value)
+                        },
+                        effects: (self.musicManager.synthPresets[self.musicManager.currentSynthIndex] && self.musicManager.synthPresets[self.musicManager.currentSynthIndex].effects) || { reverbWet: 0.3, delayWet: 0.05 }
+                    };
+                }
+                if (applyBtn) applyBtn.addEventListener('click', () => {
+                    var idx = parseInt(select.value || '0');
+                    var preset = collectPreset();
+                    // 更新内存并立即应用到当前合成器
+                    self.musicManager.synthPresets[idx] = preset;
+                    self.musicManager.currentSynthIndex = idx;
+                    if (typeof self.musicManager._updateSynth === 'function') {
+                        self.musicManager._updateSynth();
+                    }
+                    self._showPresetChangeNotification(`音色参数已应用: ${self.musicManager.getSynthName()}`, 'music');
+                });
+                if (saveBtn) saveBtn.addEventListener('click', () => {
+                    var idx = parseInt(select.value || '0');
+                    var preset = collectPreset();
+                    try {
+                        var key = `fmPreset_${idx}`;
+                        localStorage.setItem(key, JSON.stringify(preset));
+                        self._showInfoTransient('✅ FM preset saved', 1200);
+                    } catch (e) {
+                        console.warn('save fm preset failed', e);
+                    }
+                });
+                // 页面加载时尝试恢复所有保存的预设
+                try {
+                    for (var i = 0; i < 8; i++) {
+                        var k = `fmPreset_${i}`;
+                        var raw = localStorage.getItem(k);
+                        if (raw) {
+                            var p = JSON.parse(raw);
+                            if (p && typeof p === 'object') {
+                                this.musicManager.synthPresets[i] = Object.assign({}, this.musicManager.synthPresets[i], p);
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+        },
+        {
+            key: "_wireEditorPauseResume",
+            value: function _wireEditorPauseResume() {
+                var _this = this;
+                // 打开按钮 -> 暂停
+                var openArp = document.getElementById('open-arpeggio-editor');
+                if (openArp) {
+                    openArp.addEventListener('click', function() { _this._pauseRealtime(); });
+                }
+                var openDrum = document.getElementById('open-drum-editor');
+                if (openDrum) {
+                    openDrum.addEventListener('click', function() { _this._pauseRealtime(); });
+                }
+                // 关闭控件/背景点击 -> 恢复
+                var arpModal = document.getElementById('arpeggio-editor-modal');
+                if (arpModal) {
+                    var closeSpan = arpModal.querySelector('.close');
+                    if (closeSpan) closeSpan.addEventListener('click', function() { _this._resumeRealtime(); });
+                    var closeBtn = document.getElementById('closeBtn');
+                    if (closeBtn) closeBtn.addEventListener('click', function() { _this._resumeRealtime(); });
+                    arpModal.addEventListener('click', function(e) {
+                        if (e.target === arpModal) { _this._resumeRealtime(); }
+                    });
+                }
+                var drumModal = document.getElementById('drum-editor-modal');
+                if (drumModal) {
+                    var dClose = drumModal.querySelector('.close');
+                    if (dClose) dClose.addEventListener('click', function() { _this._resumeRealtime(); });
+                    drumModal.addEventListener('click', function(e) {
+                        if (e.target === drumModal) { _this._resumeRealtime(); }
+                    });
+                }
+            }
+        },
+        {
+            key: "_pauseRealtime",
+            value: function _pauseRealtime() {
+                if (this._isPaused) return;
+                this._isPaused = true;
+                this._prevGameState = this.gameState;
+                this.gameState = 'paused';
+                // 可选：暂停波形更新不需要其它操作，因为 _animate 中已按 gameState 判断
+                console.log('⏸️ Realtime paused for editor');
+            }
+        },
+        {
+            key: "_resumeRealtime",
+            value: function _resumeRealtime() {
+                if (!this._isPaused) return;
+                this._isPaused = false;
+                // 若之前是 tracking 则恢复，否则也强制恢复到 tracking（排除 error/no-camera）
+                if (this._prevGameState === 'tracking' || this._prevGameState === 'paused') {
+                    this.gameState = 'tracking';
+                } else if (this._prevGameState === 'no-camera') {
+                    this.gameState = 'no-camera';
+                } else if (this._prevGameState === 'error') {
+                    this.gameState = 'error';
+                } else {
+                    this.gameState = 'tracking';
+                }
+                console.log('▶️ Realtime resumed after editor');
+            }
+        },
+        {
+            key: "_initDelayControlUI",
+            value: function _initDelayControlUI() {
+                var panel = document.getElementById('delay-control-panel');
+                if (!panel) return;
+                var autoToggle = document.getElementById('delay-auto-toggle');
+                var wetSlider = document.getElementById('delay-wet-slider');
+                var collapseBtn = document.getElementById('delay-collapse');
+                var levelLabel = document.getElementById('delay-level-label');
+                if (autoToggle) {
+                    autoToggle.checked = this.delayCtrl.auto;
+                    autoToggle.addEventListener('change', () => {
+                        this.delayCtrl.auto = !!autoToggle.checked;
+                    });
+                }
+                if (wetSlider) {
+                    var v = parseFloat(wetSlider.value);
+                    if (!isNaN(v)) this.delayCtrl.baseWet = v;
+                    wetSlider.addEventListener('input', () => {
+                        var val = Math.max(0, Math.min(1, parseFloat(wetSlider.value)));
+                        // 限制最大 0.7，与 HTML 属性一致
+                        val = Math.min(val, 0.7);
+                        this.delayCtrl.baseWet = val;
+                        // 立即应用当前湿度（不再随档位线性变化）
+                        var wet = this.delayCtrl.baseWet;
+                        if (window.game && this.musicManager && this.musicManager.setDelayWet) {
+                            this.musicManager.setDelayWet(wet);
+                        }
+                    });
+                }
+                if (collapseBtn) {
+                    collapseBtn.addEventListener('click', () => {
+                        var collapsed = panel.getAttribute('data-collapsed') === '1';
+                        if (!collapsed) {
+                            // 折叠除 Level/折叠按钮 以外的控件
+                            Array.from(panel.children).forEach((el) => {
+                                if (el.id !== 'delay-level-label' && el.id !== 'delay-collapse') {
+                                    el.style.display = 'none';
+                                }
+                            });
+                            panel.setAttribute('data-collapsed', '1');
+                            collapseBtn.textContent = '▸';
+                        } else {
+                            Array.from(panel.children).forEach((el) => {
+                                el.style.display = '';
+                            });
+                            panel.setAttribute('data-collapsed', '0');
+                            collapseBtn.textContent = '▾';
+                        }
+                    });
+                }
+                // 更新一次显示
+                if (levelLabel) levelLabel.textContent = 'Level: ' + this.delayCtrl.level;
+            }
+        },
+        {
+            key: "_initDrumVolumeUI",
+            value: function _initDrumVolumeUI() {
+                var panel = document.getElementById('drum-volume-panel');
+                if (!panel || !window.drumManager) return;
+                var toggle = document.getElementById('drum-volume-toggle');
+                var sliders = document.getElementById('drum-volume-sliders');
+                if (toggle && sliders) {
+                    toggle.addEventListener('click', function() {
+                        sliders.style.display = (sliders.style.display === 'none') ? 'flex' : 'none';
+                    });
+                }
+                // 初始值从 DrumManager 获取
+                try {
+                    var vols = (window.drumManager.getAllDrumVolumes && window.drumManager.getAllDrumVolumes()) || null;
+                    var ids = ['kick','snare','hihat','clap','openhat'];
+                    ids.forEach(function(id){
+                        var el = document.getElementById('vol-' + id);
+                        if (el && vols && typeof vols[id] === 'number') {
+                            el.value = Math.round(vols[id]);
+                        }
+                    });
+                } catch (e) {}
+
+                // 绑定滑杆事件：将滑杆值(分贝)写回 DrumManager.setDrumVolume
+                function bind(id){
+                    var el = document.getElementById('vol-' + id);
+                    if (!el) return;
+                    el.addEventListener('input', function(){
+                        var dB = parseFloat(el.value);
+                        if (window.drumManager && window.drumManager.setDrumVolume) {
+                            window.drumManager.setDrumVolume(id, dB);
+                        }
+                    });
+                }
+                ['kick','snare','hihat','clap','openhat'].forEach(bind);
+            }
+        },
+        {
+            key: "_sampleDelayDistanceIfDue",
+            value: function _sampleDelayDistanceIfDue() {
+                var now = performance.now();
+                if (now - (this.delayCtrl.lastSampleTs || 0) < this.delayCtrl.sampleIntervalMs) return;
+                this.delayCtrl.lastSampleTs = now;
+                // 两只手都存在才采样（不区分左右，只取两只手）
+                if (!this.hands || this.hands.length < 2) return;
+                var lmA = (this.hands[0] && this.hands[0].landmarks) ? this.hands[0].landmarks : null;
+                var lmB = (this.hands[1] && this.hands[1].landmarks) ? this.hands[1].landmarks : null;
+                if (!lmA || !lmB || lmA.length < 21 || lmB.length < 21) return;
+                var xA = (lmA && lmA[4]) ? lmA[4].x : undefined; // 拇指指尖
+                var xB = (lmB && lmB[4]) ? lmB[4].x : undefined;
+                if (typeof xA !== 'number' || typeof xB !== 'number') return;
+                var d = Math.abs(xA - xB);
+                // 维护环形缓冲（最大 50）
+                var buf = this.delayCtrl.buffer;
+                buf.push(d);
+                if (buf.length > this.delayCtrl.bufferSize) buf.shift();
+                // 未进入模式，检查是否满足 5s 稳定
+                if (!this.delayCtrl.active && buf.length === this.delayCtrl.bufferSize) {
+                    var std = this._computeStd(buf);
+                    if (std < this.delayCtrl.stdThreshold) {
+                        // 标定基准为中位数，初始关闭
+                        this.delayCtrl.baseline = this._computeMedian(buf);
+                        this.delayCtrl.active = true;
+                        // 同步开启 NoteLen 控制
+                        this.noteLenCtrl.active = true;
+                        this.noteLenCtrl.locked = false;
+                        this.noteLenCtrl.activatedTs = performance.now();
+                        this.delayCtrl.level = 0;
+                        if (this.musicManager && this.musicManager.setDelayTimeBeats) this.musicManager.setDelayTimeBeats(0);
+                        // 不强制改动湿度，保持用户设置
+                        // 提示：Delay control ready
+                        this._showInfoTransient('🎚️ Delay control ready (hold both hands to adjust)', 2000);
+                        var label = document.getElementById('delay-level-label');
+                        if (label) label.textContent = 'Level: 0';
+                    }
+                }
+            }
+        },
+        {
+            key: "_showInfoTransient",
+            value: function _showInfoTransient(msg, durationMs) {
+                var statusElement = document.getElementById('info-text');
+                if (!statusElement) return;
+                var prev = statusElement.textContent;
+                var prevColor = statusElement.style.color;
+                statusElement.textContent = msg;
+                statusElement.style.color = '#7B4394';
+                setTimeout(() => {
+                    statusElement.textContent = prev || 'raise your hands to raise the roof';
+                    statusElement.style.color = prevColor || '#FFFFFF';
+                }, Math.max(1000, durationMs || 2000));
+            }
+        },
+        {
+            key: "_updateDelayLevelIfDue",
+            value: function _updateDelayLevelIfDue() {
+                if (!this.delayCtrl.active || !this.delayCtrl.auto) return;
+                var now = performance.now();
+                if (now - (this.delayCtrl.lastUpdateTs || 0) < this.delayCtrl.updateCooldownMs) return;
+                // 取最近一次样本
+                var buf = this.delayCtrl.buffer;
+                if (!buf || buf.length === 0) return;
+                var d = buf[buf.length - 1];
+                var delta = Math.max(0, Math.min(this.delayCtrl.maxRange, d - this.delayCtrl.baseline));
+                var norm = this.delayCtrl.maxRange > 0 ? (delta / this.delayCtrl.maxRange) : 0;
+                var thresholds = [0.25, 0.5, 0.75, 1.0];
+                var target = 0;
+                for (var i = 0; i < thresholds.length; i++) {
+                    if (norm >= thresholds[i] - this.delayCtrl.hysteresis) target = i + 1;
+                }
+                if (target === this.delayCtrl.level) return;
+                // 应用
+                this.delayCtrl.level = target;
+                this.delayCtrl.lastUpdateTs = now;
+                var beatsMap = [0, 0.25, 0.5, 0.75, 1.0];
+                var beats = beatsMap[target];
+                if (this.musicManager && this.musicManager.setDelayTimeBeats) this.musicManager.setDelayTimeBeats(beats);
+                // 湿度随档位线性增加（不高）：Level/N * baseWet
+                // 湿度不再自动随档位变化，由用户滑杆控制
+                var label = document.getElementById('delay-level-label');
+                if (label) label.textContent = 'Level: ' + target;
+            }
+        },
+        {
+            key: "_updateNoteLengthLevelIfDue",
+            value: function _updateNoteLengthLevelIfDue() {
+                if (!this.noteLenCtrl.active) return;
+                var now = performance.now();
+                if (now - (this.noteLenCtrl.lastUpdateTs || 0) < this.noteLenCtrl.updateCooldownMs) return;
+                // 逻辑更新：进入后即可实时根据 |yL-yR| 调整；
+                // 若检测到“右手全部打开”的边沿（从否到是），则锁定当前档位。
+                var right = (this.hands && this.hands[1]) ? this.hands[1] : null;
+                var lmR = right && right.landmarks;
+                var lmL = (this.hands && this.hands[0]) ? this.hands[0].landmarks : null;
+                if (!lmR || !lmL || lmR.length < 21 || lmL.length < 21) return;
+                var fingerStatesR = this._getFingerStates(lmR);
+                var allOpenR = fingerStatesR.index && fingerStatesR.middle && fingerStatesR.ring && fingerStatesR.pinky;
+                // 边沿检测：从非全开 -> 全开，触发“锁定”
+                if (allOpenR && !this.noteLenCtrl.wasAllOpenR) {
+                    this.noteLenCtrl.locked = true;
+                    this._showInfoTransient('🎼 Note Length locked', 1200);
+                }
+                this.noteLenCtrl.wasAllOpenR = allOpenR;
+                if (this.noteLenCtrl.locked) return; // 已锁定则不再自动更新
+                // 计算两拇指垂直差，并做范围归一化（避免过小无效/过大钳制）
+                var yL = lmL[4].y;
+                var yR = lmR[4].y;
+                var dy = Math.abs(yL - yR); // 0..1
+                var dyClamped = Math.max(this.noteLenCtrl.rangeMin, Math.min(this.noteLenCtrl.rangeMax, dy));
+                var norm = (dyClamped - this.noteLenCtrl.rangeMin) / (this.noteLenCtrl.rangeMax - this.noteLenCtrl.rangeMin); // 0..1
+                // 五档阈值（0..1）: 0-0.2-0.4-0.6-0.8-1.0，默认保持 1.0（L4），向上拉开才减少
+                var idx = 4;
+                var th = this.noteLenCtrl.thresholds;
+                for (var i = 0; i < th.length - 1; i++) {
+                    if (norm >= th[i] - this.noteLenCtrl.hysteresis) idx = i; // 0..4
+                }
+                if (idx === this.noteLenCtrl.level) return;
+                this.noteLenCtrl.level = idx;
+                this.noteLenCtrl.lastUpdateTs = now;
+                // 应用到音乐管理器
+                if (this.musicManager && this.musicManager.setNoteLengthLevel) this.musicManager.setNoteLengthLevel(idx);
+                // 即时提示当前时值系数
+                var factor = (this.noteLenFactors && this.noteLenFactors[idx] !== undefined) ? this.noteLenFactors[idx] : 1.0;
+                this._showInfoTransient(`🎼 NoteLen L${idx} (${factor.toFixed(2)}x)`, 600);
+            }
+        },
+        {
+            key: "_computeMedian",
+            value: function _computeMedian(arr) {
+                if (!arr || arr.length === 0) return 0;
+                var a = arr.slice().sort(function(x, y) { return x - y; });
+                var mid = Math.floor(a.length / 2);
+                return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
+            }
+        },
+        {
+            key: "_computeStd",
+            value: function _computeStd(arr) {
+                if (!arr || arr.length === 0) return 0;
+                var mean = 0;
+                for (var i = 0; i < arr.length; i++) mean += arr[i];
+                mean /= arr.length;
+                var sum = 0;
+                for (var j = 0; j < arr.length; j++) {
+                    var d = arr[j] - mean;
+                    sum += d * d;
+                }
+                return Math.sqrt(sum / arr.length);
             }
         },
         {

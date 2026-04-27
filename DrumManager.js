@@ -51,6 +51,7 @@ var isLoaded = false;
 var sequence = null;
 var beatIndex = 0;
 var activeDrums = new Set();
+var drumVolumes = { kick: -9, snare: -3, hihat: -5, openhat: -9, clap: -18 }; // dB 缺省值，与onload一致
 // 鼓组风格预设系统
 var drumPresets = [
     // House 预设组 (2个，删除Deep House)
@@ -74,12 +75,12 @@ var drumPresets = [
         name: "Rhythm2",
         bpm: 126,
         patterns: {
-            'kick': [true, false, false, false, true, false, false, false,
-                     true, false, false, false, true, false, false, false],
+            'kick': [true, false, false, false, true, false, false, true,,
+                     false,, true, false, false, true, false, false, false],
             'snare': [false, false, false, false, true, false, false, false,
                       false, false, false, false, true, false, true, true],
-            'hihat': [false, false, true, false, false, false, true, false,
-                      false, false, true, false, false, true, true, true],
+            'hihat': [false, false, true, false, false, false, true, true,
+                      true, false, true, false, false, true, true, true],
             'openhat': [false, false, false, false, false, false, false, false,
                         false, false, false, false, false, false, false, false],
             'clap': [false, false, false, false, true, false, false, false,
@@ -92,15 +93,15 @@ var drumPresets = [
         bpm: 132,
         patterns: {
             'kick': [true, false, false, false, true, false, false, false,
-                     true, false, false, false, true, false, false, false],
+                     true, false, false, true, true, true, false, false],
             'snare': [false, false, false, false, false, false, false, false,
-                      false, false, false, false, true, false, false, false],
-            'hihat': [false, false, true, false, false, false, true, false,
-                      false, false, true, false, false, false, true, false],
+                      false, false, false, false, false, false, false, false],
+            'hihat': [true, true, false, true, true, false, true, false,
+                      false, true, true, false, false, true, false, false],
             'openhat': [false, false, false, false, false, false, false, false,
                         false, false, false, false, false, false, false, false],
             'clap': [false, false, false, false, true, false, false, false,
-                     false, false, false, false, false, false, false, false]
+                     false, false, false, false, true, false, false, false]
         }
     },
     {
@@ -108,15 +109,15 @@ var drumPresets = [
         bpm: 128,
         patterns: {
             // 基于Attack Magazine专业模式：四四拍底鼓，拍手只在第2和第4拍，噪音在第3拍和第4拍前
-            'kick': [true, false, false, false, true, false, false, false,
-                     true, false, false, false, true, false, false, false],
+            'kick': [true, false, false, false, false, true, false, false,
+                     false, true, false, true, false, false, false, false],
             'snare': [false, false, false, false, true, false, false, false,
                       false, false, false, false, true, false, false, false],
-            'hihat': [false, false, true, false, false, false, false, false,
-                      false, false, true, false, false, false, true, false],
-            'openhat': [false, false, true, false, false, false, false, false,
-                        false, false, true, false, false, false, false, false],
-            'clap': [false, false, false, false, true, false, true, false,
+            'hihat': [false, false, false, true, true, false, false, false,
+                      true, false, true, false, false, false, true, true],
+            'openhat': [false, false, false, false, false, false, false, false,
+                        false, false, false, true, false, true, false, false],
+            'clap': [false, false, false, false, false, false, false, false,
                      false, false, false, false, true, false, false, false]
         }
     },
@@ -175,20 +176,26 @@ var fingerToDrumMap = {
         }
         players = new Tone.Players({
             urls: {
-                kick: 'assets/kick.wav',
-                snare: 'assets/snare.wav',
-                hihat: 'assets/hihat.wav',
-                openhat: 'assets/hihat.wav', // 使用同样的hihat音色，但播放时会处理成开放式
-                clap: 'assets/clap.wav'
+                // 民族打击乐替换映射
+                // index(食指): kick -> Rimshot
+                kick: 'assets/Rimshot.wav',
+                // middle(中指): snare -> Flam
+                snare: 'assets/Flam.wav',
+                // ring(无名指): hihat -> Shaker
+                hihat: 'assets/Shaker.wav',
+                // thumb(大拇指): openhat -> Orchestral_Drum
+                openhat: 'assets/Orchestral_Drum.wav',
+                // pinky(小指): clap -> Indian_Percussion
+                clap: 'assets/Indian_Percussion.wav'
             },
             onload: function() {
                 isLoaded = true;
-                // Set volumes after loading
-                players.player('kick').volume.value = -6; // Lowered kick volume
-                players.player('snare').volume.value = 0;
-                players.player('hihat').volume.value = -2; // Softer hi-hat
-                players.player('openhat').volume.value = -1; // Open hat slightly louder
-                players.player('clap').volume.value = 0;
+                // Set volumes after loading (slightly lower overall; clap much lower)
+                players.player('kick').volume.value = drumVolumes.kick; // was -6
+                players.player('snare').volume.value = drumVolumes.snare; // was 0
+                players.player('hihat').volume.value = drumVolumes.hihat; // was -2
+                players.player('openhat').volume.value = drumVolumes.openhat; // was -6
+                players.player('clap').volume.value = drumVolumes.clap; // was -10
                 console.log("Drum samples loaded successfully.");
                 resolve();
             },
@@ -265,6 +272,22 @@ var fingerToDrumMap = {
  * @returns {object} The finger-to-drum map.
  */ export function getFingerToDrumMap() {
     return fingerToDrumMap;
+}
+/**
+ * 设置单个鼓轨的音量（分贝，建议范围 -60..0）。
+ */
+export function setDrumVolume(drumId, dB) {
+    if (!drumVolumes.hasOwnProperty(drumId)) return;
+    var value = typeof dB === 'number' ? dB : drumVolumes[drumId];
+    drumVolumes[drumId] = value;
+    try {
+        var p = players && players.player && players.player(drumId);
+        if (p) p.volume.value = value;
+    } catch (e) {}
+}
+/** 获取所有鼓轨当前音量（对象：{kick:-9,...}） */
+export function getAllDrumVolumes() {
+    return { ...drumVolumes };
 }
 /**
  * Returns the current beat index for external use (like visualization).

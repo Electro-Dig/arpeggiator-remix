@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro-Futuristic Arpeggio Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #001122 0%, #002244 50%, #001133 100%);
+            color: #88ffaa;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .editor-container {
+            display: flex;
+            height: 100vh;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        /* 示波器容器 */
+        .oscilloscope-container {
+            flex: 1;
+            background: linear-gradient(135deg, #001a33 0%, #002244 100%);
+            border: 2px solid #00aaff;
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 
+                0 0 30px rgba(0, 170, 255, 0.3),
+                inset 0 0 20px rgba(0, 170, 255, 0.1);
+        }
+
+        .oscilloscope-header {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ffff;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ffff;
+            letter-spacing: 2px;
+        }
+
+        .oscilloscope-grid {
+            position: absolute;
+            top: 60px;
+            left: 40px;
+            right: 40px;
+            bottom: 60px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        /* 网格线 */
+        .grid-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .vertical-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(0, 255, 136, 0.4);
+        }
+
+        .horizontal-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(0, 255, 136, 0.3);
+        }
+
+        .center-line {
+            background: rgba(0, 255, 136, 0.6) !important;
+            box-shadow: 0 0 3px rgba(0, 255, 136, 0.5);
+        }
+
+        /* 音序点容器 */
+        .sequence-points-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        /* 音序点 */
+        .sequence-point {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: radial-gradient(circle, #00aaff 0%, #0066cc 100%);
+            border: 2px solid #00ffff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 
+                0 0 15px #00aaff,
+                inset 0 0 8px rgba(255, 255, 255, 0.3);
+            cursor: grab;
+            z-index: 10;
+            transition: all 0.2s ease;
+        }
+
+        .sequence-point:active {
+            cursor: grabbing;
+        }
+
+        .sequence-point.active {
+            background: radial-gradient(circle, #ff6600 0%, #cc4400 100%);
+            border-color: #ff8800;
+            box-shadow:
+                0 0 20px #ff6600,
+                inset 0 0 8px rgba(255, 255, 255, 0.4);
+        }
+
+        .sequence-point:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .sequence-point.inactive {
+            background: rgba(0, 255, 136, 0.2);
+            border-color: rgba(0, 255, 136, 0.4);
+            box-shadow: 0 0 4px rgba(0, 255, 136, 0.3);
+        }
+
+        /* SVG波形 */
+        .waveform-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* 音高标签 */
+        .pitch-labels {
+            position: absolute;
+            left: -40px;
+            top: 50px;
+            bottom: 40px;
+            width: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pitch-label {
+            color: #00ff88;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        /* 序列号标签 */
+        .sequence-labels {
+            position: absolute;
+            left: 40px;
+            right: 40px;
+            bottom: 10px;
+            height: 20px;
+        }
+
+        .sequence-label {
+            position: absolute;
+            transform: translateX(-50%);
+            color: #00ff88;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            width: 320px;
+            background: linear-gradient(135deg, #001a33 0%, #002244 100%);
+            border: 2px solid #00aaff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 
+                0 0 30px rgba(0, 170, 255, 0.3),
+                inset 0 0 20px rgba(0, 170, 255, 0.1);
+            overflow-y: auto;
+        }
+
+        .panel-header {
+            text-align: center;
+            color: #00ffff;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ffff;
+            letter-spacing: 1px;
+        }
+
+        .control-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 170, 255, 0.1);
+            border: 1px solid rgba(0, 170, 255, 0.3);
+            border-radius: 8px;
+        }
+
+        .section-title {
+            color: #88ffaa;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            display: block;
+            color: #88ffaa;
+            font-size: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #003366 0%, #004488 100%);
+            border: 1px solid #00aaff;
+            border-radius: 4px;
+            color: #88ffaa;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .control-value {
+            display: inline-block;
+            margin-left: 10px;
+            color: #00ffff;
+            font-weight: bold;
+            min-width: 40px;
+        }
+
+        /* 滑块样式 */
+        .control-input[type="range"] {
+            height: 6px;
+            background: linear-gradient(90deg, #003366 0%, #00aaff 100%);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .control-input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: radial-gradient(circle, #00ffff 0%, #0088cc 100%);
+            border: 2px solid #00ffff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        /* 按钮样式 */
+        .main-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .main-btn {
+            padding: 15px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid;
+            font-family: 'Courier New', monospace;
+        }
+
+        .main-btn.preview {
+            background: linear-gradient(135deg, #006600 0%, #008800 100%);
+            border-color: #00aa00;
+            color: #88ffaa;
+        }
+
+        .main-btn.random {
+            background: linear-gradient(135deg, #660066 0%, #880088 100%);
+            border-color: #aa00aa;
+            color: #ffaaff;
+        }
+
+        .main-btn.reset {
+            background: linear-gradient(135deg, #666600 0%, #888800 100%);
+            border-color: #aaaa00;
+            color: #ffffaa;
+        }
+
+        .main-btn.apply {
+            background: linear-gradient(135deg, #cc4400 0%, #ff6600 100%);
+            border-color: #ff8800;
+            color: #ffffff;
+        }
+
+        .main-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        /* 动画效果 */
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                box-shadow: 0 0 15px #00aaff;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.3);
+                box-shadow: 0 0 30px #00aaff, 0 0 50px rgba(0, 170, 255, 0.5);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                box-shadow: 0 0 15px #00aaff;
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(0, 255, 136, 0.6), 0 0 30px rgba(0, 255, 136, 0.3);
+            }
+        }
+
+        .oscilloscope-container {
+            animation: glow 3s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <!-- 示波器显示区域 -->
+        <div class="oscilloscope-container">
+            <div class="oscilloscope-header">ARPEGGIO SEQUENCER v2.1</div>
+            
+            <!-- 音高标签 -->
+            <div class="pitch-labels">
+                <div class="pitch-label">+24</div>
+                <div class="pitch-label">+12</div>
+                <div class="pitch-label">0</div>
+                <div class="pitch-label">-12</div>
+                <div class="pitch-label">-24</div>
+            </div>
+
+            <!-- 示波器网格 -->
+            <div class="oscilloscope-grid" id="oscilloscope-grid">
+                <!-- 网格线 -->
+                <div class="grid-lines" id="gridLines"></div>
+
+                <!-- 音序点容器 -->
+                <div class="sequence-points-container" id="sequencePointsContainer"></div>
+            </div>
+
+            <!-- 序列号标签 -->
+            <div class="sequence-labels">
+                <div class="sequence-label" style="left: 11.11%;">1</div>
+                <div class="sequence-label" style="left: 22.22%;">2</div>
+                <div class="sequence-label" style="left: 33.33%;">3</div>
+                <div class="sequence-label" style="left: 44.44%;">4</div>
+                <div class="sequence-label" style="left: 55.56%;">5</div>
+                <div class="sequence-label" style="left: 66.67%;">6</div>
+                <div class="sequence-label" style="left: 77.78%;">7</div>
+                <div class="sequence-label" style="left: 88.89%;">8</div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="control-panel">
+            <div class="panel-header">CONTROL PANEL</div>
+
+            <!-- 序列设置 -->
+            <div class="control-section">
+                <div class="section-title">Sequence Settings</div>
+
+                <div class="control-group">
+                    <label class="control-label">BPM</label>
+                    <input type="range" class="control-input" id="bpmSlider" min="60" max="200" value="120">
+                    <span class="control-value" id="bpmValue">120</span>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Root Note</label>
+                    <select class="control-input" id="rootNote">
+                        <option value="C">C</option>
+                        <option value="C#">C#</option>
+                        <option value="D">D</option>
+                        <option value="D#">D#</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="F#">F#</option>
+                        <option value="G">G</option>
+                        <option value="G#">G#</option>
+                        <option value="A">A</option>
+                        <option value="A#">A#</option>
+                        <option value="B">B</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Octave</label>
+                    <input type="range" class="control-input" id="octaveSlider" min="2" max="6" value="4">
+                    <span class="control-value" id="octaveValue">4</span>
+                </div>
+            </div>
+
+            <!-- 音效设置 -->
+            <div class="control-section">
+                <div class="section-title">Sound Settings</div>
+
+                <div class="control-group">
+                    <label class="control-label">Wave Type</label>
+                    <select class="control-input" id="waveType">
+                        <option value="sine">Sine</option>
+                        <option value="square">Square</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="triangle">Triangle</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Attack</label>
+                    <input type="range" class="control-input" id="attackSlider" min="0" max="1" step="0.01" value="0.1">
+                    <span class="control-value" id="attackValue">0.1</span>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Release</label>
+                    <input type="range" class="control-input" id="releaseSlider" min="0" max="2" step="0.01" value="0.5">
+                    <span class="control-value" id="releaseValue">0.5</span>
+                </div>
+            </div>
+
+            <!-- 主要操作 -->
+            <div class="main-actions">
+                <button class="main-btn preview" id="previewBtn">▶ Preview</button>
+                <button class="main-btn random" id="randomBtn">🎲 Random</button>
+                <button class="main-btn reset" id="resetBtn">↻ Reset</button>
+                <button class="main-btn apply" id="applyBtn">✓ Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class RetroArpeggioEditor {
+            constructor() {
+                this.sequenceData = [
+                    { step: 0, interval: 0, active: true },
+                    { step: 1, interval: 12, active: true },
+                    { step: 2, interval: null, active: false },
+                    { step: 3, interval: 24, active: true },
+                    { step: 4, interval: 12, active: true },
+                    { step: 5, interval: null, active: false },
+                    { step: 6, interval: -12, active: true },
+                    { step: 7, interval: null, active: false }
+                ];
+                this.isPreviewPlaying = false;
+                this.dragTarget = null;
+                this.dragIndex = null;
+                this.isDragging = false;
+                this.previewAnimationTimeout = null;
+                this.audioContext = null;
+                this.init();
+            }
+
+            init() {
+                this.createGrid();
+                this.renderSequence();
+                this.setupEventListeners();
+                this.loadFromLocalStorage();
+                this.showInitializationEffect();
+                console.log('🎛️ 复古未来主义琶音编辑器已初始化');
+            }
+
+            showInitializationEffect() {
+                const header = document.querySelector('.oscilloscope-header');
+                header.style.animation = 'pulse 1s ease-in-out 3';
+
+                setTimeout(() => {
+                    header.style.animation = '';
+                }, 3000);
+
+                // 逐个显示音序点
+                const points = document.querySelectorAll('.sequence-point');
+                points.forEach((point, index) => {
+                    point.style.opacity = '0';
+                    setTimeout(() => {
+                        point.style.opacity = '1';
+                        point.style.animation = 'pulse 0.5s ease-in-out';
+                        setTimeout(() => {
+                            point.style.animation = '';
+                        }, 500);
+                    }, index * 200);
+                });
+            }
+
+            createGrid() {
+                this.createGridLines();
+                this.createSequencePoints();
+            }
+
+            createGridLines() {
+                const gridContainer = document.getElementById('gridLines');
+                gridContainer.innerHTML = '';
+
+                const gridRect = document.getElementById('oscilloscope-grid').getBoundingClientRect();
+                const gridWidth = gridRect.width;
+                const gridHeight = gridRect.height;
+
+                // 创建垂直线 (10条)
+                for (let i = 0; i <= 9; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'vertical-line';
+                    line.style.left = `${(i / 9) * 100}%`;
+                    gridContainer.appendChild(line);
+                }
+
+                // 创建水平线 (5条)
+                for (let i = 0; i <= 4; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'horizontal-line';
+                    if (i === 2) line.classList.add('center-line'); // 中心线
+                    line.style.top = `${(i / 4) * 100}%`;
+                    gridContainer.appendChild(line);
+                }
+            }
+
+            createSequencePoints() {
+                const container = document.getElementById('sequencePointsContainer');
+                container.innerHTML = '';
+
+                // 创建SVG容器用于连接线
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('class', 'waveform-svg');
+                svg.setAttribute('width', '100%');
+                svg.setAttribute('height', '100%');
+                container.appendChild(svg);
+
+                this.sequenceData.forEach((data, index) => {
+                    const point = document.createElement('div');
+                    point.className = 'sequence-point';
+                    point.dataset.index = index;
+
+                    if (data.active) {
+                        point.classList.add('active');
+                    } else {
+                        point.classList.add('inactive');
+                    }
+
+                    // 计算位置 - 精确对应8条音序点垂直线 (1/9, 2/9, 3/9, ..., 8/9)
+                    const x = ((index + 1) / 9) * 100; // 对应中间8条垂直线
+                    const y = this.intervalToY(data.interval);
+
+                    point.style.left = `${x}%`;
+                    point.style.top = `${y}%`;
+
+                    container.appendChild(point);
+                });
+
+                this.renderConnections();
+            }
+
+            intervalToY(interval) {
+                if (interval === null) return 50; // 中心位置
+                // 映射区间: -24 到 +24 -> 100% 到 0%
+                return 50 - (interval / 24) * 50;
+            }
+
+            yToInterval(y) {
+                // 映射区间: 0% 到 100% -> +24 到 -24
+                return Math.round((50 - y) * 24 / 50);
+            }
+
+            renderConnections() {
+                const svg = document.querySelector('.waveform-svg');
+                svg.innerHTML = '';
+
+                const activePoints = this.sequenceData
+                    .map((data, index) => ({ ...data, index }))
+                    .filter(data => data.active);
+
+                if (activePoints.length < 2) return;
+
+                const gridRect = document.getElementById('oscilloscope-grid').getBoundingClientRect();
+                const svgWidth = gridRect.width;
+                const svgHeight = gridRect.height;
+
+                // 生成平滑路径
+                const pathData = this.generateSmoothPath(activePoints, svgWidth, svgHeight);
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathData);
+                path.setAttribute('stroke', '#00ff88');
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('fill', 'none');
+                path.setAttribute('opacity', '0.8');
+                path.style.filter = 'drop-shadow(0 0 5px #00ff88)';
+
+                svg.appendChild(path);
+            }
+
+            generateSmoothPath(points, width, height) {
+                if (points.length < 2) return '';
+
+                let path = '';
+
+                points.forEach((point, index) => {
+                    const x = ((point.index + 1) / 9) * width;
+                    const y = (this.intervalToY(point.interval) / 100) * height;
+
+                    if (index === 0) {
+                        path += `M ${x} ${y}`;
+                    } else {
+                        const prevPoint = points[index - 1];
+                        const prevX = ((prevPoint.index + 1) / 9) * width;
+                        const prevY = (this.intervalToY(prevPoint.interval) / 100) * height;
+
+                        // 使用二次贝塞尔曲线创建平滑连接
+                        const controlX = (prevX + x) / 2;
+                        const controlY = (prevY + y) / 2;
+
+                        path += ` Q ${controlX} ${controlY} ${x} ${y}`;
+                    }
+                });
+
+                return path;
+            }
+
+            renderSequence() {
+                this.createSequencePoints();
+            }
+
+            setupEventListeners() {
+                // 拖拽事件
+                const container = document.getElementById('sequencePointsContainer');
+
+                container.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('sequence-point')) {
+                        this.startDrag(e);
+                    }
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (this.isDragging) {
+                        this.handleDrag(e);
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    this.endDrag();
+                });
+
+                // 点击切换激活状态
+                container.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('sequence-point') && !this.isDragging) {
+                        const index = parseInt(e.target.dataset.index);
+                        this.togglePoint(index);
+                    }
+                });
+
+                // 控制面板事件
+                this.setupControlEvents();
+            }
+
+            setupControlEvents() {
+                // BPM滑块
+                const bpmSlider = document.getElementById('bpmSlider');
+                const bpmValue = document.getElementById('bpmValue');
+                bpmSlider.addEventListener('input', (e) => {
+                    bpmValue.textContent = e.target.value;
+                });
+
+                // 八度滑块
+                const octaveSlider = document.getElementById('octaveSlider');
+                const octaveValue = document.getElementById('octaveValue');
+                octaveSlider.addEventListener('input', (e) => {
+                    octaveValue.textContent = e.target.value;
+                });
+
+                // Attack滑块
+                const attackSlider = document.getElementById('attackSlider');
+                const attackValue = document.getElementById('attackValue');
+                attackSlider.addEventListener('input', (e) => {
+                    attackValue.textContent = parseFloat(e.target.value).toFixed(2);
+                });
+
+                // Release滑块
+                const releaseSlider = document.getElementById('releaseSlider');
+                const releaseValue = document.getElementById('releaseValue');
+                releaseSlider.addEventListener('input', (e) => {
+                    releaseValue.textContent = parseFloat(e.target.value).toFixed(2);
+                });
+
+                // 按钮事件
+                document.getElementById('previewBtn').addEventListener('click', () => {
+                    this.togglePreview();
+                });
+
+                document.getElementById('randomBtn').addEventListener('click', () => {
+                    this.randomizeSequence();
+                });
+
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.resetSequence();
+                });
+
+                document.getElementById('applyBtn').addEventListener('click', () => {
+                    this.applySequence();
+                });
+            }
+
+            startDrag(e) {
+                this.isDragging = true;
+                this.dragTarget = e.target;
+                this.dragIndex = parseInt(e.target.dataset.index);
+                this.dragStartY = e.clientY;
+                this.dragStartX = e.clientX;
+                this.dragStartTime = Date.now();
+                this.hasMoved = false;
+                e.target.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+
+            handleDrag(e) {
+                if (!this.isDragging || !this.dragTarget) return;
+
+                // 检测是否真的在拖拽（移动距离超过阈值）
+                const deltaX = Math.abs(e.clientX - this.dragStartX);
+                const deltaY = Math.abs(e.clientY - this.dragStartY);
+                const dragThreshold = 3; // 3像素阈值
+
+                if (deltaX > dragThreshold || deltaY > dragThreshold) {
+                    this.hasMoved = true;
+                }
+
+                // 只有真正移动时才更新位置
+                if (this.hasMoved) {
+                    const gridRect = document.getElementById('oscilloscope-grid').getBoundingClientRect();
+                    const relativeY = ((e.clientY - gridRect.top) / gridRect.height) * 100;
+
+                    // 限制在网格范围内
+                    const clampedY = Math.max(0, Math.min(100, relativeY));
+
+                    // 立即更新位置 - 移除过渡效果以实现实时跟随
+                    this.dragTarget.style.transition = 'none';
+                    this.dragTarget.style.top = `${clampedY}%`;
+
+                    // 更新数据
+                    const newInterval = this.yToInterval(clampedY);
+                    this.sequenceData[this.dragIndex].interval = newInterval;
+                    this.sequenceData[this.dragIndex].active = true;
+
+                    // 更新样式
+                    this.dragTarget.classList.remove('inactive');
+                    this.dragTarget.classList.add('active');
+
+                    // 立即重新渲染连接线
+                    requestAnimationFrame(() => {
+                        this.renderConnections();
+                    });
+                }
+            }
+
+            endDrag() {
+                if (this.isDragging && this.dragTarget) {
+                    // 如果没有移动，则视为点击事件
+                    if (!this.hasMoved) {
+                        this.handlePointClick(this.dragIndex);
+                    }
+
+                    // 恢复过渡效果
+                    this.dragTarget.style.transition = 'all 0.2s ease';
+                    this.dragTarget.style.cursor = 'grab';
+                    this.isDragging = false;
+                    this.dragTarget = null;
+                    this.dragIndex = null;
+                    this.hasMoved = false;
+                    this.saveToLocalStorage();
+                }
+            }
+
+            handlePointClick(index) {
+                // 点击切换音序点的激活状态
+                const point = this.sequenceData[index];
+                if (point.active) {
+                    // 如果当前激活，则禁用
+                    point.active = false;
+                    point.interval = null;
+                } else {
+                    // 如果当前禁用，则激活并设置为根音
+                    point.active = true;
+                    point.interval = 0;
+                }
+
+                this.renderSequencePoints();
+                this.renderConnections();
+                this.saveToLocalStorage();
+            }
+
+            togglePoint(index) {
+                const data = this.sequenceData[index];
+                data.active = !data.active;
+
+                if (!data.active) {
+                    data.interval = null;
+                } else if (data.interval === null) {
+                    data.interval = 0; // 默认设置为中心音高
+                }
+
+                this.renderSequence();
+                this.saveToLocalStorage();
+            }
+
+            togglePreview() {
+                if (this.isPreviewPlaying) {
+                    this.stopPreview();
+                } else {
+                    this.startPreview();
+                }
+            }
+
+            startPreview() {
+                this.isPreviewPlaying = true;
+                const btn = document.getElementById('previewBtn');
+                btn.textContent = '⏸ Stop';
+                btn.style.background = 'linear-gradient(135deg, #cc4400 0%, #ff6600 100%)';
+
+                console.log('🎵 开始预览琶音序列');
+                this.animatePreview();
+            }
+
+            stopPreview() {
+                this.isPreviewPlaying = false;
+                const btn = document.getElementById('previewBtn');
+                btn.textContent = '▶ Preview';
+                btn.style.background = 'linear-gradient(135deg, #006600 0%, #008800 100%)';
+
+                if (this.previewAnimationTimeout) {
+                    clearTimeout(this.previewAnimationTimeout);
+                }
+
+                // 移除所有预览高亮
+                document.querySelectorAll('.sequence-point').forEach(point => {
+                    point.style.animation = '';
+                });
+
+                console.log('⏹ 停止预览');
+            }
+
+            animatePreview() {
+                if (!this.isPreviewPlaying) return;
+
+                const activePoints = this.sequenceData
+                    .map((data, index) => ({ ...data, index }))
+                    .filter(data => data.active);
+
+                if (activePoints.length === 0) {
+                    this.stopPreview();
+                    return;
+                }
+
+                let currentStep = 0;
+                const bpm = parseInt(document.getElementById('bpmSlider').value);
+                const stepDuration = (60 / bpm / 4) * 1000; // 16分音符
+
+                const playStep = () => {
+                    if (!this.isPreviewPlaying) return;
+
+                    const point = activePoints[currentStep % activePoints.length];
+                    const pointElement = document.querySelector(`[data-index="${point.index}"]`);
+
+                    if (pointElement) {
+                        pointElement.style.animation = 'pulse 0.3s ease-in-out';
+                        setTimeout(() => {
+                            if (pointElement) pointElement.style.animation = '';
+                        }, 300);
+                    }
+
+                    currentStep++;
+                    this.previewAnimationTimeout = setTimeout(playStep, stepDuration);
+                };
+
+                playStep();
+            }
+
+            randomizeSequence() {
+                this.sequenceData.forEach((data, index) => {
+                    data.active = Math.random() > 0.3; // 70%概率激活
+                    if (data.active) {
+                        // 随机音程 (-24 到 +24)
+                        data.interval = Math.floor(Math.random() * 49) - 24;
+                    } else {
+                        data.interval = null;
+                    }
+                });
+
+                this.renderSequencePoints();
+                this.renderConnections();
+                this.saveToLocalStorage();
+                console.log('🎲 已随机化琶音序列');
+            }
+
+            resetSequence() {
+                this.sequenceData = [
+                    { step: 0, interval: 0, active: true },
+                    { step: 1, interval: 12, active: true },
+                    { step: 2, interval: null, active: false },
+                    { step: 3, interval: 24, active: true },
+                    { step: 4, interval: 12, active: true },
+                    { step: 5, interval: null, active: false },
+                    { step: 6, interval: -12, active: true },
+                    { step: 7, interval: null, active: false }
+                ];
+
+                this.renderSequencePoints();
+                this.renderConnections();
+                this.saveToLocalStorage();
+                console.log('↻ 已重置琶音序列');
+            }
+
+            applySequence() {
+                const activeSequence = this.sequenceData.filter(data => data.active);
+                console.log('✓ 应用琶音序列:', activeSequence);
+
+                // 这里可以添加与主应用的集成逻辑
+                alert('琶音序列已应用！\n\n活跃音序点: ' + activeSequence.length + '\n详情请查看控制台。');
+            }
+
+            saveToLocalStorage() {
+                try {
+                    localStorage.setItem('retroArpeggioSequence', JSON.stringify(this.sequenceData));
+                } catch (e) {
+                    console.warn('无法保存到本地存储:', e);
+                }
+            }
+
+            loadFromLocalStorage() {
+                try {
+                    const saved = localStorage.getItem('retroArpeggioSequence');
+                    if (saved) {
+                        this.sequenceData = JSON.parse(saved);
+                        console.log('📁 已从本地存储加载序列');
+                    }
+                } catch (e) {
+                    console.warn('无法从本地存储加载:', e);
+                }
+            }
+        }
+
+        // 初始化编辑器
+        document.addEventListener('DOMContentLoaded', () => {
+            window.arpeggioEditor = new RetroArpeggioEditor();
+        });
+    </script>
+</body>
+</html>

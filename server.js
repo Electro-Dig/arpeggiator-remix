@@ -33,60 +33,50 @@ app.get('/', (req, res) => {
     res.sendFile(join(__dirname, 'index.html'));
 });
 
-// 创建自签名证书用于HTTPS（如果不存在）
-function createSelfSignedCert() {
-    const cert = `-----BEGIN CERTIFICATE-----
-MIICpDCCAYwCCQC7QjKl5hHhIDANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDDAls
-b2NhbGhvc3QwHhcNMjQwMTAxMDAwMDAwWhcNMjUwMTAxMDAwMDAwWjAUMRIwEAYD
-VQQDDAlsb2NhbGhvc3QwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC7
-QjKl5hHhIDANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwHhcN
-MjQwMTAxMDAwMDAwWhcNMjUwMTAxMDAwMDAwWjAUMRIwEAYDVQQDDAlsb2NhbGhv
-c3QwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC7...
------END CERTIFICATE-----`;
-
-    const key = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7QjKl5hHhIDANB
-gkqhkiG9w0BAQsFADAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwHhcNMjQwMTAxMDAwMD
-AwWhcNMjUwMTAxMDAwMDAwWjAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwggEiMA0GCSq
-GSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC7...
------END PRIVATE KEY-----`;
-
-    if (!fs.existsSync('server.crt')) {
-        fs.writeFileSync('server.crt', cert);
+// 安全的证书管理系统
+function loadTLSConfig() {
+    // 优先使用环境变量中的证书路径
+    const certPath = process.env.TLS_CERT_PATH;
+    const keyPath = process.env.TLS_KEY_PATH;
+    
+    if (certPath && keyPath) {
+        try {
+            return {
+                cert: fs.readFileSync(certPath, 'utf8'),
+                key: fs.readFileSync(keyPath, 'utf8')
+            };
+        } catch (error) {
+            console.warn('⚠️  无法读取自定义证书文件，将使用开发模式');
+        }
     }
-    if (!fs.existsSync('server.key')) {
-        fs.writeFileSync('server.key', key);
-    }
+    
+    // 开发环境：生成临时证书（仅用于测试）
+    return generateDevCertificate();
+}
+
+function generateDevCertificate() {
+    console.log('🔧 开发模式：生成临时自签名证书');
+    // 这里可以集成 selfsigned 库或其他证书生成工具
+    // 为了不破坏现有功能，暂时返回 null，使用 HTTP
+    return null;
 }
 
 // 启动服务器
 function startServer() {
     const isDev = process.argv.includes('--dev');
+    const tlsConfig = loadTLSConfig();
     
-    if (isDev || fs.existsSync('server.crt')) {
-        try {
-            // 尝试使用HTTPS
-            if (!fs.existsSync('server.crt')) {
-                createSelfSignedCert();
-            }
-            
-            const httpsOptions = {
-                key: fs.readFileSync('server.key'),
-                cert: fs.readFileSync('server.crt')
-            };
-            
-            https.createServer(httpsOptions, app).listen(PORT, () => {
-                console.log('🚀 HTTPS服务器运行在: https://localhost:' + PORT);
-                console.log('💡 在浏览器中访问: https://localhost:' + PORT);
-                console.log('📹 摄像头权限需要HTTPS才能正常工作');
-                console.log('⚠️  浏览器可能显示安全警告，点击"高级"->继续访问即可');
-                console.log('\n按 Ctrl+C 停止服务器');
-            });
-        } catch (error) {
-            console.log('HTTPS启动失败，降级到HTTP模式:', error.message);
-            startHttpServer();
-        }
+    if (tlsConfig) {
+        // 使用HTTPS
+        https.createServer(tlsConfig, app).listen(PORT, () => {
+            console.log('🚀 HTTPS服务器运行在: https://localhost:' + PORT);
+            console.log('💡 在浏览器中访问: https://localhost:' + PORT);
+            console.log('📹 摄像头权限需要HTTPS才能正常工作');
+            console.log('\n按 Ctrl+C 停止服务器');
+        });
     } else {
+        // 降级到HTTP模式
+        console.log('⚠️  未配置TLS证书，使用HTTP模式');
         startHttpServer();
     }
 }

@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>调试波形连线</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .visualizer {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            margin: 20px auto;
+            background:
+                /* 示波器深色背景 */
+                radial-gradient(ellipse at center, #001122 0%, #000811 100%),
+                /* 水平网格线 */
+                linear-gradient(to bottom, transparent 0%, transparent 49px, rgba(0, 255, 136, 0.1) 49px, rgba(0, 255, 136, 0.1) 51px, transparent 51px, transparent 100%),
+                /* 垂直网格线 */
+                linear-gradient(to right, transparent 0%, transparent 49px, rgba(0, 255, 136, 0.1) 49px, rgba(0, 255, 136, 0.1) 51px, transparent 51px, transparent 100%);
+            background-size: 100% 100%, 100% 50px, 100px 100%;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow:
+                inset 0 0 50px rgba(0, 255, 136, 0.1),
+                0 0 20px rgba(0, 255, 136, 0.2);
+        }
+        
+        .waveform-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .waveform-path {
+            fill: none;
+            stroke: #00ff88;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        
+        .waveform-glow {
+            fill: none;
+            stroke: #00ff88;
+            stroke-width: 8;
+            opacity: 0.3;
+            filter: blur(4px);
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        
+        .sequence-point {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            border: 2px solid;
+            z-index: 10;
+        }
+        
+        .sequence-point.active {
+            background: radial-gradient(circle, #00ff88, #00cc66);
+            border-color: #00ff88;
+            box-shadow: 
+                0 0 10px #00ff88,
+                inset 0 0 5px rgba(255, 255, 255, 0.3);
+        }
+        
+        .sequence-point.inactive {
+            background: radial-gradient(circle, #333, #111);
+            border-color: #555;
+            opacity: 0.3;
+            transform: translate(-50%, -50%) scale(0.7);
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: linear-gradient(145deg, #00ff88, #00cc66);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+        }
+        
+        .debug-info {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 波形连线调试</h1>
+        <p>测试空符号处理和连线逻辑</p>
+        
+        <div class="visualizer" id="visualizer">
+            <svg class="waveform-svg">
+                <defs>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                        <feMerge> 
+                            <feMergeNode in="coloredBlur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+                <path id="waveform-glow" class="waveform-glow"></path>
+                <path id="waveform-path" class="waveform-path"></path>
+            </svg>
+        </div>
+        
+        <div class="controls">
+            <button onclick="testSequence1()">测试序列1</button>
+            <button onclick="testSequence2()">测试序列2</button>
+            <button onclick="testSequence3()">测试序列3</button>
+            <button onclick="randomizeSequence()">随机序列</button>
+        </div>
+        
+        <div class="debug-info" id="debug-info">
+            <strong>调试信息:</strong><br>
+            等待测试...
+        </div>
+    </div>
+
+    <script>
+        // 当前序列
+        let sequence = [0, 3, 5, 7, null, 10, 12, null];
+        
+        // 调试日志
+        function log(message) {
+            const debugInfo = document.getElementById('debug-info');
+            debugInfo.innerHTML += message + '<br>';
+            debugInfo.scrollTop = debugInfo.scrollHeight;
+            console.log(message);
+        }
+        
+        // 清除日志
+        function clearLog() {
+            document.getElementById('debug-info').innerHTML = '<strong>调试信息:</strong><br>';
+        }
+        
+        // 获取激活点
+        function getActivePoints() {
+            const activePoints = [];
+            
+            for (let i = 0; i < sequence.length; i++) {
+                if (sequence[i] !== null) {
+                    const x = (i + 1) * 100; // 800px宽度中的位置
+                    const y = 360 - ((sequence[i] + 12) / 36) * 320; // 400px高度中的位置
+                    activePoints.push({x, y, step: i, interval: sequence[i]});
+                }
+            }
+            
+            return activePoints;
+        }
+        
+        // 生成平滑路径
+        function generateSmoothPath(points) {
+            if (points.length < 2) return '';
+            
+            let pathData = `M ${points[0].x} ${points[0].y}`;
+            
+            for (let i = 1; i < points.length; i++) {
+                const prev = points[i - 1];
+                const curr = points[i];
+                
+                // 根据点之间的距离调整张力
+                const distance = curr.step - prev.step;
+                let tension = 0.3;
+                
+                if (distance > 1) {
+                    tension = Math.min(0.5, 0.3 + (distance - 1) * 0.1);
+                }
+                
+                const cp1x = prev.x + (curr.x - prev.x) * tension;
+                const cp1y = prev.y;
+                const cp2x = curr.x - (curr.x - prev.x) * tension;
+                const cp2y = curr.y;
+                
+                pathData += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
+            }
+            
+            return pathData;
+        }
+        
+        // 更新波形
+        function updateWaveform() {
+            clearLog();
+            log(`📊 当前序列: [${sequence.map(v => v === null ? 'null' : v).join(', ')}]`);
+            
+            const activePoints = getActivePoints();
+            log(`🎯 激活点数量: ${activePoints.length}`);
+            
+            activePoints.forEach((point, index) => {
+                log(`  点${index + 1}: 步骤${point.step}, 音程${point.interval}, 坐标(${point.x.toFixed(1)}, ${point.y.toFixed(1)})`);
+            });
+            
+            let pathData = '';
+            
+            if (activePoints.length >= 2) {
+                pathData = generateSmoothPath(activePoints);
+                log(`✅ 生成连线路径`);
+            } else if (activePoints.length === 1) {
+                const point = activePoints[0];
+                pathData = `M ${point.x - 3} ${point.y} A 3 3 0 1 1 ${point.x + 3} ${point.y} A 3 3 0 1 1 ${point.x - 3} ${point.y}`;
+                log(`⭕ 单点圆圈`);
+            } else {
+                log(`❌ 无激活点`);
+            }
+            
+            document.getElementById('waveform-path').setAttribute('d', pathData);
+            document.getElementById('waveform-glow').setAttribute('d', pathData);
+            
+            log(`🔗 路径数据: ${pathData.substring(0, 80)}${pathData.length > 80 ? '...' : ''}`);
+        }
+        
+        // 更新音序点显示
+        function updateSequencePoints() {
+            // 清除现有点
+            const existingPoints = document.querySelectorAll('.sequence-point');
+            existingPoints.forEach(point => point.remove());
+            
+            // 创建新的音序点
+            for (let i = 0; i < sequence.length; i++) {
+                const interval = sequence[i];
+                const point = document.createElement('div');
+                point.className = 'sequence-point';
+                
+                const x = ((i + 1) / 8) * 100; // 百分比位置
+                
+                if (interval !== null) {
+                    point.classList.add('active');
+                    const y = 90 - ((interval + 12) / 36) * 80;
+                    point.style.top = y + '%';
+                    point.title = `步骤${i + 1}: ${interval > 0 ? '+' : ''}${interval}`;
+                } else {
+                    point.classList.add('inactive');
+                    point.style.top = '50%';
+                    point.title = `步骤${i + 1}: 空拍`;
+                }
+                
+                point.style.left = x + '%';
+                document.getElementById('visualizer').appendChild(point);
+            }
+        }
+        
+        // 更新完整可视化
+        function updateVisualization() {
+            updateSequencePoints();
+            updateWaveform();
+        }
+        
+        // 测试序列
+        function testSequence1() {
+            sequence = [0, 3, 5, 7, null, 10, 12, null];
+            updateVisualization();
+        }
+        
+        function testSequence2() {
+            sequence = [0, null, null, 7, null, null, 12, null];
+            updateVisualization();
+        }
+        
+        function testSequence3() {
+            sequence = [null, 3, null, null, 8, null, null, 15];
+            updateVisualization();
+        }
+        
+        function randomizeSequence() {
+            const intervals = [0, 2, 3, 5, 7, 8, 10, 12];
+            sequence = [];
+            
+            for (let i = 0; i < 8; i++) {
+                if (Math.random() > 0.4) {
+                    sequence.push(intervals[Math.floor(Math.random() * intervals.length)]);
+                } else {
+                    sequence.push(null);
+                }
+            }
+            
+            updateVisualization();
+        }
+        
+        // 初始化
+        updateVisualization();
+    </script>
+</body>
+</html>

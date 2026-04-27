@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主页面调试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 400px;
+            background: rgba(0, 20, 40, 0.9);
+            border: 1px solid #0ff;
+            padding: 10px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 10000;
+        }
+        
+        .debug-item {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #0ff;
+            padding-left: 10px;
+        }
+        
+        .success {
+            border-left-color: #0f0;
+            color: #0f0;
+        }
+        
+        .error {
+            border-left-color: #f00;
+            color: #f00;
+        }
+        
+        .warning {
+            border-left-color: #ff0;
+            color: #ff0;
+        }
+        
+        button {
+            background: #0ff;
+            color: #000;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 主页面调试工具</h1>
+    
+    <div class="debug-panel" id="debugPanel">
+        <h3>🔍 调试信息</h3>
+        <div>
+            <button onclick="checkTone()">检查 Tone.js</button>
+            <button onclick="checkArpeggio()">检查琶音编辑器</button>
+            <button onclick="checkEvents()">检查事件</button>
+            <button onclick="clearLog()">清空日志</button>
+        </div>
+        <div id="debugLog"></div>
+    </div>
+
+    <!-- 加载主页面的依赖 -->
+    <script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
+    
+    <script>
+        let debugLog = [];
+        
+        function addDebugLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.push({timestamp, message, type});
+            updateDebugDisplay();
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function updateDebugDisplay() {
+            const logContainer = document.getElementById('debugLog');
+            logContainer.innerHTML = debugLog.map(log => 
+                `<div class="debug-item ${log.type}">
+                    [${log.timestamp}] ${log.message}
+                </div>`
+            ).join('');
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function checkTone() {
+            addDebugLog('=== 检查 Tone.js ===');
+            
+            if (window.Tone) {
+                addDebugLog('✅ Tone.js 已加载', 'success');
+                addDebugLog(`📦 版本: ${Tone.version || 'unknown'}`, 'success');
+                addDebugLog(`🎵 音频上下文状态: ${Tone.context.state}`, 'success');
+            } else {
+                addDebugLog('❌ Tone.js 未加载', 'error');
+            }
+        }
+        
+        function checkArpeggio() {
+            addDebugLog('=== 检查琶音编辑器 ===');
+            
+            if (window.arpeggioEditor) {
+                addDebugLog('✅ 琶音编辑器已加载', 'success');
+                
+                // 检查关键方法
+                const methods = ['playDragNote', 'updateDrag', 'startDrag', 'noteToMidi', 'midiToNote'];
+                methods.forEach(method => {
+                    if (typeof window.arpeggioEditor[method] === 'function') {
+                        addDebugLog(`✅ 方法 ${method} 存在`, 'success');
+                    } else {
+                        addDebugLog(`❌ 方法 ${method} 不存在`, 'error');
+                    }
+                });
+                
+                // 检查属性
+                addDebugLog(`🎵 根音符: ${window.arpeggioEditor.rootNote}${window.arpeggioEditor.octave}`, 'info');
+                addDebugLog(`🎵 BPM: ${window.arpeggioEditor.bpm}`, 'info');
+                
+            } else {
+                addDebugLog('❌ 琶音编辑器未加载', 'error');
+            }
+        }
+        
+        function checkEvents() {
+            addDebugLog('=== 检查事件监听器 ===');
+            
+            // 检查琶音编辑器按钮
+            const arpeggioBtn = document.querySelector('[onclick*="arpeggioEditor"]');
+            if (arpeggioBtn) {
+                addDebugLog('✅ 琶音编辑器按钮找到', 'success');
+            } else {
+                addDebugLog('❌ 琶音编辑器按钮未找到', 'error');
+            }
+            
+            // 检查模态框
+            const modal = document.getElementById('arpeggio-editor-modal');
+            if (modal) {
+                addDebugLog('✅ 琶音编辑器模态框找到', 'success');
+            } else {
+                addDebugLog('❌ 琶音编辑器模态框未找到', 'error');
+            }
+            
+            // 检查序列点容器
+            const container = document.getElementById('sequencePointsContainer');
+            if (container) {
+                addDebugLog('✅ 序列点容器找到', 'success');
+                const points = container.querySelectorAll('.sequence-point');
+                addDebugLog(`🎯 序列点数量: ${points.length}`, 'info');
+            } else {
+                addDebugLog('❌ 序列点容器未找到', 'error');
+            }
+        }
+        
+        function clearLog() {
+            debugLog = [];
+            updateDebugDisplay();
+        }
+        
+        // 监听控制台输出
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('[DEBUG]')) {
+                addDebugLog(message, 'info');
+            }
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('[DEBUG]')) {
+                addDebugLog(message, 'error');
+            }
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('[DEBUG]')) {
+                addDebugLog(message, 'warning');
+            }
+            originalWarn.apply(console, args);
+        };
+        
+        // 页面加载完成后自动检查
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                addDebugLog('🚀 调试工具已加载');
+                checkTone();
+            }, 100);
+        });
+        
+        // 模拟主页面的初始化
+        setTimeout(() => {
+            addDebugLog('🔄 尝试访问主页面对象...');
+            
+            if (window.parent && window.parent !== window) {
+                // 在iframe中
+                if (window.parent.arpeggioEditor) {
+                    window.arpeggioEditor = window.parent.arpeggioEditor;
+                    addDebugLog('✅ 从父窗口获取琶音编辑器', 'success');
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

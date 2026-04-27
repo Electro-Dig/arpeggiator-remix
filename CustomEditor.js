@@ -513,11 +513,11 @@ export class CustomEditor {
         drumSequencer.innerHTML = '';
         
         const drums = [
-            { id: 'kick', name: 'Kick', emoji: '🦵', color: 'drum-kick' },
-            { id: 'snare', name: 'Snare', emoji: '🥁', color: 'drum-snare' },
-            { id: 'hihat', name: 'Hi-hat', emoji: '🎩', color: 'drum-hihat' },
-            { id: 'clap', name: 'Clap', emoji: '👏', color: 'drum-clap' },
-            { id: 'openhat', name: 'Open Hat', emoji: '🎩', color: 'drum-openhat' }
+            { id: 'kick', name: 'Rimshot', emoji: '🥁', color: 'drum-kick' },
+            { id: 'snare', name: 'Flam', emoji: '🥁', color: 'drum-snare' },
+            { id: 'hihat', name: 'Shaker', emoji: '🎶', color: 'drum-hihat' },
+            { id: 'clap', name: 'Indian_Percussion', emoji: '🪘', color: 'drum-clap' },
+            { id: 'openhat', name: 'Orchestral_Drum', emoji: '🥁', color: 'drum-openhat' }
         ];
         
         drums.forEach(drum => {
@@ -588,7 +588,7 @@ export class CustomEditor {
         }
     }
 
-    // 测试琶音合成器功能
+    // 测试琶音合成器功能 - 使用当前编辑的序列
     testArpeggioSynth() {
         console.log('🎵 开始测试琶音合成器...');
 
@@ -596,27 +596,52 @@ export class CustomEditor {
             // 确保合成器已创建
             if (!this.previewSynth) {
                 console.log('🔧 创建预览合成器...');
-                this.createPreviewSynth();
+                this.createSequencePreviewSynth();
             }
 
             if (!this.previewSynth) {
                 throw new Error('无法创建预览合成器');
             }
 
-            // 测试音符序列
-            const testNotes = ['C4', 'E4', 'G4', 'C5'];
-            let noteIndex = 0;
+            // 获取当前编辑的序列数据
+            const sequence = this.getSequenceData();
+            const rootNote = this.getCurrentRootNote();
+
+            console.log('🎼 当前序列数据:', sequence);
+            console.log('🎵 根音:', rootNote);
+
+            // 转换为音符
+            const testNotes = [];
+            sequence.forEach((interval, index) => {
+                if (interval !== null) {
+                    try {
+                        const rootFreq = Tone.Frequency(rootNote + '4');
+                        const targetFreq = rootFreq.transpose(interval);
+                        const note = targetFreq.toNote();
+                        testNotes.push({ note, step: index + 1, interval });
+                    } catch (error) {
+                        console.warn(`计算音符失败 (步骤 ${index + 1}, 间隔 ${interval}):`, error);
+                    }
+                }
+            });
+
+            if (testNotes.length === 0) {
+                console.warn('⚠️ 没有有效的音符可以测试');
+                alert('当前序列没有激活的音符，请先设置一些音序点');
+                return;
+            }
 
             console.log('🎼 播放测试音符序列:', testNotes);
 
+            let noteIndex = 0;
             const playNextNote = () => {
                 if (noteIndex >= testNotes.length) {
                     console.log('✅ 琶音合成器测试完成');
                     return;
                 }
 
-                const note = testNotes[noteIndex];
-                console.log(`🎵 播放音符: ${note}`);
+                const { note, step, interval } = testNotes[noteIndex];
+                console.log(`🎵 播放步骤 ${step}: ${note} (间隔: ${interval})`);
 
                 try {
                     this.previewSynth.triggerAttackRelease(note, "4n");
@@ -626,7 +651,7 @@ export class CustomEditor {
                 }
 
                 noteIndex++;
-                setTimeout(playNextNote, 500); // 每个音符间隔500ms
+                setTimeout(playNextNote, 600); // 每个音符间隔600ms
             };
 
             playNextNote();
@@ -1105,11 +1130,12 @@ export class CustomEditor {
         // 创建与DrumManager相同的鼓声播放器
         this.previewDrumPlayers = new Tone.Players({
             urls: {
-                kick: 'assets/kick.wav',
-                snare: 'assets/snare.wav',
-                hihat: 'assets/hihat.wav',
-                clap: 'assets/clap.wav',
-                openhat: 'assets/openhat.wav' // 使用专门的openhat音频文件
+                // 与 DrumManager.js 保持一致的民族打击乐采样映射
+                kick: 'assets/Rimshot.wav',
+                snare: 'assets/Flam.wav',
+                hihat: 'assets/Shaker.wav',
+                clap: 'assets/Indian_Percussion.wav',
+                openhat: 'assets/Orchestral_Drum.wav'
             },
             onload: () => {
                 try {
@@ -1125,11 +1151,12 @@ export class CustomEditor {
                     });
 
                     // 设置与原版相同的音量
+                    // 重新平衡民族打击乐的默认音量（可按需再调）
                     this.previewDrumPlayers.player('kick').volume.value = -6;
-                    this.previewDrumPlayers.player('snare').volume.value = 0;
-                    this.previewDrumPlayers.player('hihat').volume.value = -2;
-                    this.previewDrumPlayers.player('clap').volume.value = 0;
-                    this.previewDrumPlayers.player('openhat').volume.value = -1; // Open hat略大声
+                    this.previewDrumPlayers.player('snare').volume.value = -3;
+                    this.previewDrumPlayers.player('hihat').volume.value = -5;
+                    this.previewDrumPlayers.player('clap').volume.value = -10;
+                    this.previewDrumPlayers.player('openhat').volume.value = -6;
                     this.drumPlayersLoaded = true;
                     console.log("🔊 预览鼓声样本加载完成，包括OpenHat");
                 } catch (error) {
@@ -2097,11 +2124,11 @@ class CircularSequencer {
 
         // 鼓声配置
         this.drumTypes = [
-            { id: 'kick', name: 'Kick', color: '#D72828', emoji: '🥁' },
-            { id: 'snare', name: 'Snare', color: '#F36E2F', emoji: '🥁' },
-            { id: 'hihat', name: 'Hi-hat', color: '#84C34E', emoji: '🎩' },
-            { id: 'clap', name: 'Clap', color: '#7B4394', emoji: '👏' },
-            { id: 'openhat', name: 'Open Hat', color: '#4A90E2', emoji: '🎩' }
+            { id: 'kick', name: 'Rimshot', color: '#D72828', emoji: '🥁' },
+            { id: 'snare', name: 'Flam', color: '#F36E2F', emoji: '🥁' },
+            { id: 'hihat', name: 'Shaker', color: '#84C34E', emoji: '🎶' },
+            { id: 'clap', name: 'Indian_Percussion', color: '#7B4394', emoji: '🪘' },
+            { id: 'openhat', name: 'Orchestral_Drum', color: '#4A90E2', emoji: '🥁' }
         ];
 
         // 状态数据
@@ -2505,8 +2532,11 @@ CustomEditor.prototype.setupSequenceEditorEvents = function() {
     const previewBtn = document.getElementById('preview-sequence');
     if (previewBtn) {
         previewBtn.addEventListener('click', () => {
-            this.previewSequence();
+            console.log('🎵 预览按钮被点击');
+            this.previewCurrentSequence();
         });
+    } else {
+        console.warn('⚠️ 预览按钮未找到');
     }
 
     // 随机按钮
@@ -2532,35 +2562,59 @@ CustomEditor.prototype.setupSequenceEditorEvents = function() {
 };
 
 CustomEditor.prototype.setupSequenceStepEvents = function() {
-    const sequenceSteps = document.querySelectorAll('.sequence-step');
+    console.log('🎵 设置音序点事件...');
 
-    sequenceSteps.forEach((stepElement, stepIndex) => {
-        const stepPoint = stepElement.querySelector('.step-point');
-        if (!stepPoint) return;
+    // 尝试新的增强可视化器结构
+    let sequenceElements = document.querySelectorAll('.sequence-column');
+    let isEnhancedMode = sequenceElements.length > 0;
+
+    // 如果没找到增强模式，使用传统模式
+    if (!isEnhancedMode) {
+        sequenceElements = document.querySelectorAll('.sequence-step');
+        console.log('📋 使用传统音序点模式');
+    } else {
+        console.log('🎨 使用增强可视化器模式');
+    }
+
+    sequenceElements.forEach((stepElement, stepIndex) => {
+        let stepControl;
+
+        if (isEnhancedMode) {
+            stepControl = stepElement.querySelector('.step-handle');
+        } else {
+            stepControl = stepElement.querySelector('.step-point');
+        }
+
+        if (!stepControl) {
+            console.warn(`⚠️ 未找到步骤 ${stepIndex + 1} 的控制元素`);
+            return;
+        }
 
         // 点击切换激活状态
-        stepPoint.addEventListener('click', () => {
+        stepControl.addEventListener('click', () => {
             this.toggleSequenceStep(stepIndex);
         });
 
         // 拖拽调整音程
-        this.setupStepDragEvents(stepPoint, stepIndex);
+        this.setupStepDragEvents(stepControl, stepIndex, isEnhancedMode);
     });
+
+    console.log(`✅ 已设置 ${sequenceElements.length} 个音序点事件`);
 };
 
-CustomEditor.prototype.setupStepDragEvents = function(stepPoint, stepIndex) {
+CustomEditor.prototype.setupStepDragEvents = function(stepControl, stepIndex, isEnhancedMode = false) {
     let isDragging = false;
     let startY = 0;
     let startInterval = 0;
 
     // 鼠标事件
-    stepPoint.addEventListener('mousedown', (e) => {
-        if (!stepPoint.classList.contains('active')) return;
+    stepControl.addEventListener('mousedown', (e) => {
+        if (!stepControl.classList.contains('active')) return;
 
         isDragging = true;
         startY = e.clientY;
         startInterval = this.getStepInterval(stepIndex);
-        stepPoint.classList.add('dragging');
+        stepControl.classList.add('dragging');
 
         e.preventDefault();
     });
@@ -2569,27 +2623,28 @@ CustomEditor.prototype.setupStepDragEvents = function(stepPoint, stepIndex) {
         if (!isDragging) return;
 
         const deltaY = startY - e.clientY; // 向上为正
+        let sensitivity = isEnhancedMode ? 2 : 3; // 增强模式更敏感
         const newInterval = Math.max(-12, Math.min(24,
-            startInterval + Math.round(deltaY / 3))); // 每3px一个半音
+            startInterval + Math.round(deltaY / sensitivity)));
 
-        this.updateStepInterval(stepIndex, newInterval);
+        this.updateStepInterval(stepIndex, newInterval, isEnhancedMode);
     });
 
     document.addEventListener('mouseup', () => {
         if (isDragging) {
             isDragging = false;
-            stepPoint.classList.remove('dragging');
+            stepControl.classList.remove('dragging');
         }
     });
 
     // 触摸事件（移动端支持）
-    stepPoint.addEventListener('touchstart', (e) => {
-        if (!stepPoint.classList.contains('active')) return;
+    stepControl.addEventListener('touchstart', (e) => {
+        if (!stepControl.classList.contains('active')) return;
 
         isDragging = true;
         startY = e.touches[0].clientY;
         startInterval = this.getStepInterval(stepIndex);
-        stepPoint.classList.add('dragging');
+        stepControl.classList.add('dragging');
 
         e.preventDefault();
     });
@@ -2598,44 +2653,68 @@ CustomEditor.prototype.setupStepDragEvents = function(stepPoint, stepIndex) {
         if (!isDragging) return;
 
         const deltaY = startY - e.touches[0].clientY;
+        let sensitivity = isEnhancedMode ? 2 : 3;
         const newInterval = Math.max(-12, Math.min(24,
-            startInterval + Math.round(deltaY / 3)));
+            startInterval + Math.round(deltaY / sensitivity)));
 
-        this.updateStepInterval(stepIndex, newInterval);
+        this.updateStepInterval(stepIndex, newInterval, isEnhancedMode);
         e.preventDefault();
     });
 
     document.addEventListener('touchend', () => {
         if (isDragging) {
             isDragging = false;
-            stepPoint.classList.remove('dragging');
+            stepControl.classList.remove('dragging');
         }
     });
 };
 
 CustomEditor.prototype.toggleSequenceStep = function(stepIndex) {
-    const stepElement = document.querySelector(`.sequence-step[data-step="${stepIndex}"]`);
-    const stepPoint = stepElement?.querySelector('.step-point');
-    if (!stepPoint) return;
+    // 尝试增强可视化器结构
+    let stepElement = document.querySelector(`.sequence-column[data-step="${stepIndex}"]`);
+    let stepControl = stepElement?.querySelector('.step-handle');
+    let isEnhancedMode = true;
 
-    const isActive = stepPoint.classList.contains('active');
+    // 如果没找到，尝试传统结构
+    if (!stepControl) {
+        stepElement = document.querySelector(`.sequence-step[data-step="${stepIndex}"]`);
+        stepControl = stepElement?.querySelector('.step-point');
+        isEnhancedMode = false;
+    }
+
+    if (!stepControl) {
+        console.warn(`⚠️ 未找到步骤 ${stepIndex + 1} 的控制元素`);
+        return;
+    }
+
+    const isActive = stepControl.classList.contains('active');
 
     if (isActive) {
         // 切换为非激活状态
-        stepPoint.classList.remove('active');
-        stepPoint.classList.add('inactive');
-        stepPoint.dataset.interval = 'null';
-        stepPoint.querySelector('.interval-value').textContent = '--';
+        stepControl.classList.remove('active');
+        stepControl.classList.add('inactive');
+        stepControl.dataset.interval = 'null';
+
+        if (isEnhancedMode) {
+            stepControl.querySelector('.interval-display').textContent = '--';
+        } else {
+            stepControl.querySelector('.interval-value').textContent = '--';
+        }
     } else {
         // 切换为激活状态，使用默认间隔0
-        stepPoint.classList.remove('inactive');
-        stepPoint.classList.add('active');
-        stepPoint.dataset.interval = '0';
-        stepPoint.querySelector('.interval-value').textContent = '0';
+        stepControl.classList.remove('inactive');
+        stepControl.classList.add('active');
+        stepControl.dataset.interval = '0';
+
+        if (isEnhancedMode) {
+            stepControl.querySelector('.interval-display').textContent = '0';
+        } else {
+            stepControl.querySelector('.interval-value').textContent = '0';
+        }
     }
 
     // 实时预览单个音符
-    if (stepPoint.classList.contains('active')) {
+    if (stepControl.classList.contains('active')) {
         this.previewStepNote(stepIndex);
     }
 
@@ -2643,30 +2722,58 @@ CustomEditor.prototype.toggleSequenceStep = function(stepIndex) {
 };
 
 CustomEditor.prototype.getStepInterval = function(stepIndex) {
-    const stepElement = document.querySelector(`.sequence-step[data-step="${stepIndex}"]`);
-    const stepPoint = stepElement?.querySelector('.step-point');
-    if (!stepPoint) return 0;
+    // 尝试增强可视化器结构
+    let stepElement = document.querySelector(`.sequence-column[data-step="${stepIndex}"]`);
+    let stepControl = stepElement?.querySelector('.step-handle');
 
-    const interval = stepPoint.dataset.interval;
+    // 如果没找到，尝试传统结构
+    if (!stepControl) {
+        stepElement = document.querySelector(`.sequence-step[data-step="${stepIndex}"]`);
+        stepControl = stepElement?.querySelector('.step-point');
+    }
+
+    if (!stepControl) return 0;
+
+    const interval = stepControl.dataset.interval;
     return interval === 'null' ? 0 : parseInt(interval) || 0;
 };
 
-CustomEditor.prototype.updateStepInterval = function(stepIndex, newInterval) {
-    const stepElement = document.querySelector(`.sequence-step[data-step="${stepIndex}"]`);
-    const stepPoint = stepElement?.querySelector('.step-point');
-    if (!stepPoint || !stepPoint.classList.contains('active')) return;
+CustomEditor.prototype.updateStepInterval = function(stepIndex, newInterval, isEnhancedMode = false) {
+    // 尝试增强可视化器结构
+    let stepElement = document.querySelector(`.sequence-column[data-step="${stepIndex}"]`);
+    let stepControl = stepElement?.querySelector('.step-handle');
+
+    // 如果没找到，尝试传统结构
+    if (!stepControl) {
+        stepElement = document.querySelector(`.sequence-step[data-step="${stepIndex}"]`);
+        stepControl = stepElement?.querySelector('.step-point');
+        isEnhancedMode = false;
+    }
+
+    if (!stepControl || !stepControl.classList.contains('active')) return;
 
     // 更新数据和显示
-    stepPoint.dataset.interval = newInterval.toString();
-    const intervalValue = stepPoint.querySelector('.interval-value');
-    if (intervalValue) {
+    stepControl.dataset.interval = newInterval.toString();
+
+    // 选择正确的显示元素
+    const displayElement = isEnhancedMode ?
+        stepControl.querySelector('.interval-display') :
+        stepControl.querySelector('.interval-value');
+
+    if (displayElement) {
         if (newInterval === 0) {
-            intervalValue.textContent = '0';
+            displayElement.textContent = '0';
         } else if (newInterval > 0) {
-            intervalValue.textContent = '+' + newInterval;
+            displayElement.textContent = '+' + newInterval;
         } else {
-            intervalValue.textContent = newInterval.toString();
+            displayElement.textContent = newInterval.toString();
         }
+    }
+
+    // 增强模式下更新位置
+    if (isEnhancedMode && stepControl) {
+        const percentage = ((newInterval + 12) / 36) * 100; // -12到+24映射到0-100%
+        stepControl.style.bottom = percentage + '%';
     }
 
     // 实时预览音符
@@ -2717,54 +2824,84 @@ CustomEditor.prototype.cycleRootNote = function() {
     console.log(`🎵 根音切换: ${currentNote} → ${nextNote}`);
 };
 
-CustomEditor.prototype.previewSequence = function() {
+CustomEditor.prototype.previewCurrentSequence = function() {
     console.log('🎵 预览完整序列...');
 
-    if (!this.previewSynth) {
-        this.createPreviewSynth();
-    }
-
-    const sequence = this.getSequenceData();
-    const rootNote = this.getCurrentRootNote();
-    const tempo = document.getElementById('arpeggio-tempo')?.value || 120;
-
-    // 过滤出有效的音符
-    const validNotes = sequence.map((interval, index) => {
-        if (interval === null) return null;
-
-        try {
-            const rootFreq = Tone.Frequency(rootNote + '4');
-            const targetFreq = rootFreq.transpose(interval);
-            return targetFreq.toNote();
-        } catch (error) {
-            console.warn(`计算音符失败 (步骤 ${index + 1}, 间隔 ${interval}):`, error);
-            return null;
+    try {
+        // 确保合成器存在
+        if (!this.previewSynth) {
+            console.log('🔧 创建预览合成器...');
+            this.createSequencePreviewSynth();
         }
-    });
 
-    console.log('🎼 序列音符:', validNotes);
+        if (!this.previewSynth) {
+            throw new Error('无法创建预览合成器');
+        }
 
-    // 播放序列
-    let stepIndex = 0;
-    const stepInterval = (60 / tempo / 4) * 1000; // 16分音符间隔
+        const sequence = this.getSequenceData();
+        const rootNote = this.getCurrentRootNote();
+        const tempo = document.getElementById('arpeggio-tempo')?.value || 120;
 
-    const playStep = () => {
-        if (stepIndex >= sequence.length) {
-            console.log('✅ 序列预览完成');
+        console.log('📊 序列数据:', sequence);
+        console.log('🎵 根音:', rootNote);
+        console.log('⏱️ 速度:', tempo);
+
+        // 检查是否有有效音符
+        const hasActiveNotes = sequence.some(interval => interval !== null);
+        if (!hasActiveNotes) {
+            console.warn('⚠️ 序列中没有激活的音符');
+            alert('当前序列没有激活的音符，请先设置一些音序点');
             return;
         }
 
-        const note = validNotes[stepIndex];
-        if (note) {
-            this.previewSynth.triggerAttackRelease(note, '8n');
-            console.log(`🎵 播放步骤 ${stepIndex + 1}: ${note}`);
-        }
+        // 过滤出有效的音符
+        const validNotes = sequence.map((interval, index) => {
+            if (interval === null) return null;
 
-        stepIndex++;
-        setTimeout(playStep, stepInterval);
-    };
+            try {
+                const rootFreq = Tone.Frequency(rootNote + '4');
+                const targetFreq = rootFreq.transpose(interval);
+                return targetFreq.toNote();
+            } catch (error) {
+                console.warn(`计算音符失败 (步骤 ${index + 1}, 间隔 ${interval}):`, error);
+                return null;
+            }
+        });
 
-    playStep();
+        console.log('🎼 序列音符:', validNotes);
+
+        // 播放序列
+        let stepIndex = 0;
+        const stepInterval = (60 / tempo / 4) * 1000; // 16分音符间隔
+
+        const playStep = () => {
+            if (stepIndex >= sequence.length) {
+                console.log('✅ 序列预览完成');
+                return;
+            }
+
+            const note = validNotes[stepIndex];
+            if (note) {
+                try {
+                    this.previewSynth.triggerAttackRelease(note, '8n');
+                    console.log(`🎵 播放步骤 ${stepIndex + 1}: ${note}`);
+                } catch (error) {
+                    console.error(`❌ 播放音符失败 (步骤 ${stepIndex + 1}):`, error);
+                }
+            } else {
+                console.log(`⏸️ 步骤 ${stepIndex + 1}: 静音`);
+            }
+
+            stepIndex++;
+            setTimeout(playStep, stepInterval);
+        };
+
+        playStep();
+
+    } catch (error) {
+        console.error('❌ 序列预览失败:', error);
+        alert('序列预览失败: ' + error.message);
+    }
 };
 
 CustomEditor.prototype.randomizeSequence = function() {
@@ -2772,39 +2909,21 @@ CustomEditor.prototype.randomizeSequence = function() {
 
     const commonIntervals = [0, 2, 3, 5, 7, 8, 10, 12]; // 常用音程
 
+    // 生成随机序列数组
+    const randomSequence = [];
     for (let i = 0; i < 8; i++) {
-        const stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
-        const stepPoint = stepElement?.querySelector('.step-point');
-        if (!stepPoint) continue;
-
         // 70%概率激活，30%概率为空拍
         if (Math.random() > 0.3) {
-            stepPoint.classList.remove('inactive');
-            stepPoint.classList.add('active');
-
             // 随机选择音程
             const randomInterval = commonIntervals[Math.floor(Math.random() * commonIntervals.length)];
-            stepPoint.dataset.interval = randomInterval.toString();
-
-            const intervalValue = stepPoint.querySelector('.interval-value');
-            if (intervalValue) {
-                if (randomInterval === 0) {
-                    intervalValue.textContent = '0';
-                } else {
-                    intervalValue.textContent = '+' + randomInterval;
-                }
-            }
+            randomSequence.push(randomInterval);
         } else {
-            stepPoint.classList.remove('active');
-            stepPoint.classList.add('inactive');
-            stepPoint.dataset.interval = 'null';
-
-            const intervalValue = stepPoint.querySelector('.interval-value');
-            if (intervalValue) {
-                intervalValue.textContent = '--';
-            }
+            randomSequence.push(null);
         }
     }
+
+    // 使用loadSequenceData方法加载，这样可以自动支持增强可视化器
+    this.loadSequenceData(randomSequence);
 
     console.log('✅ 随机序列生成完成');
 };
@@ -2815,37 +2934,8 @@ CustomEditor.prototype.resetSequence = function() {
     // 默认序列：[0, 3, null, 7, 8, null, 7, null]
     const defaultSequence = [0, 3, null, 7, 8, null, 7, null];
 
-    for (let i = 0; i < 8; i++) {
-        const stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
-        const stepPoint = stepElement?.querySelector('.step-point');
-        if (!stepPoint) continue;
-
-        const interval = defaultSequence[i];
-
-        if (interval === null) {
-            stepPoint.classList.remove('active');
-            stepPoint.classList.add('inactive');
-            stepPoint.dataset.interval = 'null';
-
-            const intervalValue = stepPoint.querySelector('.interval-value');
-            if (intervalValue) {
-                intervalValue.textContent = '--';
-            }
-        } else {
-            stepPoint.classList.remove('inactive');
-            stepPoint.classList.add('active');
-            stepPoint.dataset.interval = interval.toString();
-
-            const intervalValue = stepPoint.querySelector('.interval-value');
-            if (intervalValue) {
-                if (interval === 0) {
-                    intervalValue.textContent = '0';
-                } else {
-                    intervalValue.textContent = '+' + interval;
-                }
-            }
-        }
-    }
+    // 使用loadSequenceData方法加载，这样可以自动支持增强可视化器
+    this.loadSequenceData(defaultSequence);
 
     console.log('✅ 序列已重置为默认值');
 };
@@ -2854,15 +2944,23 @@ CustomEditor.prototype.getSequenceData = function() {
     const sequence = [];
 
     for (let i = 0; i < 8; i++) {
-        const stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
-        const stepPoint = stepElement?.querySelector('.step-point');
-        if (!stepPoint) {
+        // 尝试增强可视化器结构
+        let stepElement = document.querySelector(`.sequence-column[data-step="${i}"]`);
+        let stepControl = stepElement?.querySelector('.step-handle');
+
+        // 如果没找到，尝试传统结构
+        if (!stepControl) {
+            stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
+            stepControl = stepElement?.querySelector('.step-point');
+        }
+
+        if (!stepControl) {
             sequence.push(null);
             continue;
         }
 
-        if (stepPoint.classList.contains('active')) {
-            const interval = stepPoint.dataset.interval;
+        if (stepControl.classList.contains('active')) {
+            const interval = stepControl.dataset.interval;
             sequence.push(interval === 'null' ? null : parseInt(interval) || 0);
         } else {
             sequence.push(null);
@@ -2887,35 +2985,65 @@ CustomEditor.prototype.loadSequenceData = function(sequenceArray) {
     }
 
     for (let i = 0; i < 8; i++) {
-        const stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
-        const stepPoint = stepElement?.querySelector('.step-point');
-        if (!stepPoint) continue;
+        // 尝试增强可视化器结构
+        let stepElement = document.querySelector(`.sequence-column[data-step="${i}"]`);
+        let stepControl = stepElement?.querySelector('.step-handle');
+        let isEnhancedMode = true;
+
+        // 如果没找到，尝试传统结构
+        if (!stepControl) {
+            stepElement = document.querySelector(`.sequence-step[data-step="${i}"]`);
+            stepControl = stepElement?.querySelector('.step-point');
+            isEnhancedMode = false;
+        }
+
+        if (!stepControl) {
+            console.warn(`⚠️ 未找到步骤 ${i + 1} 的控制元素`);
+            continue;
+        }
 
         const interval = sequenceArray[i];
 
         if (interval === null || interval === undefined) {
-            stepPoint.classList.remove('active');
-            stepPoint.classList.add('inactive');
-            stepPoint.dataset.interval = 'null';
+            stepControl.classList.remove('active');
+            stepControl.classList.add('inactive');
+            stepControl.dataset.interval = 'null';
 
-            const intervalValue = stepPoint.querySelector('.interval-value');
-            if (intervalValue) {
-                intervalValue.textContent = '--';
+            const displayElement = isEnhancedMode ?
+                stepControl.querySelector('.interval-display') :
+                stepControl.querySelector('.interval-value');
+
+            if (displayElement) {
+                displayElement.textContent = '--';
+            }
+
+            // 增强模式下重置位置
+            if (isEnhancedMode) {
+                stepControl.style.bottom = '50%'; // 中间位置
             }
         } else {
-            stepPoint.classList.remove('inactive');
-            stepPoint.classList.add('active');
-            stepPoint.dataset.interval = interval.toString();
+            stepControl.classList.remove('inactive');
+            stepControl.classList.add('active');
+            stepControl.dataset.interval = interval.toString();
 
-            const intervalValue = stepPoint.querySelector('.interval-value');
-            if (intervalValue) {
+            const displayElement = isEnhancedMode ?
+                stepControl.querySelector('.interval-display') :
+                stepControl.querySelector('.interval-value');
+
+            if (displayElement) {
                 if (interval === 0) {
-                    intervalValue.textContent = '0';
+                    displayElement.textContent = '0';
                 } else if (interval > 0) {
-                    intervalValue.textContent = '+' + interval;
+                    displayElement.textContent = '+' + interval;
                 } else {
-                    intervalValue.textContent = interval.toString();
+                    displayElement.textContent = interval.toString();
                 }
+            }
+
+            // 增强模式下设置位置
+            if (isEnhancedMode) {
+                const percentage = ((interval + 12) / 36) * 100; // -12到+24映射到0-100%
+                stepControl.style.bottom = percentage + '%';
             }
         }
     }

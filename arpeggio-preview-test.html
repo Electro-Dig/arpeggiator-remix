@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>琶音预览功能测试</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff88;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #00ff88;
+            text-shadow: 0 0 10px #00ff88;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 5px;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .test-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+        }
+        
+        .test-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .log {
+            background: #000;
+            border: 1px solid #333;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        
+        .sequence-display {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .sequence-point {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .sequence-point.active {
+            background: #00ff88;
+            color: #000;
+        }
+        
+        .sequence-point:hover {
+            transform: scale(1.1);
+        }
+        
+        .controls {
+            margin: 15px 0;
+        }
+        
+        .control-group {
+            margin: 10px 0;
+        }
+        
+        label {
+            display: inline-block;
+            width: 100px;
+            color: #00ff88;
+        }
+        
+        input, select {
+            background: #000;
+            color: #00ff88;
+            border: 1px solid #00ff88;
+            padding: 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 琶音预览功能测试</h1>
+        
+        <div class="test-section">
+            <h3>1. 基础音频测试</h3>
+            <button class="test-button" onclick="testToneJS()">测试 Tone.js 加载</button>
+            <button class="test-button" onclick="testAudioContext()">测试音频上下文</button>
+            <button class="test-button" onclick="testSimpleSynth()">测试简单合成器</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. 音符转换测试</h3>
+            <button class="test-button" onclick="testNoteConversion()">测试音符转换</button>
+            <button class="test-button" onclick="testIntervalCalculation()">测试音程计算</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. 序列设置</h3>
+            <div class="controls">
+                <div class="control-group">
+                    <label>根音:</label>
+                    <select id="rootNote">
+                        <option value="C">C</option>
+                        <option value="C#">C#</option>
+                        <option value="D">D</option>
+                        <option value="D#">D#</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="F#">F#</option>
+                        <option value="G">G</option>
+                        <option value="G#">G#</option>
+                        <option value="A">A</option>
+                        <option value="A#">A#</option>
+                        <option value="B">B</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>八度:</label>
+                    <input type="number" id="octave" value="4" min="2" max="6">
+                </div>
+                <div class="control-group">
+                    <label>BPM:</label>
+                    <input type="number" id="bpm" value="120" min="60" max="200">
+                </div>
+            </div>
+            
+            <div class="sequence-display" id="sequenceDisplay">
+                <!-- 序列点将通过JS生成 -->
+            </div>
+            
+            <button class="test-button" onclick="generateSequence()">生成默认序列</button>
+            <button class="test-button" onclick="clearSequence()">清空序列</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. 预览测试</h3>
+            <button class="test-button" onclick="previewSequence()">🎵 预览序列</button>
+            <button class="test-button" onclick="stopPreview()">⏹️ 停止预览</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>5. 调试日志</h3>
+            <div class="log" id="logOutput"></div>
+            <button class="test-button" onclick="clearLog()">清空日志</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as Tone from 'https://esm.sh/tone';
+        
+        // 全局变量
+        let sequenceData = [];
+        let currentSynth = null;
+        let isPlaying = false;
+        
+        // 日志函数
+        function log(message, type = 'info') {
+            const logOutput = document.getElementById('logOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#51cf66' : '#00ff88';
+            logOutput.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+            console.log(message);
+        }
+        
+        // 测试函数
+        window.testToneJS = function() {
+            log('测试 Tone.js 加载...');
+            if (typeof Tone !== 'undefined') {
+                log('✅ Tone.js 加载成功', 'success');
+                log(`Tone.js 版本: ${Tone.version || '未知'}`);
+            } else {
+                log('❌ Tone.js 未加载', 'error');
+            }
+        };
+        
+        window.testAudioContext = async function() {
+            log('测试音频上下文...');
+            try {
+                if (Tone.context.state !== 'running') {
+                    log('启动音频上下文...');
+                    await Tone.start();
+                }
+                log(`✅ 音频上下文状态: ${Tone.context.state}`, 'success');
+                log(`采样率: ${Tone.context.sampleRate} Hz`);
+            } catch (error) {
+                log(`❌ 音频上下文错误: ${error.message}`, 'error');
+            }
+        };
+        
+        window.testSimpleSynth = async function() {
+            log('测试简单合成器...');
+            try {
+                if (Tone.context.state !== 'running') {
+                    await Tone.start();
+                }
+                
+                const synth = new Tone.Synth().toDestination();
+                log('播放测试音符 C4...');
+                synth.triggerAttackRelease('C4', '8n');
+                
+                setTimeout(() => {
+                    synth.dispose();
+                    log('✅ 简单合成器测试完成', 'success');
+                }, 1000);
+            } catch (error) {
+                log(`❌ 合成器测试失败: ${error.message}`, 'error');
+            }
+        };
+        
+        // 音符转换函数
+        function noteToMidi(note) {
+            const noteMap = {
+                'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5,
+                'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11
+            };
+            
+            let noteName, octave;
+            if (note.includes('#')) {
+                noteName = note.slice(0, -1);
+                octave = parseInt(note.slice(-1));
+            } else {
+                noteName = note.slice(0, -1);
+                octave = parseInt(note.slice(-1));
+            }
+            
+            return (octave + 1) * 12 + noteMap[noteName];
+        }
+        
+        function midiToNote(midi) {
+            const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const octave = Math.floor(midi / 12) - 1;
+            const note = notes[midi % 12];
+            return note + octave;
+        }
+        
+        window.testNoteConversion = function() {
+            log('测试音符转换...');
+            const testNotes = ['C4', 'C#4', 'D4', 'E4', 'F#4', 'G4', 'A4', 'B4'];
+            
+            testNotes.forEach(note => {
+                const midi = noteToMidi(note);
+                const converted = midiToNote(midi);
+                log(`${note} -> MIDI ${midi} -> ${converted}`);
+            });
+            log('✅ 音符转换测试完成', 'success');
+        };
+        
+        window.testIntervalCalculation = function() {
+            log('测试音程计算...');
+            const rootNote = document.getElementById('rootNote').value + document.getElementById('octave').value;
+            const intervals = [0, 3, 7, 12, 15];
+            
+            log(`根音: ${rootNote}`);
+            intervals.forEach(interval => {
+                const baseMidi = noteToMidi(rootNote);
+                const targetMidi = baseMidi + interval;
+                const targetNote = midiToNote(targetMidi);
+                log(`音程 +${interval}: ${rootNote} -> ${targetNote}`);
+            });
+            log('✅ 音程计算测试完成', 'success');
+        };
+        
+        // 序列管理
+        window.generateSequence = function() {
+            sequenceData = [
+                { active: true, interval: 0 },   // 根音
+                { active: true, interval: 3 },   // 小三度
+                { active: false, interval: 0 },  // 空拍
+                { active: true, interval: 7 },   // 纯五度
+                { active: true, interval: 12 },  // 八度
+                { active: false, interval: 0 },  // 空拍
+                { active: true, interval: 7 },   // 纯五度
+                { active: false, interval: 0 }   // 空拍
+            ];
+            updateSequenceDisplay();
+            log('✅ 生成默认序列', 'success');
+        };
+        
+        window.clearSequence = function() {
+            sequenceData = Array(8).fill().map(() => ({ active: false, interval: 0 }));
+            updateSequenceDisplay();
+            log('清空序列');
+        };
+        
+        function updateSequenceDisplay() {
+            const container = document.getElementById('sequenceDisplay');
+            container.innerHTML = '';
+            
+            sequenceData.forEach((point, index) => {
+                const element = document.createElement('div');
+                element.className = `sequence-point ${point.active ? 'active' : ''}`;
+                element.textContent = point.active ? point.interval : '×';
+                element.onclick = () => toggleSequencePoint(index);
+                container.appendChild(element);
+            });
+        }
+        
+        function toggleSequencePoint(index) {
+            sequenceData[index].active = !sequenceData[index].active;
+            if (sequenceData[index].active && sequenceData[index].interval === 0 && index > 0) {
+                sequenceData[index].interval = [0, 3, 5, 7, 9, 12, 15, 19][index] || 0;
+            }
+            updateSequenceDisplay();
+            log(`切换序列点 ${index + 1}: ${sequenceData[index].active ? '激活' : '关闭'}`);
+        }
+        
+        // 预览功能
+        window.previewSequence = async function() {
+            if (isPlaying) {
+                log('预览正在进行中...', 'error');
+                return;
+            }
+            
+            log('开始预览序列...');
+            
+            try {
+                // 启动音频
+                if (Tone.context.state !== 'running') {
+                    await Tone.start();
+                }
+                
+                // 获取激活的序列点
+                const activePoints = sequenceData
+                    .map((point, index) => ({ ...point, index }))
+                    .filter(point => point.active);
+                
+                if (activePoints.length === 0) {
+                    log('❌ 没有激活的序列点', 'error');
+                    return;
+                }
+                
+                // 计算音符
+                const rootNote = document.getElementById('rootNote').value + document.getElementById('octave').value;
+                const bpm = parseInt(document.getElementById('bpm').value);
+                
+                log(`根音: ${rootNote}, BPM: ${bpm}`);
+                log(`激活的序列点: ${activePoints.length} 个`);
+                
+                const notes = activePoints.map(point => {
+                    const baseMidi = noteToMidi(rootNote);
+                    const targetMidi = baseMidi + point.interval;
+                    return midiToNote(targetMidi);
+                });
+                
+                log(`预览音符: ${notes.join(', ')}`);
+                
+                // 创建合成器
+                currentSynth = new Tone.Synth().toDestination();
+                isPlaying = true;
+                
+                // 播放序列
+                const noteInterval = (60 / bpm) * 250; // 16分音符间隔
+                
+                for (let i = 0; i < notes.length; i++) {
+                    if (!isPlaying) break;
+                    
+                    setTimeout(() => {
+                        if (isPlaying && currentSynth) {
+                            log(`播放: ${notes[i]}`);
+                            currentSynth.triggerAttackRelease(notes[i], '8n');
+                        }
+                        
+                        if (i === notes.length - 1) {
+                            setTimeout(() => {
+                                window.stopPreview();
+                                log('✅ 预览完成', 'success');
+                            }, 500);
+                        }
+                    }, i * noteInterval);
+                }
+                
+            } catch (error) {
+                log(`❌ 预览失败: ${error.message}`, 'error');
+                window.stopPreview();
+            }
+        };
+        
+        window.stopPreview = function() {
+            if (currentSynth) {
+                currentSynth.dispose();
+                currentSynth = null;
+            }
+            isPlaying = false;
+            log('停止预览');
+        };
+        
+        window.clearLog = function() {
+            document.getElementById('logOutput').innerHTML = '';
+        };
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🎵 琶音预览测试页面加载完成');
+            window.generateSequence();
+        });
+    </script>
+</body>
+</html>
