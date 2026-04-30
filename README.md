@@ -1,193 +1,175 @@
-# 🎵 Arpeggiator Remix - 手势控制音乐创作系统
+# Arpeggiator Remix
 
-一个基于手势识别的实时音乐创作工具，支持左右手协同控制琶音与鼓机。
+> A browser-based gesture-controlled arpeggiator, drum machine, and real-time visualizer.
 
-## ✨ 功能特色
+[中文说明](#中文说明)
 
-- **实时手势识别**：使用 MediaPipe 进行精确的手部跟踪
-- **双手控制**：左手控制琶音（音高、音量、音色），右手控制鼓机节拍
-- **自定义编辑器**：可视化编辑琶音模式和鼓组节拍
-- **实时波形显示**：可视化音频输出
-- **预设管理**：内置多种音乐风格预设
+## Demo
 
-## 🎮 操作指南
+- Live demo: not published yet
+- Local demo: run the project locally and open it in a browser with camera access
+- Media to add: a short performance GIF showing both-hand control
 
-### 左手控制（琶音）
-- **手掌高度**：控制音高（上高下低）
-- **拇指与食指捏合**：控制音量（捏紧音量小，张开音量大）
-- **握拳**：切换音色预设
+## Overview
 
-### 右手控制（鼓机）
-- **手指伸展**：不同手指对应不同鼓点（食指=踢鼓，中指=军鼓，无名指=踩镲，小指=拍手）
-- **4指紧贴**：4个手指（食指、中指、无名指、小指）伸直并紧贴，切换琶音风格
-- **握拳**：切换鼓组预设
+Arpeggiator Remix turns webcam hand tracking into a small browser instrument. One hand performs a melodic arpeggiator, while the other hand shapes drum patterns and rhythmic energy. The project explores how simple hand gestures can become a playable interface for Web Audio, real-time visuals, and generative music sketches.
 
-## 🎛️ 自定义编辑器功能测试
+The current version is a prototype for performance, teaching, and experimentation rather than a polished product.
 
-### 琶音编辑器测试
-1. 点击右下角的"自定义编辑器"按钮
-2. 选择"编辑琶音"
-3. **音符选择**：点击音符按钮来选择琶音中要使用的音符
-4. **和弦间隔**：设置和弦的音程间隔
-5. **琶音模式**：选择上行、下行或上下行模式
-6. **速度控制**：调整琶音播放速度
-7. 点击"预览"测试效果
-8. 点击"应用"将设置应用到实时演奏中
+## Interaction Model
 
-### 鼓组编辑器测试
-1. 在自定义编辑器中选择"编辑鼓组"
-2. **16步音序器**：
-   - Kick（踢鼓）：点击对应步骤来激活/关闭
-   - Snare（军鼓）：设置军鼓的节拍模式
-   - Hi-hat（踩镲）：创建踩镲节奏
-   - Clap（拍手）：添加拍手音效
-3. 使用快速操作：
-   - **清空所有**：一键清除所有鼓点
-   - **随机化**：自动生成随机节拍模式
-4. 点击"应用"将鼓组模式应用到实时演奏
+| Input | Effect |
+|---|---|
+| Left hand height | Moves the arpeggio through pitch/register space |
+| Left thumb-index pinch | Controls arpeggio volume/intensity |
+| Left fist | Cycles synth / music presets |
+| Right index finger | Controls the kick drum voice |
+| Right middle finger | Controls the snare drum voice |
+| Right ring finger | Controls the hi-hat voice |
+| Right pinky finger | Controls the clap voice |
+| Four-finger vertical gesture | Switches arpeggio style |
+| Right fist | Cycles drum presets |
 
-### 预设保存测试
-1. 在编辑器中创建自定义设置
-2. 点击"保存预设"
-3. 输入预设名称
-4. 预设将保存到本地存储，下次访问时自动加载
+## Features
 
-## 🔧 技术架构
+- Real-time two-hand tracking with MediaPipe
+- Browser-based arpeggiator and drum machine
+- Tone.js / Web Audio sound generation
+- Visual feedback for hand movement and audio activity
+- Preset switching for synth and drum behavior
+- Custom arpeggio and drum pattern editors
+- Camera fallback / no-camera mode for editing patterns
 
-- **前端**：HTML5, CSS3, JavaScript (ES6+)
-- **音频引擎**：Tone.js
-- **手势识别**：MediaPipe
-- **3D 可视化**：Three.js
-- **实时处理**：Web Audio API
+## Tech Stack
 
-## 🚀 启动方式
+- JavaScript / HTML / CSS
+- MediaPipe Tasks Vision for hand tracking
+- Tone.js and Web Audio for synthesis and sequencing
+- Three.js-style visual interaction layer
+- Express local server for development
 
-1. 使用 Live Server 或任何本地服务器启动项目
-2. 允许摄像头访问权限
-3. 将手放在摄像头前开始创作音乐
-
-## ⚠️ 注意事项
-
-- 需要良好的光线条件以确保手势识别准确性
-- 建议使用支持 WebRTC 的现代浏览器
-- 首次使用需要一些时间来熟悉手势控制
-
-## 🐛 故障排除
-
-### 手势识别不流畅
-- 检查光线是否充足
-- 确保手部在摄像头视野内
-- 尝试调整手部与摄像头的距离
-
-### 音频延迟
-- 使用有线耳机减少音频延迟
-- 关闭其他占用音频资源的应用
-
-### 自定义编辑器无响应
-- 确保游戏已完全加载
-- 检查浏览器控制台是否有错误信息
-- 刷新页面重试
-
-## 📝 更新日志
-
-### v1.2.0 (最新)
-- ✅ 修复初始化错误
-- ✅ 优化手势识别平滑度
-- ✅ 解决通知显示重叠问题
-- ✅ 完善自定义编辑器功能
-- ✅ 增强错误处理机制
-
-### v1.1.0
-- 🆕 添加自定义编辑器
-- 🆕 支持预设保存/加载
-- 🔧 优化性能
-
-### v1.0.0
-- 🎉 基础手势控制功能
-- 🎵 琶音与鼓机系统
-- 📊 实时波形显示
-
----
-
-**享受你的音乐创作之旅！** 🎶
-
-# Hand Gesture Arpeggiator
-
-Hand-controlled arpeggiator, drum machine, and audio reactive visualizer. Raise your hands to raise the roof!
-
-An interactive web app built with threejs, mediapipe computer vision, rosebud AI, and tone.js.
-
-- Hand #1 controls the arpeggios (raise hand to raise pitch, pinch to change volume)
-- Hand #2 controls the drums (raise different fingers to change the pattern)
-
-[Video](https://youtu.be/JepIs-DTBgk?si=4Y-FrQDF6KNy662C) | [Live Demo](https://collidingscopes.github.io/arpeggiator/) | [More Code & Tutorials](https://funwithcomputervision.com/)
-
-<img src="assets/demo.png">
-
-## Requirements
-
-- Modern web browser with WebGL support
-- Camera access enabled for hand tracking
-
-## Technologies
-
-- **MediaPipe** for hand tracking and gesture recognition
-- **Three.js** for audio reactive visual rendering
-- **Tone.js** for synthesizer sounds
-- **HTML5 Canvas** for visual feedback
-- **JavaScript** for real-time interaction
-
-## Setup for Development
+## Run Locally
 
 ```bash
-# Clone this repository
-git clone https://github.com/collidingScopes/arpeggiator
-
-# Navigate to the project directory
-cd arpeggiator
-
-# Serve with your preferred method (example using Python)
-python -m http.server
+npm install
+npm run dev
 ```
 
-Then navigate to `http://localhost:8000` in your browser.
+Then open:
 
-## License
+```text
+https://localhost:8000
+```
 
-MIT License
+The development server uses a local HTTPS setup for camera access. Your browser may show a self-signed certificate warning.
+
+## Camera and Privacy
+
+The app requires camera permission for hand tracking. Camera frames are used locally in the browser for MediaPipe hand landmark detection. The project does not intentionally upload camera video to a backend.
+
+## Project Status
+
+Prototype / active experiment.
+
+Recommended next improvements:
+
+- Publish a live demo
+- Add screenshots and a short performance GIF
+- Remove committed `node_modules` from the repository and rely on `npm install`
+- Document the custom editor workflow in more detail
 
 ## Credits
 
-- Three.js - https://threejs.org/
-- MediaPipe - https://mediapipe.dev/
-- Rosebud AI - https://rosebud.ai/
-- Tone.js - https://tonejs.github.io/
+Built with MediaPipe, Tone.js, browser Web Audio, and the creative-coding tradition of turning everyday gestures into musical control signals.
 
-## Related Projects
+## License
 
-I've released several computer vision projects (with code + tutorials) here:
-[Fun With Computer Vision](https://www.funwithcomputervision.com/)
+No license has been specified yet.
 
-You can purchase lifetime access and receive the full project files and tutorials. I'm adding more content regularly 🪬
+---
 
-You might also like some of my other open source projects:
+# 中文说明
 
-- [3D Model Playground](https://collidingScopes.github.io/3d-model-playground) - control 3D models with voice and hand gestures
-- [Threejs hand tracking tutorial](https://collidingScopes.github.io/threejs-handtracking-101) - Basic hand tracking setup with threejs and MediaPipe computer vision
-- [Particular Drift](https://collidingScopes.github.io/particular-drift) - Turn photos into flowing particle animations
-- [Video-to-ASCII](https://collidingScopes.github.io/ascii) - Convert videos into ASCII pixel art
+> 一个基于浏览器的手势控制琶音器、鼓机与实时可视化乐器原型。
 
-## Contact
+## 演示
 
-- Instagram: [@stereo.drift](https://www.instagram.com/stereo.drift/)
-- Twitter/X: [@measure_plan](https://x.com/measure_plan)
-- Email: [stereodriftvisuals@gmail.com](mailto:stereodriftvisuals@gmail.com)
-- GitHub: [collidingScopes](https://github.com/collidingScopes)
+- 在线演示：暂未发布
+- 本地演示：本地运行后在浏览器中打开，并允许摄像头权限
+- 建议补充素材：一段展示双手控制的 10-30 秒 GIF
 
-## Donations
+## 项目概述
 
-If you found this tool useful, feel free to buy me a coffee. 
+Arpeggiator Remix 把摄像头手势识别变成一个小型浏览器乐器：一只手控制旋律琶音，另一只手控制鼓机节奏。项目探索的是：如何用简单、直觉化的身体动作控制 Web Audio、实时视觉和生成音乐。
 
-My name is Alan, and I enjoy building open source software for computer vision, games, and more. This would be much appreciated during late-night coding sessions!
+当前版本更接近可演示的创意编码原型，适合表演实验、教学展示和交互音乐研究。
 
-[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/stereoDrift)
+## 交互方式
+
+| 输入 | 效果 |
+|---|---|
+| 左手高度 | 控制琶音的音高 / 音区 |
+| 左手拇指与食指捏合 | 控制琶音音量 / 强度 |
+| 左手握拳 | 切换合成器或音乐预设 |
+| 右手食指 | 控制 Kick / 底鼓 |
+| 右手中指 | 控制 Snare / 军鼓 |
+| 右手无名指 | 控制 Hi-hat / 踩镲 |
+| 右手小指 | 控制 Clap / 拍手声 |
+| 右手四指竖直手势 | 切换琶音风格 |
+| 右手握拳 | 切换鼓组预设 |
+
+## 功能
+
+- 使用 MediaPipe 进行实时双手追踪
+- 浏览器内置琶音器与鼓机
+- 使用 Tone.js / Web Audio 生成声音
+- 手势与音频活动的实时视觉反馈
+- 合成器与鼓组预设切换
+- 自定义琶音与鼓机 pattern 编辑器
+- 摄像头异常时的无摄像头编辑模式
+
+## 技术栈
+
+- JavaScript / HTML / CSS
+- MediaPipe Tasks Vision 手势识别
+- Tone.js 与 Web Audio 音频合成和 sequencing
+- Three.js 风格的视觉交互层
+- Express 本地开发服务器
+
+## 本地运行
+
+```bash
+npm install
+npm run dev
+```
+
+然后打开：
+
+```text
+https://localhost:8000
+```
+
+为了让摄像头权限正常工作，开发服务器会尝试使用本地 HTTPS。浏览器可能会提示自签名证书警告。
+
+## 摄像头与隐私
+
+项目需要摄像头权限来识别手势。摄像头画面只用于浏览器本地的 MediaPipe 手部关键点检测；项目本身不会主动把摄像头视频上传到后端。
+
+## 项目状态
+
+原型 / 持续实验中。
+
+建议下一步：
+
+- 发布在线 demo
+- 增加截图和表演 GIF
+- 从仓库中移除已提交的 `node_modules`，改为依赖 `npm install`
+- 更详细地说明自定义编辑器的使用流程
+
+## 致谢
+
+项目使用 MediaPipe、Tone.js、Web Audio，并延续了 creative coding 中“把日常身体动作转化为音乐控制信号”的创作思路。
+
+## License
+
+暂未指定 license。
