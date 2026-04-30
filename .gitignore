@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+
+# Local server certificates
+server.crt
+server.key
+
+# Logs and OS files
+*.log
+.DS_Store

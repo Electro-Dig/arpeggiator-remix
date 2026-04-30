@@ -80,11 +80,15 @@ Recommended next improvements:
 
 ## Credits
 
+This repository directly references and remixes [collidingScopes/arpeggiator](https://github.com/collidingScopes/arpeggiator), a hand-controlled arpeggiator, drum machine, and audio-reactive visualizer built with MediaPipe, Three.js, and Tone.js.
+
+This remix adapts the idea into the Electro-Dig context with custom pattern editors, additional preset workflows, bilingual documentation, and ongoing experiments around gesture-controlled music interfaces.
+
 Built with MediaPipe, Tone.js, browser Web Audio, and the creative-coding tradition of turning everyday gestures into musical control signals.
 
 ## License
 
-No license has been specified yet.
+No license has been specified yet. The directly referenced upstream repository also does not currently expose a GitHub-detected license, so clarify licensing before broader redistribution or reuse.
 
 ---
 
@@ -168,8 +172,12 @@ https://localhost:8000
 
 ## 致谢
 
+本仓库直接参考并改编自 [collidingScopes/arpeggiator](https://github.com/collidingScopes/arpeggiator)。原项目是一个基于 MediaPipe、Three.js 和 Tone.js 的手势控制琶音器、鼓机与音频响应可视化器。
+
+这个 remix 版本将其放入 Electro-Dig 的创作语境中，加入了自定义 pattern 编辑器、更多 preset 工作流、中英双语文档，以及围绕手势控制音乐界面的持续实验。
+
 项目使用 MediaPipe、Tone.js、Web Audio，并延续了 creative coding 中“把日常身体动作转化为音乐控制信号”的创作思路。
 
 ## License
 
-暂未指定 license。
+暂未指定 license。直接参考的上游仓库目前也没有 GitHub 识别到的 license，因此在更广泛分发或复用代码前，需要进一步确认授权方式。
