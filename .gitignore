@@ -10,6 +10,10 @@ node_modules/
 dist/
 build/
 
+# Local tooling state
+.netlify/
+.vscode/
+
 # Local server certificates
 server.crt
 server.key
