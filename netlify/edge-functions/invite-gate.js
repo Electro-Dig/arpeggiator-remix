@@ -95,7 +95,7 @@ async function handleInviteSubmit(request, url) {
   });
 
   const targetUrl = new URL(redirectPath, url);
-  const response = Response.redirect(targetUrl, 303);
+  const response = redirectResponse(targetUrl);
   response.headers.append(
     'Set-Cookie',
     `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${DEFAULT_TTL_SECONDS}`,
@@ -129,12 +129,21 @@ function serviceUnavailableResponse(message) {
 }
 
 function redirectWithCookieClear(targetUrl) {
-  const response = Response.redirect(targetUrl, 303);
+  const response = redirectResponse(targetUrl);
   response.headers.append(
     'Set-Cookie',
     `${AUTH_COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`,
   );
   return withSecurityHeaders(response);
+}
+
+function redirectResponse(targetUrl) {
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: targetUrl.toString(),
+    },
+  });
 }
 
 function withSecurityHeaders(response) {
