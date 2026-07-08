@@ -195,7 +195,7 @@ export var MusicManager = /*#__PURE__*/ function() {
             {
                 name: "Dark Current",
                 scale: ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'], // E3到A4完整半音音阶（18个音符）
-                sequence: [0, 2, null, 5, 7, null, 5, null], // 8拍序列：根音-大二度-空拍-纯四度-纯五度-空拍-纯四度-空拍
+                sequence: [0, 7, 12, 0, 7, 14, 0, 7, 15, 0, 7, 14, 0, 7, 12, 0], // 16拍序列：根音-大二度-空拍-纯四度-纯五度-空拍-纯四度-空拍
                 arpeggioPattern: "up",
                 tempo: 118,
                 synthPreset: 1  // BRASS for deep undercurrent feel
@@ -203,9 +203,9 @@ export var MusicManager = /*#__PURE__*/ function() {
             {
                 name: "Light Flow",
                 scale: ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'], // E3到A4完整半音音阶（18个音符）
-                sequence: [0, 4, null, 7, 9, null, 7, null], // 8拍序列：根音-大三度-空拍-纯五度-大六度-空拍-纯五度-空拍
+                sequence: [-2, 0, 3, 10, -2, 0, 3, 7, -2, 0, 3, 10, -2, 0, 3, 0], // 8拍序列：根音-大三度-空拍-纯五度-大六度-空拍-纯五度-空拍
                 arpeggioPattern: "up",
-                tempo: 125,
+                tempo: 118,
                 synthPreset: 0  // E.PIANO for bright flowing feel
             },
             {
@@ -378,9 +378,38 @@ export var MusicManager = /*#__PURE__*/ function() {
                     reverbWet: 0.3,     // More reverb for spacious pluck
                     delayWet: 0.12      // Moderate delay for depth
                 }
+            },
+            // E-BELL SOFT (FM bell-like, mellow)
+            {
+                harmonicity: 4.5,
+                modulationIndex: 12,
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.005, decay: 1.2, sustain: 0.0, release: 2.0 },
+                modulation: { type: 'sine' },
+                modulationEnvelope: { attack: 0.001, decay: 1.0, sustain: 0.0, release: 1.5 },
+                effects: { reverbWet: 0.35, delayWet: 0.08 }
+            },
+            // BR LEAD 80s (FM lead with grandeur)
+            {
+                harmonicity: 1.0,
+                modulationIndex: 11,
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.08, decay: 0.25, sustain: 0.9, release: 1.2 },
+                modulation: { type: 'sine' },
+                modulationEnvelope: { attack: 0.05, decay: 0.2, sustain: 0.8, release: 0.9 },
+                effects: { reverbWet: 0.25, delayWet: 0.15 }
             }
         ];
         this.currentSynthIndex = 0;
+
+        // Manual delay override controls (preserved across synth changes)
+        this.delayManualOverride = false;
+        this.delayBeats = 0; // 0, 0.25, 0.5, 0.75, 1.0 (beats)
+        this.delayWetManual = 0; // 0..1
+
+        // Arpeggio single note length (relative to step length '16n')
+        this.noteLengthLevels = [0.2, 0.4, 0.6, 0.8, 1.0];
+        this.noteLengthLevelIndex = 4; // default full step length
     }
     _create_class(MusicManager, [
         {
@@ -401,10 +430,16 @@ export var MusicManager = /*#__PURE__*/ function() {
                                 ];
                             case 1:
                                 _state.sent();
+                                // Install a master limiter once to prevent clipping across the entire mix
+                                if (!_this._limiterInstalled) {
+                                    _this.masterLimiter = new Tone.Limiter(-1);
+                                    Tone.Destination.chain(_this.masterLimiter);
+                                    _this._limiterInstalled = true;
+                                }
                                 _this.reverb = new Tone.Reverb({
                                     decay: 5,
                                     preDelay: 0.0,
-                                    wet: 0.8
+                                    wet: 0.4
                                 }).toDestination();
                                 // Create a stereo delay and connect it to the reverb
                                 _this.stereoDelay = new Tone.FeedbackDelay("8n", 0.5).connect(_this.reverb);
@@ -416,8 +451,8 @@ export var MusicManager = /*#__PURE__*/ function() {
                                 _this.polySynth = new Tone.PolySynth(Tone.FMSynth, _this.synthPresets[_this.currentSynthIndex]);
                                 _this.polySynth.connect(_this.analyser);
                                 _this.analyser.connect(_this.stereoDelay);
-                                // Set a low volume to avoid clipping and create a more ambient feel
-                                _this.polySynth.volume.value = 0;
+                                // Set a conservative level to avoid clipping; note velocity controls loudness per note
+                                _this.polySynth.volume.value = -12;
                                 _this.isStarted = true;
                                 // Set the master tempo to 100 BPM
                                 Tone.Transport.bpm.value = 100;
@@ -462,15 +497,13 @@ export var MusicManager = /*#__PURE__*/ function() {
                 
                 const pattern = new Tone.Pattern((time, note) => {
                     const velocity = _this.handVolumes.get(handId) || 0.2;
-                    
                     if (note === null) {
-                        // 空拍处理：降低音量但不停止琶音
-                        _this.polySynth.volume.value = -20; // 降低音量到很低但不完全静音
-                    } else {
-                        // 正常音符：恢复音量并播放
-                        _this.polySynth.volume.value = Tone.gainToDb(velocity);
-                    _this.polySynth.triggerAttackRelease(note, "16n", time, velocity);
+                        return; // rest
                     }
+                    var baseStepSec = Tone.Time('16n').toSeconds();
+                    var lengthFactor = _this.noteLengthLevels[_this.noteLengthLevelIndex] || 1.0;
+                    var durSec = Math.max(0.02, baseStepSec * lengthFactor);
+                    _this.polySynth.triggerAttackRelease(note, durSec, time, velocity);
                 }, arpeggioNotes, currentPreset.arpeggioPattern);
                 
                 pattern.interval = "16n";
@@ -488,14 +521,9 @@ export var MusicManager = /*#__PURE__*/ function() {
             value: function updateArpeggioVolume(handId, velocity) {
                 // Only update if an arpeggio is active for this hand
                 if (this.polySynth && this.activePatterns.has(handId)) {
-                    // Clamp the velocity to be safe
+                    // Clamp the velocity to be safe; use per-note velocity only to avoid clicks
                     var clampedVelocity = Math.max(0, Math.min(1, velocity));
                     this.handVolumes.set(handId, clampedVelocity);
-                    // IMPORTANT FIX: Also set the synth's overall volume.
-                    // Since we only have one arpeggio at a time, we can map this directly.
-                    // Using logarithmic scaling for a more natural volume control.
-                    var volumeInDb = Tone.gainToDb(clampedVelocity);
-                    this.polySynth.volume.value = volumeInDb;
                 }
             }
         },
@@ -543,10 +571,7 @@ export var MusicManager = /*#__PURE__*/ function() {
                     activePattern.pattern.dispose(); // Clean up Tone.js objects
                     this.activePatterns.delete(handId); // Remove from our map
                     this.handVolumes.delete(handId); // Clean up the stored volume
-                    // If no other hands are playing, silence the synth.
-                    if (this.activePatterns.size === 0) {
-                        this.polySynth.volume.value = -Infinity;
-                    }
+                    // Leave synth level unchanged to avoid abrupt gain jumps
                 }
             }
         },
@@ -570,13 +595,20 @@ export var MusicManager = /*#__PURE__*/ function() {
                 this.polySynth = new Tone.PolySynth(Tone.FMSynth, newPreset);
                 // Re-establish the audio chain: synth -> analyser -> delay
                 this.polySynth.connect(this.analyser);
-                this.polySynth.volume.value = 0; // Reset volume
+                this.polySynth.volume.value = -12; // Conservative headroom
                 var _newPreset_effects_reverbWet;
                 // Adjust global effects based on the new preset's settings
                 // Use optional chaining `?.` to safely access `effects` property
                 this.reverb.wet.value = (_newPreset_effects_reverbWet = (_newPreset_effects = newPreset.effects) === null || _newPreset_effects === void 0 ? void 0 : _newPreset_effects.reverbWet) !== null && _newPreset_effects_reverbWet !== void 0 ? _newPreset_effects_reverbWet : 0.8; // Default to 0.8 if not specified
                 var _newPreset_effects_delayWet;
                 this.stereoDelay.wet.value = (_newPreset_effects_delayWet = (_newPreset_effects1 = newPreset.effects) === null || _newPreset_effects1 === void 0 ? void 0 : _newPreset_effects1.delayWet) !== null && _newPreset_effects_delayWet !== void 0 ? _newPreset_effects_delayWet : 0; // Default to 0 if not specified
+                // Re-apply manual delay override if enabled
+                if (this.delayManualOverride && this.stereoDelay) {
+                    var bpm = Tone.Transport.bpm.value || 120;
+                    var sec = (60 / bpm) * (this.delayBeats || 0);
+                    this.stereoDelay.delayTime.value = sec;
+                    this.stereoDelay.wet.value = this.delayWetManual;
+                }
                 console.log("Switched to synth preset: ".concat(this.currentSynthIndex));
             }
         },
@@ -604,7 +636,7 @@ export var MusicManager = /*#__PURE__*/ function() {
                 
                 // Re-establish the audio chain: synth -> analyser -> delay
                 this.polySynth.connect(this.analyser);
-                this.polySynth.volume.value = 0; // Reset volume
+                this.polySynth.volume.value = -12; // Conservative headroom
                 
                 var _newPreset_effects_reverbWet;
                 // Adjust global effects based on the new preset's settings
@@ -612,6 +644,13 @@ export var MusicManager = /*#__PURE__*/ function() {
                 
                 var _newPreset_effects_delayWet;
                 this.stereoDelay.wet.value = (_newPreset_effects_delayWet = (_newPreset_effects1 = newPreset.effects) === null || _newPreset_effects1 === void 0 ? void 0 : _newPreset_effects1.delayWet) !== null && _newPreset_effects_delayWet !== void 0 ? _newPreset_effects_delayWet : 0;
+                // Re-apply manual delay override if enabled
+                if (this.delayManualOverride && this.stereoDelay) {
+                    var bpm2 = Tone.Transport.bpm.value || 120;
+                    var sec2 = (60 / bpm2) * (this.delayBeats || 0);
+                    this.stereoDelay.delayTime.value = sec2;
+                    this.stereoDelay.wet.value = this.delayWetManual;
+                }
                 
                 console.log("Updated to synth preset: ".concat(this.currentSynthIndex));
             }
@@ -638,10 +677,14 @@ export var MusicManager = /*#__PURE__*/ function() {
                 
                 // 更新节拍速度
                 Tone.Transport.bpm.value = newPreset.tempo;
-                
-                // 切换合成器预设
-                this.currentSynthIndex = newPreset.synthPreset;
-                this.cycleSynth();
+                // 不再在循环预设时切换合成器音色，保持当前 synth 不变
+                // Re-apply manual delay override to maintain timing with new BPM
+                if (this.delayManualOverride && this.stereoDelay) {
+                    var bpm3 = Tone.Transport.bpm.value || 120;
+                    var sec3 = (60 / bpm3) * (this.delayBeats || 0);
+                    this.stereoDelay.delayTime.value = sec3;
+                    this.stereoDelay.wet.value = this.delayWetManual;
+                }
                 
                 console.log(`切换到音乐预设: ${newPreset.name}`);
                 return newPreset;
@@ -664,7 +707,9 @@ export var MusicManager = /*#__PURE__*/ function() {
                     "DX7 MARIMBA", 
                     "Clean Sine", 
                     "SYNTHWAVE LEAD",
-                    "CRYSTAL PLUCK"
+                    "CRYSTAL PLUCK",
+                    "E-BELL SOFT",
+                    "BR LEAD 80s"
                 ];
                 return synthNames[this.currentSynthIndex] || `Synth ${this.currentSynthIndex + 1}`;
             }
@@ -690,10 +735,54 @@ export var MusicManager = /*#__PURE__*/ function() {
                         this.currentSynthIndex = newPreset.synthPreset;
                         this.cycleSynth();
                     }
+                    // Re-apply manual delay override to maintain timing with new BPM
+                    if (this.delayManualOverride && this.stereoDelay) {
+                        var bpm4 = Tone.Transport.bpm.value || 120;
+                        var sec4 = (60 / bpm4) * (this.delayBeats || 0);
+                        this.stereoDelay.delayTime.value = sec4;
+                        this.stereoDelay.wet.value = this.delayWetManual;
+                    }
                     
                     console.log(`设置音乐预设: ${newPreset.name}`);
                     return newPreset;
                 }
+            }
+        }
+        ,
+        {
+            key: "setDelayTimeBeats",
+            value: function setDelayTimeBeats(beats, options) {
+                // beats: 0, 0.25, 0.5, 0.75, 1.0
+                this.delayBeats = Math.max(0, beats || 0);
+                if (!options || options.manual !== false) {
+                    this.delayManualOverride = true;
+                }
+                if (this.stereoDelay) {
+                    var bpm = Tone.Transport.bpm.value || 120;
+                    var sec = (60 / bpm) * this.delayBeats;
+                    this.stereoDelay.delayTime.value = sec;
+                }
+            }
+        },
+        {
+            key: "setDelayWet",
+            value: function setDelayWet(wet, options) {
+                var clamped = Math.max(0, Math.min(1, wet || 0));
+                this.delayWetManual = clamped;
+                if (!options || options.manual !== false) {
+                    this.delayManualOverride = true;
+                }
+                if (this.stereoDelay) {
+                    this.stereoDelay.wet.value = clamped;
+                }
+            }
+        }
+        ,
+        {
+            key: "setNoteLengthLevel",
+            value: function setNoteLengthLevel(levelIndex) {
+                var idx = Math.max(0, Math.min(this.noteLengthLevels.length - 1, parseInt(levelIndex)));
+                this.noteLengthLevelIndex = isNaN(idx) ? this.noteLengthLevelIndex : idx;
             }
         }
     ]);

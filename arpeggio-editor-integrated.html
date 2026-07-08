@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>琶音编辑器 - 整合版</title>
+    <style>
+        /* 整合版琶音编辑器样式 */
+        .arpeggio-editor-integrated {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 主编辑区域 */
+        .editor-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* 标题区域 */
+        .editor-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .editor-title {
+            color: #00ff88;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ff88;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        /* 示波器风格的主编辑区域 */
+        .oscilloscope-container {
+            flex: 1;
+            position: relative;
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 136, 0.3),
+                inset 0 0 20px rgba(0, 255, 136, 0.1);
+        }
+
+        /* 网格背景 */
+        .oscilloscope-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(0, 255, 136, 0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.2) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* 音序点垂直线 */
+        .sequence-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .sequence-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, 
+                rgba(0, 255, 136, 0.8) 0%, 
+                rgba(0, 255, 136, 0.4) 50%, 
+                rgba(0, 255, 136, 0.8) 100%);
+            box-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+        }
+
+        /* 音序点容器 */
+        .sequence-points-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        /* 音序点样式 */
+        .sequence-point {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            cursor: grab;
+            transform: translate(-50%, -50%);
+            transition: all 0.2s ease;
+            z-index: 10;
+            border: 2px solid;
+        }
+
+        .sequence-point.active {
+            background: radial-gradient(circle, #ff6b35 0%, #ff4500 70%);
+            border-color: #ff6b35;
+            box-shadow: 
+                0 0 15px rgba(255, 107, 53, 0.8),
+                0 0 30px rgba(255, 107, 53, 0.4);
+        }
+
+        .sequence-point.inactive {
+            background: radial-gradient(circle, #666 0%, #333 70%);
+            border-color: #666;
+            box-shadow: 0 0 5px rgba(102, 102, 102, 0.3);
+        }
+
+        .sequence-point:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .sequence-point:active {
+            cursor: grabbing;
+        }
+
+        /* 连接线 */
+        .connections-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .connection-line {
+            stroke: #00ff88;
+            stroke-width: 2;
+            fill: none;
+            filter: drop-shadow(0 0 3px rgba(0, 255, 136, 0.6));
+        }
+
+        /* Y轴标签 */
+        .y-axis-labels {
+            position: absolute;
+            left: 5px;
+            top: 0;
+            bottom: 0;
+            width: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+
+        .y-label {
+            color: #00ff88;
+            font-size: 10px;
+            text-align: center;
+            text-shadow: 0 0 3px #00ff88;
+        }
+
+        /* 序列号标签 */
+        .sequence-labels {
+            position: absolute;
+            left: 40px;
+            right: 40px;
+            bottom: 10px;
+            height: 20px;
+        }
+
+        .sequence-label {
+            position: absolute;
+            transform: translateX(-50%);
+            color: #00ff88;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        /* 右侧控制面板 */
+        .control-panel {
+            width: 280px;
+            background: rgba(0, 30, 60, 0.9);
+            border-left: 2px solid #00ff88;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: inset 5px 0 15px rgba(0, 255, 136, 0.1);
+        }
+
+        .control-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(0, 20, 40, 0.6);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+        }
+
+        .control-section h3 {
+            color: #00aaff;
+            font-size: 14px;
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px #00aaff;
+        }
+
+        /* 控制元素样式 */
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            display: block;
+            color: #00ff88;
+            font-size: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .control-input {
+            width: 100%;
+            padding: 8px;
+            background: rgba(0, 50, 100, 0.8);
+            border: 1px solid #00aaff;
+            border-radius: 4px;
+            color: #ffffff;
+            font-family: inherit;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: #00ff88;
+            box-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+        }
+
+        /* 滑块样式 */
+        .control-input[type="range"] {
+            -webkit-appearance: none;
+            height: 6px;
+            background: linear-gradient(90deg, #003366 0%, #00aaff 100%);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .control-input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: radial-gradient(circle, #00ff88 0%, #00aaff 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.8);
+        }
+
+        /* 按钮样式 */
+        .control-btn {
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #00aaff 0%, #0066cc 100%);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+            margin: 5px 5px 5px 0;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+        }
+
+        .control-btn:hover {
+            background: linear-gradient(135deg, #00ff88 0%, #00aaff 100%);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .control-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* 数值显示 */
+        .value-display {
+            color: #00ff88;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ff88;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .arpeggio-editor-integrated {
+                flex-direction: column;
+            }
+            
+            .control-panel {
+                width: 100%;
+                height: 200px;
+                border-left: none;
+                border-top: 2px solid #00ff88;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="arpeggio-editor-integrated">
+        <!-- 主编辑区域 -->
+        <div class="editor-main">
+            <!-- 标题 -->
+            <div class="editor-header">
+                <h1 class="editor-title">ARPEGGIO SEQUENCER v2.1</h1>
+            </div>
+
+            <!-- 示波器风格编辑区域 -->
+            <div class="oscilloscope-container">
+                <!-- 网格背景 -->
+                <div class="oscilloscope-grid" id="oscilloscope-grid"></div>
+                
+                <!-- Y轴标签 -->
+                <div class="y-axis-labels">
+                    <div class="y-label">+24</div>
+                    <div class="y-label">+12</div>
+                    <div class="y-label">0</div>
+                    <div class="y-label">-12</div>
+                    <div class="y-label">-24</div>
+                </div>
+
+                <!-- 音序点垂直线 -->
+                <div class="sequence-lines" id="sequenceLines"></div>
+
+                <!-- 音序点容器 -->
+                <div class="sequence-points-container" id="sequencePointsContainer"></div>
+
+                <!-- 连接线SVG -->
+                <svg class="connections-svg" id="connectionsSvg"></svg>
+
+                <!-- 底部序列号标签 -->
+                <div class="sequence-labels" id="sequenceLabels"></div>
+            </div>
+        </div>
+
+        <!-- 右侧控制面板 -->
+        <div class="control-panel">
+            <!-- 序列设置 -->
+            <div class="control-section">
+                <h3>Sequence Settings</h3>
+                
+                <div class="control-group">
+                    <label class="control-label">BPM</label>
+                    <input type="range" class="control-input" id="bpmSlider" min="60" max="180" value="120">
+                    <div class="value-display" id="bpmValue">120</div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Root Note</label>
+                    <select class="control-input" id="rootNoteSelect">
+                        <option value="C">C</option>
+                        <option value="C#">C#</option>
+                        <option value="D">D</option>
+                        <option value="D#">D#</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="F#">F#</option>
+                        <option value="G">G</option>
+                        <option value="G#">G#</option>
+                        <option value="A">A</option>
+                        <option value="A#">A#</option>
+                        <option value="B">B</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Octave</label>
+                    <input type="range" class="control-input" id="octaveSlider" min="2" max="6" value="4">
+                    <div class="value-display" id="octaveValue">4</div>
+                </div>
+            </div>
+
+            <!-- 预设管理 -->
+            <div class="control-section">
+                <h3>Preset Management</h3>
+                
+                <div class="control-group">
+                    <label class="control-label">Load Preset</label>
+                    <select class="control-input" id="presetSelect">
+                        <!-- 动态填充预设选项 -->
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <button class="control-btn" id="savePresetBtn">💾 Save Preset</button>
+                    <button class="control-btn" id="loadPresetBtn">📂 Load Preset</button>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="control-section">
+                <h3>Actions</h3>
+                
+                <button class="control-btn" id="previewBtn">▶ Preview</button>
+                <button class="control-btn" id="randomBtn">🎲 Random</button>
+                <button class="control-btn" id="resetBtn">🔄 Reset</button>
+                <button class="control-btn" id="testBtn">🔧 Test</button>
+                <button class="control-btn" id="applyBtn">✅ Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 琶音编辑器整合版 JavaScript
+        class ArpeggioEditorIntegrated {
+            constructor() {
+                this.sequenceData = [];
+                this.isDragging = false;
+                this.dragTarget = null;
+                this.dragIndex = null;
+                this.dragStartY = 0;
+                this.dragStartX = 0;
+                this.dragStartTime = 0;
+                this.hasMoved = false;
+                
+                this.init();
+            }
+
+            init() {
+                this.initializeSequenceData();
+                this.setupUI();
+                this.setupEventListeners();
+                this.renderAll();
+            }
+
+            initializeSequenceData() {
+                // 初始化8个音序点数据
+                this.sequenceData = [];
+                for (let i = 0; i < 8; i++) {
+                    this.sequenceData.push({
+                        active: i < 4, // 前4个默认激活
+                        interval: i === 0 ? 0 : (i === 1 ? 3 : (i === 2 ? 7 : (i === 3 ? 12 : 0))) // 默认和弦
+                    });
+                }
+            }
+
+            setupUI() {
+                // 设置音序点垂直线
+                this.renderSequenceLines();
+                // 设置底部标签
+                this.renderSequenceLabels();
+                // 填充预设选项
+                this.populatePresets();
+            }
+
+            renderSequenceLines() {
+                const container = document.getElementById('sequenceLines');
+                container.innerHTML = '';
+
+                for (let i = 0; i < 8; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'sequence-line';
+                    line.style.left = `${((i + 1) / 9) * 100}%`;
+                    container.appendChild(line);
+                }
+            }
+
+            renderSequenceLabels() {
+                const container = document.getElementById('sequenceLabels');
+                container.innerHTML = '';
+
+                for (let i = 0; i < 8; i++) {
+                    const label = document.createElement('div');
+                    label.className = 'sequence-label';
+                    label.textContent = i + 1;
+                    label.style.left = `${((i + 1) / 9) * 100}%`;
+                    container.appendChild(label);
+                }
+            }
+
+            populatePresets() {
+                const select = document.getElementById('presetSelect');
+                select.innerHTML = '<option value="">Select Preset...</option>';
+
+                // 如果有全局音乐管理器，从中获取预设
+                if (window.game && window.game.musicManager && window.game.musicManager.musicPresets) {
+                    window.game.musicManager.musicPresets.forEach((preset, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = preset.name;
+                        select.appendChild(option);
+                    });
+                }
+            }
+
+            setupEventListeners() {
+                // BPM滑块
+                const bpmSlider = document.getElementById('bpmSlider');
+                const bpmValue = document.getElementById('bpmValue');
+                bpmSlider.addEventListener('input', (e) => {
+                    bpmValue.textContent = e.target.value;
+                });
+
+                // 八度滑块
+                const octaveSlider = document.getElementById('octaveSlider');
+                const octaveValue = document.getElementById('octaveValue');
+                octaveSlider.addEventListener('input', (e) => {
+                    octaveValue.textContent = e.target.value;
+                });
+
+                // 预设选择
+                const presetSelect = document.getElementById('presetSelect');
+                presetSelect.addEventListener('change', (e) => {
+                    if (e.target.value !== '') {
+                        this.loadPreset(parseInt(e.target.value));
+                    }
+                });
+
+                // 按钮事件
+                document.getElementById('previewBtn').addEventListener('click', () => this.preview());
+                document.getElementById('randomBtn').addEventListener('click', () => this.randomize());
+                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+                document.getElementById('testBtn').addEventListener('click', () => this.runTests());
+                document.getElementById('applyBtn').addEventListener('click', () => this.apply());
+                document.getElementById('savePresetBtn').addEventListener('click', () => this.savePreset());
+                document.getElementById('loadPresetBtn').addEventListener('click', () => this.loadPresetFromFile());
+
+                // 拖拽事件
+                this.setupDragEvents();
+            }
+
+            setupDragEvents() {
+                const container = document.getElementById('sequencePointsContainer');
+
+                container.addEventListener('mousedown', (e) => {
+                    if (e.target.classList.contains('sequence-point')) {
+                        this.startDrag(e);
+                    }
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (this.isDragging) {
+                        this.handleDrag(e);
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (this.isDragging) {
+                        this.endDrag();
+                    }
+                });
+            }
+
+            startDrag(e) {
+                this.isDragging = true;
+                this.dragTarget = e.target;
+                this.dragIndex = parseInt(e.target.dataset.index);
+                this.dragStartY = e.clientY;
+                this.dragStartX = e.clientX;
+                this.dragStartTime = Date.now();
+                this.hasMoved = false;
+                e.target.style.cursor = 'grabbing';
+                e.preventDefault();
+            }
+
+            handleDrag(e) {
+                if (!this.isDragging || !this.dragTarget) return;
+
+                // 检测是否真的在拖拽（移动距离超过阈值）
+                const deltaX = Math.abs(e.clientX - this.dragStartX);
+                const deltaY = Math.abs(e.clientY - this.dragStartY);
+                const dragThreshold = 3; // 3像素阈值
+
+                if (deltaX > dragThreshold || deltaY > dragThreshold) {
+                    this.hasMoved = true;
+                }
+
+                // 只有真正移动时才更新位置
+                if (this.hasMoved) {
+                    const gridRect = document.getElementById('oscilloscope-grid').getBoundingClientRect();
+                    const relativeY = ((e.clientY - gridRect.top) / gridRect.height) * 100;
+
+                    // 限制在网格范围内
+                    const clampedY = Math.max(0, Math.min(100, relativeY));
+
+                    // 立即更新位置
+                    this.dragTarget.style.transition = 'none';
+                    this.updatePointPosition(this.dragIndex, clampedY);
+
+                    // 立即重新渲染连接线
+                    requestAnimationFrame(() => {
+                        this.renderConnections();
+                    });
+                }
+            }
+
+            endDrag() {
+                if (this.isDragging && this.dragTarget) {
+                    // 如果没有移动，则视为点击事件
+                    if (!this.hasMoved) {
+                        this.handlePointClick(this.dragIndex);
+                    }
+
+                    // 恢复过渡效果
+                    this.dragTarget.style.transition = 'all 0.2s ease';
+                    this.dragTarget.style.cursor = 'grab';
+                    this.isDragging = false;
+                    this.dragTarget = null;
+                    this.dragIndex = null;
+                    this.hasMoved = false;
+                }
+            }
+
+            handlePointClick(index) {
+                // 点击切换音序点的激活状态
+                const point = this.sequenceData[index];
+                if (point.active) {
+                    // 如果当前激活，则禁用
+                    point.active = false;
+                    point.interval = null;
+                } else {
+                    // 如果当前禁用，则激活并设置为根音
+                    point.active = true;
+                    point.interval = 0;
+                }
+
+                this.renderSequencePoints();
+                this.renderConnections();
+            }
+
+            // 渲染方法
+            renderAll() {
+                this.renderSequencePoints();
+                this.renderConnections();
+            }
+
+            renderSequencePoints() {
+                const container = document.getElementById('sequencePointsContainer');
+                if (!container) {
+                    console.error('sequencePointsContainer not found');
+                    return;
+                }
+
+                container.innerHTML = '';
+
+                this.sequenceData.forEach((data, index) => {
+                    const point = document.createElement('div');
+                    point.className = `sequence-point ${data.active ? 'active' : 'inactive'}`;
+                    point.dataset.index = index;
+
+                    // 计算位置
+                    const x = ((index + 1) / 9) * 100; // 对应8条音序点垂直线
+                    const y = this.intervalToY(data.interval);
+
+                    point.style.left = `${x}%`;
+                    point.style.top = `${y}%`;
+
+                    // 添加调试信息
+                    point.title = `Point ${index + 1}: ${data.active ? data.interval : 'inactive'}`;
+
+                    container.appendChild(point);
+                });
+
+                console.log('音序点已渲染:', this.sequenceData.map((d, i) => `${i+1}:${d.active ? d.interval : 'off'}`).join(' '));
+            }
+
+            renderConnections() {
+                const svg = document.getElementById('connectionsSvg');
+                if (!svg) {
+                    console.error('SVG element not found');
+                    return;
+                }
+
+                svg.innerHTML = '';
+
+                const activePoints = this.sequenceData
+                    .map((data, index) => ({ ...data, index }))
+                    .filter(point => point.active);
+
+                if (activePoints.length < 2) return;
+
+                // 获取容器尺寸
+                const container = document.getElementById('oscilloscope-grid');
+                if (!container) {
+                    console.error('Container not found');
+                    return;
+                }
+
+                const containerRect = container.getBoundingClientRect();
+                const svgWidth = containerRect.width;
+                const svgHeight = containerRect.height;
+
+                // 设置SVG尺寸
+                svg.setAttribute('width', svgWidth);
+                svg.setAttribute('height', svgHeight);
+                svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+
+                // 创建平滑连接路径
+                let pathData = '';
+                activePoints.forEach((point, i) => {
+                    const x = ((point.index + 1) / 9) * svgWidth;
+                    const y = (this.intervalToY(point.interval) / 100) * svgHeight;
+
+                    if (i === 0) {
+                        pathData += `M ${x} ${y}`;
+                    } else {
+                        // 添加平滑曲线
+                        const prevPoint = activePoints[i - 1];
+                        const prevX = ((prevPoint.index + 1) / 9) * svgWidth;
+                        const prevY = (this.intervalToY(prevPoint.interval) / 100) * svgHeight;
+
+                        const controlX1 = prevX + (x - prevX) * 0.3;
+                        const controlY1 = prevY;
+                        const controlX2 = x - (x - prevX) * 0.3;
+                        const controlY2 = y;
+
+                        pathData += ` C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${x} ${y}`;
+                    }
+                });
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathData);
+                path.setAttribute('class', 'connection-line');
+                svg.appendChild(path);
+
+                console.log('连接线已渲染:', activePoints.length, '个活跃点');
+            }
+
+            updatePointPosition(index, yPercent) {
+                const newInterval = this.yToInterval(yPercent);
+                this.sequenceData[index].interval = newInterval;
+                this.sequenceData[index].active = true;
+
+                // 更新点的位置和样式
+                const point = document.querySelector(`[data-index="${index}"]`);
+                if (point) {
+                    point.style.top = `${yPercent}%`;
+                    point.classList.remove('inactive');
+                    point.classList.add('active');
+                }
+            }
+
+            // 坐标转换方法
+            intervalToY(interval) {
+                if (interval === null) return 50; // 中心位置
+                // 将音程(-24到+24)映射到Y坐标(100%到0%)
+                return 100 - ((interval + 24) / 48 * 100);
+            }
+
+            yToInterval(yPercent) {
+                // 将Y坐标(0%到100%)映射到音程(+24到-24)
+                const interval = (100 - yPercent) / 100 * 48 - 24;
+                return Math.round(interval);
+            }
+
+            // 功能方法
+            preview() {
+                console.log('预览琶音序列:', this.sequenceData);
+                // 这里可以集成音频预览功能
+                if (window.game && window.game.musicManager) {
+                    // 使用现有的音乐管理器预览
+                    this.playPreview();
+                }
+            }
+
+            playPreview() {
+                // 简单的预览实现
+                const activeNotes = this.sequenceData
+                    .filter(point => point.active)
+                    .map(point => point.interval);
+
+                console.log('播放音符:', activeNotes);
+                // 这里可以添加实际的音频播放逻辑
+            }
+
+            randomize() {
+                this.sequenceData.forEach((point, index) => {
+                    if (Math.random() > 0.3) { // 70%概率激活
+                        point.active = true;
+                        point.interval = Math.floor(Math.random() * 49) - 24; // -24到+24的随机音程
+                    } else {
+                        point.active = false;
+                        point.interval = null;
+                    }
+                });
+
+                this.renderAll();
+                console.log('🎲 已随机化琶音序列');
+            }
+
+            reset() {
+                this.initializeSequenceData();
+                this.renderAll();
+                console.log('🔄 已重置琶音序列');
+            }
+
+            apply() {
+                // 应用当前设置到主项目
+                const bpm = parseInt(document.getElementById('bpmSlider').value);
+                const rootNote = document.getElementById('rootNoteSelect').value;
+                const octave = parseInt(document.getElementById('octaveSlider').value);
+
+                const sequenceConfig = {
+                    bpm: bpm,
+                    rootNote: rootNote + octave,
+                    sequence: this.sequenceData.map(point => point.active ? point.interval : null)
+                };
+
+                console.log('应用琶音配置:', sequenceConfig);
+
+                // 如果有全局音乐管理器，应用设置
+                if (window.game && window.game.musicManager) {
+                    this.applyToMusicManager(sequenceConfig);
+                }
+
+                alert('琶音设置已应用！');
+            }
+
+            applyToMusicManager(config) {
+                const musicManager = window.game.musicManager;
+
+                // 更新BPM
+                if (window.Tone && window.Tone.Transport) {
+                    window.Tone.Transport.bpm.value = config.bpm;
+                }
+
+                // 创建新的音乐预设
+                const newPreset = {
+                    name: `Custom Sequence ${new Date().toLocaleTimeString()}`,
+                    scale: this.generateScale(config.rootNote),
+                    sequence: config.sequence,
+                    arpeggioPattern: "up",
+                    tempo: config.bpm,
+                    synthPreset: musicManager.currentSynthIndex || 0
+                };
+
+                // 添加到预设列表
+                musicManager.musicPresets.push(newPreset);
+                musicManager.currentMusicPresetIndex = musicManager.musicPresets.length - 1;
+
+                // 更新UI
+                this.populatePresets();
+
+                console.log('已创建新的音乐预设:', newPreset);
+            }
+
+            generateScale(rootNote) {
+                // 生成基于根音的半音阶
+                const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const octaves = [3, 4, 5];
+                const scale = [];
+
+                // 找到根音在数组中的位置
+                const rootIndex = notes.findIndex(note => rootNote.startsWith(note));
+                const rootOctave = parseInt(rootNote.slice(-1));
+
+                // 生成18个音符的音阶
+                for (let i = 0; i < 18; i++) {
+                    const noteIndex = (rootIndex + i) % 12;
+                    const octave = rootOctave + Math.floor((rootIndex + i) / 12);
+                    scale.push(notes[noteIndex] + octave);
+                }
+
+                return scale;
+            }
+
+            loadPreset(index) {
+                if (window.game && window.game.musicManager && window.game.musicManager.musicPresets[index]) {
+                    const preset = window.game.musicManager.musicPresets[index];
+
+                    // 更新BPM
+                    document.getElementById('bpmSlider').value = preset.tempo;
+                    document.getElementById('bpmValue').textContent = preset.tempo;
+
+                    // 加载序列数据
+                    if (preset.sequence) {
+                        this.sequenceData = preset.sequence.map((interval, index) => ({
+                            active: interval !== null,
+                            interval: interval
+                        }));
+
+                        // 补齐到8个点
+                        while (this.sequenceData.length < 8) {
+                            this.sequenceData.push({ active: false, interval: null });
+                        }
+
+                        this.renderAll();
+                    }
+
+                    console.log('已加载预设:', preset.name);
+                }
+            }
+
+            savePreset() {
+                const name = prompt('请输入预设名称:');
+                if (!name) return;
+
+                const bpm = parseInt(document.getElementById('bpmSlider').value);
+                const rootNote = document.getElementById('rootNoteSelect').value;
+                const octave = parseInt(document.getElementById('octaveSlider').value);
+
+                const preset = {
+                    name: name,
+                    scale: this.generateScale(rootNote + octave),
+                    sequence: this.sequenceData.map(point => point.active ? point.interval : null),
+                    arpeggioPattern: "up",
+                    tempo: bpm,
+                    synthPreset: 0
+                };
+
+                // 保存到本地存储
+                const savedPresets = JSON.parse(localStorage.getItem('customArpeggioPresets') || '[]');
+                savedPresets.push(preset);
+                localStorage.setItem('customArpeggioPresets', JSON.stringify(savedPresets));
+
+                // 如果有全局音乐管理器，也添加到其中
+                if (window.game && window.game.musicManager) {
+                    window.game.musicManager.musicPresets.push(preset);
+                    this.populatePresets();
+                }
+
+                alert(`预设 "${name}" 已保存！`);
+            }
+
+            loadPresetFromFile() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            try {
+                                const preset = JSON.parse(e.target.result);
+                                this.loadPresetData(preset);
+                                alert('预设加载成功！');
+                            } catch (error) {
+                                alert('预设文件格式错误！');
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                input.click();
+            }
+
+            loadPresetData(preset) {
+                // 更新BPM
+                if (preset.tempo) {
+                    document.getElementById('bpmSlider').value = preset.tempo;
+                    document.getElementById('bpmValue').textContent = preset.tempo;
+                }
+
+                // 加载序列数据
+                if (preset.sequence) {
+                    this.sequenceData = preset.sequence.map((interval, index) => ({
+                        active: interval !== null,
+                        interval: interval
+                    }));
+
+                    // 补齐到8个点
+                    while (this.sequenceData.length < 8) {
+                        this.sequenceData.push({ active: false, interval: null });
+                    }
+
+                    this.renderAll();
+                }
+            }
+
+            runTests() {
+                console.log('🔧 开始运行测试...');
+
+                // 测试1: 检查DOM元素
+                const elements = [
+                    'oscilloscope-grid',
+                    'sequencePointsContainer',
+                    'connectionsSvg',
+                    'sequenceLines',
+                    'sequenceLabels'
+                ];
+
+                elements.forEach(id => {
+                    const element = document.getElementById(id);
+                    console.log(`${id}:`, element ? '✅ 存在' : '❌ 缺失');
+                });
+
+                // 测试2: 检查序列数据
+                console.log('序列数据:', this.sequenceData);
+
+                // 测试3: 强制渲染
+                console.log('强制重新渲染...');
+                this.renderAll();
+
+                // 测试4: 检查活跃点
+                const activePoints = this.sequenceData.filter(p => p.active);
+                console.log(`活跃点数量: ${activePoints.length}`);
+
+                // 测试5: 检查SVG
+                const svg = document.getElementById('connectionsSvg');
+                if (svg) {
+                    console.log('SVG尺寸:', svg.getBoundingClientRect());
+                    console.log('SVG子元素数量:', svg.children.length);
+                }
+
+                // 测试6: 创建测试序列
+                this.sequenceData = [
+                    { active: true, interval: 0 },
+                    { active: true, interval: 7 },
+                    { active: false, interval: null },
+                    { active: true, interval: 12 },
+                    { active: true, interval: 19 },
+                    { active: false, interval: null },
+                    { active: false, interval: null },
+                    { active: true, interval: 24 }
+                ];
+
+                console.log('应用测试序列...');
+                this.renderAll();
+
+                console.log('🔧 测试完成！');
+            }
+        }
+
+        // 初始化编辑器
+        let arpeggioEditor;
+
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            arpeggioEditor = new ArpeggioEditorIntegrated();
+
+            // 暴露到全局作用域以便外部调用
+            window.arpeggioEditor = arpeggioEditor;
+        });
+
+        // 导出接口供主项目使用
+        window.ArpeggioEditorIntegrated = ArpeggioEditorIntegrated;
+    </script>
+</body>
+</html>

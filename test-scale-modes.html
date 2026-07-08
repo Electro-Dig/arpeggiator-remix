@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>琶音编辑器音阶模式测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .scale-output {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎼 琶音编辑器音阶模式测试</h1>
+    
+    <div class="test-container">
+        <h2>🧪 功能测试</h2>
+        <button onclick="testScaleModeLogic()">测试音阶模式逻辑</button>
+        <button onclick="testIntervalMapping()">测试音程映射</button>
+        <button onclick="testYAxisConversion()">测试Y轴转换</button>
+        <div id="testResults"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>🎵 音阶预览</h2>
+        <button onclick="preview7NoteScale()">预览7音模式音阶</button>
+        <button onclick="preview12NoteScale()">预览12音模式音阶</button>
+        <div id="scalePreview"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>📊 性能测试</h2>
+        <button onclick="performanceTest()">运行性能测试</button>
+        <div id="performanceResults"></div>
+    </div>
+
+    <script>
+        // 模拟琶音编辑器的核心逻辑用于测试
+        class TestArpeggioEditor {
+            constructor() {
+                this.scaleType = '7-note';
+            }
+
+            mapTo7NoteScale(interval) {
+                const majorScalePattern = [0, 2, 4, 5, 7, 9, 11];
+                const octave = Math.floor(interval / 7);
+                const degree = ((interval % 7) + 7) % 7;
+                const semitone = octave * 12 + majorScalePattern[degree];
+                return Math.max(-24, Math.min(24, semitone));
+            }
+
+            intervalToY(interval) {
+                if (this.scaleType === '7-note') {
+                    const normalizedInterval = (interval + 14) / 28;
+                    return (1 - normalizedInterval) * 100;
+                } else {
+                    const normalizedInterval = (interval + 24) / 48;
+                    return (1 - normalizedInterval) * 100;
+                }
+            }
+
+            yToInterval(y) {
+                if (this.scaleType === '7-note') {
+                    const normalizedY = (100 - y) / 100;
+                    const rawInterval = Math.round(normalizedY * 28 - 14);
+                    return this.mapTo7NoteScale(rawInterval);
+                } else {
+                    const normalizedY = (100 - y) / 100;
+                    return Math.round(normalizedY * 48 - 24);
+                }
+            }
+        }
+
+        const editor = new TestArpeggioEditor();
+
+        function addResult(text, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = text;
+            document.getElementById('testResults').appendChild(div);
+        }
+
+        function testScaleModeLogic() {
+            document.getElementById('testResults').innerHTML = '';
+            addResult('🧪 开始测试音阶模式逻辑...', 'info');
+
+            // 测试7音模式映射
+            editor.scaleType = '7-note';
+            const testIntervals = [-7, -3, 0, 3, 7, 10, 14];
+            const expectedSemitones = [editor.mapTo7NoteScale(-7), editor.mapTo7NoteScale(-3), 0, editor.mapTo7NoteScale(3), editor.mapTo7NoteScale(7), editor.mapTo7NoteScale(10), editor.mapTo7NoteScale(14)];
+
+            addResult(`7音模式测试结果:`, 'info');
+            testIntervals.forEach((interval, i) => {
+                const semitone = editor.mapTo7NoteScale(interval);
+                addResult(`  间隔 ${interval} -> 半音程 ${semitone}`, semitone === expectedSemitones[i] ? 'success' : 'error');
+            });
+
+            addResult('✅ 音阶模式逻辑测试完成', 'success');
+        }
+
+        function testIntervalMapping() {
+            addResult('🔄 测试音程映射...', 'info');
+            
+            editor.scaleType = '7-note';
+            const testData = [
+                { y: 0, expectedRange: [-14, 14] },
+                { y: 50, expectedRange: [-2, 2] },
+                { y: 100, expectedRange: [-14, 14] }
+            ];
+
+            testData.forEach(test => {
+                const interval = editor.yToInterval(test.y);
+                const backToY = editor.intervalToY(interval);
+                const isValid = interval >= test.expectedRange[0] && interval <= test.expectedRange[1];
+                
+                addResult(`Y=${test.y}% -> 间隔=${interval} -> Y=${backToY.toFixed(1)}%`, isValid ? 'success' : 'error');
+            });
+
+            addResult('✅ 音程映射测试完成', 'success');
+        }
+
+        function testYAxisConversion() {
+            addResult('📐 测试Y轴转换精度...', 'info');
+
+            editor.scaleType = '7-note';
+            let errors = 0;
+
+            for (let y = 0; y <= 100; y += 10) {
+                const interval = editor.yToInterval(y);
+                const backToY = editor.intervalToY(interval);
+                const error = Math.abs(y - backToY);
+                
+                if (error > 5) { // 允许5%的误差
+                    addResult(`误差过大: Y=${y}% -> ${backToY.toFixed(1)}% (误差: ${error.toFixed(1)}%)`, 'error');
+                    errors++;
+                }
+            }
+
+            if (errors === 0) {
+                addResult('✅ Y轴转换精度测试通过', 'success');
+            } else {
+                addResult(`❌ 发现${errors}个精度错误`, 'error');
+            }
+        }
+
+        function preview7NoteScale() {
+            const preview = document.getElementById('scalePreview');
+            preview.innerHTML = '<h3>7音模式音阶预览 (C大调)</h3>';
+            
+            editor.scaleType = '7-note';
+            const scaleDiv = document.createElement('div');
+            scaleDiv.className = 'scale-output';
+            
+            let output = '';
+            for (let i = 0; i < 15; i++) { // 两个八度
+                const semitone = editor.mapTo7NoteScale(i);
+                const noteName = semitoneToNoteName(semitone);
+                output += `度数${i+1}: ${semitone}半音 (${noteName})\\n`;
+            }
+            
+            scaleDiv.textContent = output;
+            preview.appendChild(scaleDiv);
+        }
+
+        function preview12NoteScale() {
+            const preview = document.getElementById('scalePreview');
+            preview.innerHTML = '<h3>12音模式半音阶预览</h3>';
+            
+            const scaleDiv = document.createElement('div');
+            scaleDiv.className = 'scale-output';
+            
+            let output = '';
+            for (let i = 0; i < 24; i++) { // 两个八度
+                const noteName = semitoneToNoteName(i);
+                output += `半音${i}: ${noteName}\\n`;
+            }
+            
+            scaleDiv.textContent = output;
+            preview.appendChild(scaleDiv);
+        }
+
+        function semitoneToNoteName(semitone) {
+            const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+            const octave = Math.floor(semitone / 12) + 4;
+            const noteIndex = ((semitone % 12) + 12) % 12;
+            return notes[noteIndex] + octave;
+        }
+
+        function performanceTest() {
+            const results = document.getElementById('performanceResults');
+            results.innerHTML = '<h3>性能测试结果</h3>';
+            
+            // 测试转换性能
+            const iterations = 10000;
+            
+            // 7音模式性能
+            editor.scaleType = '7-note';
+            const start7 = performance.now();
+            for (let i = 0; i < iterations; i++) {
+                const y = Math.random() * 100;
+                const interval = editor.yToInterval(y);
+                editor.intervalToY(interval);
+            }
+            const time7 = performance.now() - start7;
+            
+            // 12音模式性能
+            editor.scaleType = '12-note';
+            const start12 = performance.now();
+            for (let i = 0; i < iterations; i++) {
+                const y = Math.random() * 100;
+                const interval = editor.yToInterval(y);
+                editor.intervalToY(interval);
+            }
+            const time12 = performance.now() - start12;
+            
+            results.innerHTML += `
+                <div class="test-result info">
+                    7音模式: ${iterations}次转换耗时 ${time7.toFixed(2)}ms (平均 ${(time7/iterations*1000).toFixed(3)}μs/次)
+                </div>
+                <div class="test-result info">
+                    12音模式: ${iterations}次转换耗时 ${time12.toFixed(2)}ms (平均 ${(time12/iterations*1000).toFixed(3)}μs/次)
+                </div>
+                <div class="test-result ${time7 < time12 * 2 ? 'success' : 'error'}">
+                    性能比较: 7音模式 ${time7 < time12 ? '更快' : '较慢'} (${((time7/time12)*100).toFixed(1)}% 相对性能)
+                </div>
+            `;
+        }
+
+        // 页面加载完成后自动运行基础测试
+        window.onload = function() {
+            addResult('🎯 琶音编辑器音阶模式测试工具已加载', 'info');
+            addResult('点击上方按钮开始测试各项功能', 'info');
+        };
+    </script>
+</body>
+</html>

@@ -1169,179 +1169,543 @@ body {
     }
 }
 
-/* ===== 琶音序列编辑器样式 ===== */
-.sequence-controls {
+/* ===== 琶音序列编辑器样式 (示波器风格) ===== */
+
+/* 编辑器布局 */
+.arpeggio-editor-layout {
+    width: 95vw;
+    max-width: 1400px;
+    height: 85vh;
+    max-height: 800px;
+    padding: 0;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+    border: 2px solid #00ff88;
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+}
+
+.arpeggio-editor-container {
+    display: flex;
+    height: 100%;
+    gap: 0;
+}
+
+.main-editor-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 15px 0 0 15px;
+}
+
+.settings-panel {
+    width: 280px;
+    background: rgba(0, 20, 40, 0.8);
+    border-left: 1px solid #00ff88;
+    border-radius: 0 15px 15px 0;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.editor-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.editor-header h2 {
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    margin: 0;
+    letter-spacing: 2px;
+}
+
+/* 示波器容器 */
+.oscilloscope-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.oscilloscope-grid {
+    flex: 1;
+    position: relative;
+    background: radial-gradient(circle at center, rgba(0, 255, 136, 0.05) 0%, rgba(0, 0, 0, 0.8) 70%);
+    border: 2px solid #00ff88;
+    border-radius: 10px;
+    overflow: hidden;
+    min-height: 400px;
+}
+
+/* 网格背景 */
+.grid-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(rgba(0, 255, 136, 0.2) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 136, 0.2) 1px, transparent 1px);
+    background-size: 10% 25%;
+    pointer-events: none;
+}
+
+/* 轴标签 */
+.y-axis-labels {
+    position: absolute;
+    left: 5px;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px 0;
+    pointer-events: none;
+}
+
+.x-axis-labels {
+    position: absolute;
+    bottom: 5px;
+    left: 0;
+    right: 0;
+    display: flex;
+    padding: 0 10px;
+    pointer-events: none;
+}
+
+.x-axis-labels .axis-label {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #00ff88;
+    font-weight: bold;
+}
+
+.y-label, .x-label {
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(0, 255, 136, 0.8);
+}
+
+.y-label {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 2px 4px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.x-label {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    transform: translateX(-50%);
+}
+
+/* 序列线条 */
+.sequence-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.sequence-line {
+    position: absolute;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom,
+        rgba(0, 255, 136, 0.6) 0%,
+        rgba(0, 255, 136, 0.3) 50%,
+        rgba(0, 255, 136, 0.6) 100%);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+}
+
+/* 连接线SVG */
+.connections-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.connection-line {
+    stroke: #00ff88;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 5px #00ff88);
+}
+
+/* 音序点容器 */
+.sequence-points-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+}
+
+.sequence-point {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    transform: translate(-50%, -50%);
+    border: 2px solid #333;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.sequence-point.active {
+    background: radial-gradient(circle, #ff6b35 0%, #ff8c42 100%);
+    border-color: #ff6b35;
+    box-shadow:
+        0 0 15px rgba(255, 107, 53, 0.8),
+        0 0 25px rgba(255, 107, 53, 0.4);
+}
+
+.sequence-point.inactive {
+    background: radial-gradient(circle, #333 0%, #555 100%);
+    border-color: #666;
+    opacity: 0.6;
+}
+
+.sequence-point:hover {
+    transform: translate(-50%, -50%) scale(1.3);
+    z-index: 10;
+}
+
+.sequence-point.active:hover {
+    box-shadow:
+        0 0 20px rgba(255, 107, 53, 1),
+        0 0 35px rgba(255, 107, 53, 0.6);
+}
+
+/* 控制按钮 */
+.control-buttons {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    justify-content: center;
     flex-wrap: wrap;
 }
 
 .control-btn {
     padding: 8px 16px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 255, 136, 0.05) 100%);
+    border: 1px solid #00ff88;
     border-radius: 6px;
-    color: white;
-    font-size: 12px;
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     backdrop-filter: blur(5px);
 }
 
 .control-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.2) 0%, rgba(0, 255, 136, 0.1) 100%);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+    transform: translateY(-1px);
 }
 
 .control-btn:active {
-    transform: scale(0.95);
+    transform: translateY(0) scale(0.95);
 }
 
-.sequence-grid {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    padding: 20px 0;
-    flex-wrap: wrap;
+/* 设置面板 */
+.settings-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(0, 255, 136, 0.2);
 }
 
-.sequence-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    position: relative;
+.settings-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
 }
 
-.step-point {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-    user-select: none;
-    border: 2px solid transparent;
-}
-
-.step-point.active {
-    background: linear-gradient(135deg, #4CAF50, #66BB6A);
-    border-color: rgba(76, 175, 80, 0.5);
-    box-shadow:
-        0 0 20px rgba(76, 175, 80, 0.4),
-        inset 0 2px 4px rgba(255, 255, 255, 0.2);
-}
-
-.step-point.inactive {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
-.step-point:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 25px rgba(255, 255, 255, 0.3);
-}
-
-.step-point.dragging {
-    transform: scale(1.15);
-    box-shadow: 0 0 30px rgba(76, 175, 80, 0.6);
-    z-index: 10;
-}
-
-.interval-value {
+.settings-section h3 {
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
     font-size: 12px;
     font-weight: bold;
-    color: white;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    margin: 0 0 15px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
 }
 
-.step-point.active .interval-value {
-    color: white;
+.setting-group {
+    margin-bottom: 15px;
 }
 
-.step-point.inactive .interval-value {
-    color: rgba(255, 255, 255, 0.6);
+.setting-group label {
+    display: block;
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-.step-number {
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.slider {
+    flex: 1;
+    height: 4px;
+    background: rgba(0, 255, 136, 0.2);
+    border-radius: 2px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #00ff88;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+.slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #00ff88;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+.value-display {
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.7);
-    font-weight: 500;
+    font-weight: bold;
+    min-width: 30px;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 255, 136, 0.3);
 }
 
-/* 音程值颜色编码 */
-.step-point[data-interval="0"] .interval-value {
-    color: #FFF;
+.select-input {
+    width: 100%;
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid #00ff88;
+    border-radius: 4px;
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    outline: none;
 }
 
-.step-point[data-interval^="+"] .interval-value {
-    color: #81C784;
+.select-input:focus {
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
 }
 
-.step-point[data-interval^="-"] .interval-value {
-    color: #FFB74D;
+.preset-buttons, .action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-/* 拖拽指示器 */
-.sequence-step::before {
-    content: '';
+.preset-btn, .action-btn {
+    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 255, 136, 0.05) 100%);
+    border: 1px solid #00ff88;
+    border-radius: 4px;
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.preset-btn:hover, .action-btn:hover {
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.2) 0%, rgba(0, 255, 136, 0.1) 100%);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+}
+
+.action-btn.close-btn {
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%);
+    border-color: #ff6b35;
+    color: #ff6b35;
+}
+
+.action-btn.close-btn:hover {
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.2) 0%, rgba(255, 107, 53, 0.1) 100%);
+    box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+}
+/* 模态框关闭按钮样式覆盖 */
+.arpeggio-editor-layout .close {
     position: absolute;
-    top: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 2px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.2);
-    opacity: 0;
-    transition: opacity 0.2s ease;
+    top: 15px;
+    right: 20px;
+    color: #ff6b35;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1000;
+    transition: all 0.2s ease;
+    text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
 }
 
-.sequence-step:hover::before {
-    opacity: 1;
+.arpeggio-editor-layout .close:hover {
+    color: #ff8c42;
+    text-shadow: 0 0 15px rgba(255, 107, 53, 0.8);
+    transform: scale(1.1);
 }
 
-.sequence-step::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 2px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.2);
-    opacity: 0;
-    transition: opacity 0.2s ease;
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .arpeggio-editor-layout {
+        width: 98vw;
+        height: 90vh;
+    }
+
+    .settings-panel {
+        width: 250px;
+    }
 }
 
-.sequence-step:hover::after {
-    opacity: 1;
-}
-
-/* 序列编辑器响应式设计 */
 @media (max-width: 768px) {
-    .sequence-grid {
-        gap: 10px;
+    .arpeggio-editor-container {
+        flex-direction: column;
     }
 
-    .step-point {
-        width: 40px;
-        height: 40px;
+    .main-editor-panel {
+        border-radius: 15px 15px 0 0;
     }
 
-    .interval-value {
-        font-size: 10px;
+    .settings-panel {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid #00ff88;
+        border-radius: 0 0 15px 15px;
+        max-height: 200px;
+    }
+
+    .oscilloscope-grid {
+        min-height: 300px;
+    }
+
+    .control-buttons {
+        gap: 8px;
     }
 
     .control-btn {
         padding: 6px 12px;
-        font-size: 11px;
+        font-size: 10px;
     }
 
-    .sequence-controls {
+    .editor-header h2 {
+        font-size: 16px;
+    }
+
+    .y-label, .x-label {
+        font-size: 10px;
+    }
+
+    .sequence-point {
+        width: 10px;
+        height: 10px;
+    }
+}
+
+/* 增强可视化器响应式设计 */
+@media (max-width: 768px) {
+    .sequence-visualizer {
+        padding: 15px;
+        gap: 10px;
+    }
+
+    .interval-scale {
+        height: 150px;
+        width: 30px;
+    }
+
+    .step-track {
+        height: 150px;
+    }
+
+    .sequence-grid-enhanced {
         gap: 8px;
+    }
+
+    .step-handle {
+        width: 20px;
+        height: 20px;
+    }
+
+    .interval-display {
+        font-size: 9px;
+        top: -20px;
+        padding: 1px 4px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sequence-visualizer {
+        flex-direction: column;
+        padding: 10px;
+    }
+
+    .interval-scale {
+        height: 80px;
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .sequence-grid-enhanced {
+        gap: 6px;
+    }
+
+    .step-track {
+        height: 80px;
+    }
+
+    .step-handle {
+        width: 18px;
+        height: 18px;
+    }
+
+    .interval-display {
+        font-size: 8px;
+        top: -18px;
     }
 }
