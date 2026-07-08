@@ -6,7 +6,7 @@ import {
   isInviteCodeAllowed,
   parseCookies,
   verifyAuthToken,
-} from '../netlify/edge-functions/invite-auth-core.js';
+} from '../netlify/invite-auth-core.js';
 
 test('accepts a freshly signed auth token', async () => {
   const token = await createAuthToken({

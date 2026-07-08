@@ -5,7 +5,7 @@ import {
   isInviteCodeAllowed,
   parseCookies,
   verifyAuthToken,
-} from './invite-auth-core.js';
+} from '../invite-auth-core.js';
 
 const LOGIN_PATH = '/__invite';
 const LOGOUT_PATH = '/__invite/logout';
