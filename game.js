@@ -222,6 +222,13 @@ import { MusicManager } from './MusicManager.js'; // Import the MusicManager
 import * as Tone from 'https://esm.sh/tone'; // Import Tone to access Transport
 import * as drumManager from './DrumManager.js'; // Import the new drum manager module
 import { WaveformVisualizer } from './WaveformVisualizer.js'; // Import the new waveform visualizer
+import { DuoModeController } from './duo/DuoModeController.js';
+import {
+    mapDelayFromDistance,
+    mapFilterCutoff,
+    mapReverbWet,
+    smoothValue
+} from './duo/MixerParameterMapper.js';
 export var Game = /*#__PURE__*/ function () {
     "use strict";
     function Game(renderDiv) {
@@ -353,6 +360,16 @@ export var Game = /*#__PURE__*/ function () {
 
         // 简化模式：减少信息显示以提升性能
         this.simpleMode = false; // false = 详细模式，true = 简化模式
+        this.duoModeEnabled = false;
+        this.trackingHandLimit = 2;
+        this.vision = null;
+        this.duoModeController = null;
+        this.duoEffectState = {
+            filterCutoff: 8000,
+            reverbWet: 0.05,
+            delayWet: 0,
+            delayFeedback: 0.15
+        };
         // Initialize asynchronously
         this._init().catch(function (error) {
             console.error("Initialization failed:", error);
@@ -482,22 +499,7 @@ export var Game = /*#__PURE__*/ function () {
                 directionalLight.position.set(0, 0, 100); // Pointing from behind camera
                 this.scene.add(directionalLight);
                 // Setup hand visualization (palm circles removed, lines will be added later)
-                for (var i = 0; i < 2; i++) {
-                    var lineGroup = new THREE.Group();
-                    lineGroup.visible = false;
-                    this.scene.add(lineGroup);
-                    this.hands.push({
-                        landmarks: null,
-                        anchorPos: new THREE.Vector3(),
-                        lineGroup: lineGroup,
-                        isFist: false, // Track if the hand is currently in a fist
-                        wasAllFingersUp: false,
-                        wasFist: false,
-                        wasPalmFacingAway: false, // Track palm orientation for right hand
-                        wasFourFingersVertical: false, // Track 4-finger vertical gesture state
-                        lastFistTime: 0 // Track last fist time for cooldown period
-                    });
-                }
+                this._ensureHandSlots(2);
                 // 标记hands已经正确初始化
                 this.handsInitialized = true;
                 console.log('✅ Hands数组初始化完成:', this.hands.length, '个手部对象');
@@ -678,6 +680,44 @@ export var Game = /*#__PURE__*/ function () {
             }
         },
         {
+            key: "_ensureHandSlots",
+            value: function _ensureHandSlots(count) {
+                while (this.hands.length < count) {
+                    var lineGroup = new THREE.Group();
+                    lineGroup.visible = false;
+                    this.scene.add(lineGroup);
+                    this.hands.push({
+                        landmarks: null,
+                        anchorPos: new THREE.Vector3(),
+                        lineGroup: lineGroup,
+                        isFist: false,
+                        wasAllFingersUp: false,
+                        wasFist: false,
+                        wasPalmFacingAway: false,
+                        wasFourFingersVertical: false,
+                        lastFistTime: 0,
+                        lastGestureChangeTime: 0
+                    });
+                }
+                while (this.lastLandmarkPositions.length < count) {
+                    this.lastLandmarkPositions.push(null);
+                }
+            }
+        },
+        {
+            key: "_createHandLandmarker",
+            value: function _createHandLandmarker(vision, numHands, delegate) {
+                return HandLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+                        delegate: delegate || 'GPU'
+                    },
+                    numHands: numHands,
+                    runningMode: 'VIDEO'
+                });
+            }
+        },
+        {
             key: "_setupHandTracking",
             value: function _setupHandTracking() {
                 var _this = this;
@@ -707,16 +747,10 @@ export var Game = /*#__PURE__*/ function () {
                                 ];
                             case 2:
                                 vision = _state.sent();
+                                _this.vision = vision;
                                 return [
                                     4,
-                                    HandLandmarker.createFromOptions(vision, {
-                                        baseOptions: {
-                                            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-                                            delegate: 'GPU'
-                                        },
-                                        numHands: 2,
-                                        runningMode: 'VIDEO'
-                                    })
+                                    _this._createHandLandmarker(vision, _this.trackingHandLimit, 'GPU')
                                 ];
                             case 3:
                                 _this.handLandmarker = _state.sent();
@@ -940,16 +974,10 @@ export var Game = /*#__PURE__*/ function () {
                                 }
                             case 1:
                                 vision = _state.sent();
+                                _this.vision = vision;
                                 return [
                                     4,
-                                    HandLandmarker.createFromOptions(vision, {
-                                        baseOptions: {
-                                            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-                                            delegate: 'CPU' // 使用CPU而不是GPU
-                                        },
-                                        numHands: 2,
-                                        runningMode: 'VIDEO'
-                                    })
+                                    _this._createHandLandmarker(vision, _this.trackingHandLimit, 'CPU')
                                 ];
                             case 2:
                                 if (!_this.handLandmarker) {
@@ -2392,6 +2420,74 @@ export var Game = /*#__PURE__*/ function () {
                     if (this.musicManager && this.musicManager.setNoteLengthLevel) {
                         this.musicManager.setNoteLengthLevel(idx);
                     }
+                }
+            }
+        },
+        {
+            key: "isDuoModeEnabled",
+            value: function isDuoModeEnabled() {
+                return this.duoModeEnabled;
+            }
+        },
+        {
+            key: "setDuoModeEnabled",
+            value: function setDuoModeEnabled(enabled) {
+                var _this = this;
+                return _async_to_generator(function () {
+                    var nextLimit, i;
+                    return _ts_generator(this, function (_state) {
+                        switch (_state.label) {
+                            case 0:
+                                _this.duoModeEnabled = !!enabled;
+                                nextLimit = _this.duoModeEnabled ? 4 : 2;
+                                _this.trackingHandLimit = nextLimit;
+                                _this._ensureHandSlots(nextLimit);
+                                if (!_this.duoModeController) {
+                                    _this._setupDuoModeController();
+                                }
+                                _this.duoModeController.setEnabled(_this.duoModeEnabled);
+                                _this._setDuoOverlayActive(_this.duoModeEnabled);
+                                if (!_this.duoModeEnabled) {
+                                    for (i = 2; i < _this.hands.length; i += 1) {
+                                        _this.hands[i].landmarks = null;
+                                        if (_this.hands[i].lineGroup) {
+                                            _this.hands[i].lineGroup.visible = false;
+                                        }
+                                    }
+                                }
+                                if (!_this.vision) return [
+                                    3,
+                                    2
+                                ];
+                                return [
+                                    4,
+                                    _this._createHandLandmarker(_this.vision, nextLimit, 'GPU')
+                                ];
+                            case 1:
+                                _this.handLandmarker = _state.sent();
+                                _state.label = 2;
+                            case 2:
+                                return [
+                                    2
+                                ];
+                        }
+                    });
+                })();
+            }
+        },
+        {
+            key: "_setupDuoModeController",
+            value: function _setupDuoModeController() {
+                this.duoModeController = new DuoModeController();
+            }
+        },
+        {
+            key: "_setDuoOverlayActive",
+            value: function _setDuoOverlayActive(active) {
+                var overlay = document.getElementById('duo-overlay');
+                if (overlay) {
+                    overlay.classList.toggle('active', !!active);
+                    overlay.setAttribute('aria-hidden', active ? 'false' : 'true');
                 }
             }
         },
