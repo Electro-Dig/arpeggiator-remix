@@ -283,11 +283,104 @@ body {
     box-shadow: 0 0 20px rgba(123, 67, 148, 0.5);
 }
 
-.custom-btn:nth-child(2) {
+.mode-text-btn {
+    width: auto;
+    min-width: 54px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mode-text-btn.active {
+    background: rgba(246, 173, 85, 0.9);
+    border-color: rgba(246, 173, 85, 0.85);
+}
+
+.duo-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 180ms ease;
+}
+
+.duo-overlay.active {
+    opacity: 1;
+}
+
+.duo-split-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.55), transparent);
+    box-shadow: 0 0 18px rgba(123, 67, 148, 0.45);
+}
+
+.duo-side-label {
+    position: absolute;
+    top: 92px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: white;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(8px);
+    font-size: 12px;
+}
+
+.duo-side-label-left {
+    left: 24px;
+    border-left: 3px solid #4fd1c7;
+}
+
+.duo-side-label-right {
+    right: 24px;
+    border-right: 3px solid #f6ad55;
+    text-align: right;
+}
+
+.duo-effect-meters {
+    position: absolute;
+    right: 24px;
+    bottom: 148px;
+    width: 160px;
+    display: grid;
+    gap: 8px;
+}
+
+.duo-meter {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    font-size: 11px;
+}
+
+.duo-meter i {
+    display: block;
+    height: 8px;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #7b4394, #f6ad55);
+}
+
+#open-arpeggio-editor {
     background: rgba(255, 87, 51, 0.8);
 }
 
-.custom-btn:nth-child(2):hover {
+#open-arpeggio-editor:hover {
     border-color: #FF5733;
     box-shadow: 0 0 20px rgba(255, 87, 51, 0.5);
 }

@@ -48,6 +48,23 @@
 
         <span id="info-text">raise your hands to raise the roof</span>
 
+        <div id="duo-overlay" class="duo-overlay" aria-hidden="true">
+            <div class="duo-split-line"></div>
+            <div class="duo-side-label duo-side-label-left">
+                <strong>PERFORMER</strong>
+                <span>Melody + Drums</span>
+            </div>
+            <div class="duo-side-label duo-side-label-right">
+                <strong>MIXER</strong>
+                <span>Delay / Reverb / Filter</span>
+            </div>
+            <div id="duo-effect-meters" class="duo-effect-meters">
+                <div class="duo-meter"><span>Filter</span><i id="duo-filter-meter"></i></div>
+                <div class="duo-meter"><span>Reverb</span><i id="duo-reverb-meter"></i></div>
+                <div class="duo-meter"><span>Delay</span><i id="duo-delay-meter"></i></div>
+            </div>
+        </div>
+
 
 
         <!-- 当前状态面板（中上方） -->
@@ -129,9 +146,13 @@
         <div id="custom-editor-buttons"
             style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; gap: 20px; align-items: center;">
             <!-- 简化模式按钮 -->
-            <button id="toggle-simple-mode" class="custom-btn" title="简化模式：减少信息显示以提升性能"
+            <button id="toggle-simple-mode" class="custom-btn mode-text-btn" title="简化模式：减少信息显示以提升性能"
                 style="font-size: 12px; padding: 8px 12px; background-color: rgba(76, 175, 80, 0.9);">
                 🚀 详细
+            </button>
+
+            <button id="toggle-duo-mode" class="custom-btn mode-text-btn" title="Duo Mix: left performs, right mixes">
+                Duo
             </button>
 
             <button id="open-arpeggio-editor" class="custom-btn" title="自定义琶音">🎼</button>

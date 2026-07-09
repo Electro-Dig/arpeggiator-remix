@@ -212,6 +212,21 @@ function initializeApp() {
         }
 
         // 初始化鼓组音量控制 UI
+        const duoModeBtn = document.getElementById('toggle-duo-mode');
+        if (duoModeBtn && game) {
+            duoModeBtn.addEventListener('click', async () => {
+                if (!game.setDuoModeEnabled || !game.isDuoModeEnabled) {
+                    console.warn('Duo mode is not ready yet.');
+                    return;
+                }
+                const nextEnabled = !game.isDuoModeEnabled();
+                await game.setDuoModeEnabled(nextEnabled);
+                duoModeBtn.classList.toggle('active', nextEnabled);
+                duoModeBtn.textContent = nextEnabled ? 'Solo' : 'Duo';
+                duoModeBtn.title = nextEnabled ? 'Return to Single Mode' : 'Duo Mix: left performs, right mixes';
+            });
+        }
+
         const drumVolPanel = document.getElementById('drum-volume-panel');
         const drumVolToggle = document.getElementById('drum-volume-toggle');
         const drumVolSliders = document.getElementById('drum-volume-sliders');
