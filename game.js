@@ -1220,6 +1220,19 @@ export var Game = /*#__PURE__*/ function () {
                         if (!videoParams) return;
                         var canvasWidth = this.renderDiv.clientWidth;
                         var canvasHeight = this.renderDiv.clientHeight;
+                        if (this.duoModeEnabled) {
+                            if (!this.duoModeController) {
+                                this._setupDuoModeController();
+                            }
+                            var duoHands = this._normalizeDetectedHandsForDuo(results, videoParams, canvasWidth, canvasHeight);
+                            var duoResult = this.duoModeController.update(duoHands, performance.now(), {
+                                videoParams: videoParams,
+                                canvasWidth: canvasWidth,
+                                canvasHeight: canvasHeight
+                            });
+                            this._cleanupDuoInactiveRoles(duoResult.roles);
+                            return;
+                        }
                         // 注意：现在使用MusicManager中的预设系统，这里的硬编码音阶已被移除
                         for (var i = 0; i < this.hands.length; i++)_this1 = this, _loop(i);
                     } catch (error) {
@@ -1301,6 +1314,259 @@ export var Game = /*#__PURE__*/ function () {
                     videoNaturalWidth: vNatW,
                     videoNaturalHeight: vNatH
                 };
+            }
+        },
+        {
+            key: "_smoothLandmarksForIndex",
+            value: function _smoothLandmarksForIndex(index, currentRawLandmarks) {
+                if (!this.lastLandmarkPositions[index] || this.lastLandmarkPositions[index].length !== currentRawLandmarks.length) {
+                    this.lastLandmarkPositions[index] = currentRawLandmarks.map(function (lm) {
+                        return _object_spread({}, lm);
+                    });
+                }
+                var smoothedLandmarks = currentRawLandmarks.map((lm, lmIndex) => {
+                    var prevLm = this.lastLandmarkPositions[index][lmIndex];
+                    return {
+                        x: this.smoothingFactor * lm.x + (1 - this.smoothingFactor) * prevLm.x,
+                        y: this.smoothingFactor * lm.y + (1 - this.smoothingFactor) * prevLm.y,
+                        z: this.smoothingFactor * lm.z + (1 - this.smoothingFactor) * prevLm.z
+                    };
+                });
+                this.lastLandmarkPositions[index] = smoothedLandmarks.map(function (lm) {
+                    return _object_spread({}, lm);
+                });
+                return smoothedLandmarks;
+            }
+        },
+        {
+            key: "_normalizeDetectedHandsForDuo",
+            value: function _normalizeDetectedHandsForDuo(results, videoParams, canvasWidth, canvasHeight) {
+                var _this = this;
+                if (!results.landmarks) return [];
+                return results.landmarks.map(function (landmarks, trackingIndex) {
+                    var smoothedLandmarks = _this._smoothLandmarksForIndex(trackingIndex, landmarks);
+                    var palm = smoothedLandmarks[9];
+                    var lmOriginalX = palm.x * videoParams.videoNaturalWidth;
+                    var lmOriginalY = palm.y * videoParams.videoNaturalHeight;
+                    var normX = (lmOriginalX - videoParams.offsetX) / videoParams.visibleWidth;
+                    var normY = (lmOriginalY - videoParams.offsetY) / videoParams.visibleHeight;
+                    return {
+                        id: trackingIndex,
+                        trackingIndex: trackingIndex,
+                        palm: {
+                            x: Math.max(0, Math.min(1, 1 - normX)),
+                            y: Math.max(0, Math.min(1, normY))
+                        },
+                        landmarks: smoothedLandmarks,
+                        videoParams: videoParams,
+                        canvasWidth: canvasWidth,
+                        canvasHeight: canvasHeight
+                    };
+                });
+            }
+        },
+        {
+            key: "_getScreenPalmPosition",
+            value: function _getScreenPalmPosition(landmarks, videoParams, canvasWidth, canvasHeight) {
+                if (!landmarks || !landmarks[9]) {
+                    return {
+                        normX: 0.5,
+                        normY: 0.5,
+                        x: 0,
+                        y: 0
+                    };
+                }
+                var palm = landmarks[9];
+                var lmOriginalX = palm.x * videoParams.videoNaturalWidth;
+                var lmOriginalY = palm.y * videoParams.videoNaturalHeight;
+                var normX = (lmOriginalX - videoParams.offsetX) / videoParams.visibleWidth;
+                var normY = (lmOriginalY - videoParams.offsetY) / videoParams.visibleHeight;
+                var screenNormX = Math.max(0, Math.min(1, 1 - normX));
+                var screenNormY = Math.max(0, Math.min(1, normY));
+                return {
+                    normX: screenNormX,
+                    normY: screenNormY,
+                    x: screenNormX * canvasWidth - canvasWidth / 2,
+                    y: (1 - screenNormY) * canvasHeight - canvasHeight / 2
+                };
+            }
+        },
+        {
+            key: "_handlePerformerMelodyHand",
+            value: function _handlePerformerMelodyHand(trackingIndex, smoothedLandmarks, videoParams, canvasWidth, canvasHeight) {
+                var hand = this.hands[trackingIndex];
+                if (!hand) return;
+                var wasVisible = hand.landmarks !== null;
+                hand.landmarks = smoothedLandmarks;
+                var palmPosition = this._getScreenPalmPosition(smoothedLandmarks, videoParams, canvasWidth, canvasHeight);
+                hand.anchorPos.set(palmPosition.x, palmPosition.y, 1);
+                var isFistNow = this._isFist(smoothedLandmarks);
+                if (isFistNow && !hand.isFist) {
+                    this.musicManager.cycleSynth();
+                    this.musicManager.stopArpeggio(0);
+                }
+                hand.isFist = isFistNow;
+                var fourFingersVerticalNow = this._isFourFingersVertical(smoothedLandmarks);
+                var fourFingersChanged = fourFingersVerticalNow !== hand.wasFourFingersVertical;
+                var now = performance.now();
+                var timeSinceLastChange = now - (hand.lastGestureChangeTime || 0);
+                if (timeSinceLastChange > 300 && fourFingersChanged && fourFingersVerticalNow) {
+                    var newMusicPreset = this.musicManager.cycleMusicPreset();
+                    this._showPresetChangeNotification(`琴音风格: ${newMusicPreset.name} (${newMusicPreset.tempo} BPM)`, 'music');
+                    hand.lastGestureChangeTime = now;
+                }
+                hand.wasFourFingersVertical = fourFingersVerticalNow;
+                var currentMusicPreset = this.musicManager.getCurrentMusicPreset();
+                var currentScale = currentMusicPreset.scale || ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4'];
+                var noteIndex = Math.floor((1 - palmPosition.normY) * currentScale.length);
+                var rootNote = currentScale[Math.max(0, Math.min(currentScale.length - 1, noteIndex))];
+                if (this.waveformVisualizer) {
+                    var colorIndex = noteIndex % this.waveformColors.length;
+                    this.waveformVisualizer.updateColor(this.waveformColors[colorIndex]);
+                }
+                var thumbTip = smoothedLandmarks[4];
+                var indexTip = smoothedLandmarks[8];
+                var dx = thumbTip.x - indexTip.x;
+                var dy = thumbTip.y - indexTip.y;
+                var distance = Math.sqrt(dx * dx + dy * dy);
+                var velocity = Math.max(0.1, Math.min(1.0, distance * 5));
+                this._updateHandLines(trackingIndex, smoothedLandmarks, videoParams, canvasWidth, canvasHeight, {
+                    note: rootNote,
+                    velocity: velocity,
+                    isFist: isFistNow,
+                    roleLabel: 'Melody'
+                });
+                if (!isFistNow) {
+                    var arpeggioIsActive = this.musicManager.activePatterns.has(0);
+                    if (!wasVisible || !arpeggioIsActive) {
+                        this.musicManager.startArpeggio(0, rootNote);
+                    } else if (arpeggioIsActive) {
+                        this.musicManager.updateArpeggio(0, rootNote);
+                        this.musicManager.updateArpeggioVolume(0, velocity);
+                    }
+                } else {
+                    this.musicManager.stopArpeggio(0);
+                }
+                hand.lineGroup.visible = true;
+            }
+        },
+        {
+            key: "_handlePerformerDrumHand",
+            value: function _handlePerformerDrumHand(trackingIndex, smoothedLandmarks, videoParams, canvasWidth, canvasHeight) {
+                var hand = this.hands[trackingIndex];
+                if (!hand) return;
+                hand.landmarks = smoothedLandmarks;
+                var palmPosition = this._getScreenPalmPosition(smoothedLandmarks, videoParams, canvasWidth, canvasHeight);
+                hand.anchorPos.set(palmPosition.x, palmPosition.y, 1);
+                var fingerStates = this._getFingerStates(smoothedLandmarks);
+                var isFistNow = this._isFist(smoothedLandmarks);
+                var fourFingersVerticalNow = this._isFourFingersVertical(smoothedLandmarks);
+                var fistChanged = isFistNow !== hand.wasFist;
+                var fourFingersChanged = fourFingersVerticalNow !== hand.wasFourFingersVertical;
+                var now = performance.now();
+                var timeSinceLastChange = now - (hand.lastGestureChangeTime || 0);
+                var canTrigger = timeSinceLastChange > 300;
+                if (canTrigger && fistChanged && isFistNow) {
+                    var newDrumPreset = drumManager.cycleDrumPreset();
+                    this._showPresetChangeNotification(`鼓组: ${newDrumPreset.name}`, 'drum');
+                    hand.lastGestureChangeTime = now;
+                }
+                hand.wasFist = isFistNow;
+                hand.wasFourFingersVertical = fourFingersVerticalNow;
+                this._updateGlobalNoteLengthByRightHandY(smoothedLandmarks, videoParams, canvasWidth, canvasHeight);
+                drumManager.updateActiveDrums(fingerStates);
+                this._updateHandLines(trackingIndex, smoothedLandmarks, videoParams, canvasWidth, canvasHeight, {
+                    fingerStates: fingerStates,
+                    roleLabel: 'Drums'
+                });
+                hand.lineGroup.visible = true;
+            }
+        },
+        {
+            key: "_handleMixerHands",
+            value: function _handleMixerHands(roles, context) {
+                var filterHand = roles.mixerFilter;
+                var spaceHand = roles.mixerSpace;
+                if (filterHand) {
+                    var localFilterX = Math.max(0, Math.min(1, (filterHand.palm.x - 0.53) / 0.47));
+                    var targetCutoff = mapFilterCutoff(localFilterX);
+                    this.duoEffectState.filterCutoff = smoothValue(this.duoEffectState.filterCutoff, targetCutoff, 0.18);
+                    this.musicManager.setFilterCutoff(this.duoEffectState.filterCutoff);
+                    this.hands[filterHand.trackingIndex].landmarks = filterHand.landmarks;
+                    var filterPalm = this._getScreenPalmPosition(filterHand.landmarks, context.videoParams, context.canvasWidth, context.canvasHeight);
+                    this.hands[filterHand.trackingIndex].anchorPos.set(filterPalm.x, filterPalm.y, 1);
+                    this._updateHandLines(filterHand.trackingIndex, filterHand.landmarks, context.videoParams, context.canvasWidth, context.canvasHeight, {
+                        roleLabel: 'Filter'
+                    });
+                    this.hands[filterHand.trackingIndex].lineGroup.visible = true;
+                }
+                if (spaceHand) {
+                    var targetReverb = mapReverbWet(spaceHand.palm.y);
+                    this.duoEffectState.reverbWet = smoothValue(this.duoEffectState.reverbWet, targetReverb, 0.18);
+                    this.musicManager.setReverbWet(this.duoEffectState.reverbWet);
+                    this.hands[spaceHand.trackingIndex].landmarks = spaceHand.landmarks;
+                    var spacePalm = this._getScreenPalmPosition(spaceHand.landmarks, context.videoParams, context.canvasWidth, context.canvasHeight);
+                    this.hands[spaceHand.trackingIndex].anchorPos.set(spacePalm.x, spacePalm.y, 1);
+                    this._updateHandLines(spaceHand.trackingIndex, spaceHand.landmarks, context.videoParams, context.canvasWidth, context.canvasHeight, {
+                        roleLabel: 'Space'
+                    });
+                    this.hands[spaceHand.trackingIndex].lineGroup.visible = true;
+                }
+                if (filterHand && spaceHand) {
+                    var dx = filterHand.palm.x - spaceHand.palm.x;
+                    var dy = filterHand.palm.y - spaceHand.palm.y;
+                    var distance = Math.min(1, Math.sqrt(dx * dx + dy * dy) * 2);
+                    var delay = mapDelayFromDistance(distance);
+                    this.duoEffectState.delayWet = smoothValue(this.duoEffectState.delayWet, delay.wet, 0.18);
+                    this.duoEffectState.delayFeedback = smoothValue(this.duoEffectState.delayFeedback, delay.feedback, 0.18);
+                    this.musicManager.setDelayWet(this.duoEffectState.delayWet, { manual: false });
+                    this.musicManager.setDelayFeedback(this.duoEffectState.delayFeedback);
+                } else {
+                    this.duoEffectState.delayWet = smoothValue(this.duoEffectState.delayWet, 0, 0.18);
+                    this.duoEffectState.delayFeedback = smoothValue(this.duoEffectState.delayFeedback, 0.15, 0.18);
+                    this.musicManager.setDelayWet(this.duoEffectState.delayWet, { manual: false });
+                    this.musicManager.setDelayFeedback(this.duoEffectState.delayFeedback);
+                }
+            }
+        },
+        {
+            key: "_cleanupDuoInactiveRoles",
+            value: function _cleanupDuoInactiveRoles(roles) {
+                var activeIndices = new Set(Object.values(roles).filter(Boolean).map(function (hand) {
+                    return hand.trackingIndex;
+                }));
+                if (!roles.performerMelody) {
+                    this.musicManager.stopArpeggio(0);
+                }
+                if (!roles.performerDrums) {
+                    drumManager.updateActiveDrums({});
+                }
+                for (var i = 0; i < this.hands.length; i += 1) {
+                    if (!activeIndices.has(i)) {
+                        this.hands[i].landmarks = null;
+                        if (this.hands[i].lineGroup) {
+                            this.hands[i].lineGroup.visible = false;
+                        }
+                    }
+                }
+            }
+        },
+        {
+            key: "_updateDuoOverlay",
+            value: function _updateDuoOverlay() {
+                var filterMeter = document.getElementById('duo-filter-meter');
+                var reverbMeter = document.getElementById('duo-reverb-meter');
+                var delayMeter = document.getElementById('duo-delay-meter');
+                if (filterMeter) {
+                    var filterNorm = (this.duoEffectState.filterCutoff - 300) / (8000 - 300);
+                    filterMeter.style.width = Math.max(0, Math.min(100, filterNorm * 100)) + '%';
+                }
+                if (reverbMeter) {
+                    reverbMeter.style.width = Math.max(0, Math.min(100, this.duoEffectState.reverbWet / 0.55 * 100)) + '%';
+                }
+                if (delayMeter) {
+                    delayMeter.style.width = Math.max(0, Math.min(100, this.duoEffectState.delayWet / 0.45 * 100)) + '%';
+                }
             }
         },
         {
@@ -2240,8 +2506,10 @@ export var Game = /*#__PURE__*/ function () {
                         this.waveformVisualizer.update();
                     }
                     // 低频率采样与更新（不会影响帧率）
-                    this._sampleDelayDistanceIfDue();
-                    this._updateDelayLevelIfDue();
+                    if (!this.duoModeEnabled) {
+                        this._sampleDelayDistanceIfDue();
+                        this._updateDelayLevelIfDue();
+                    }
                 }
                 this.renderer.render(this.scene, this.camera);
             }
@@ -2448,6 +2716,27 @@ export var Game = /*#__PURE__*/ function () {
                                 _this.duoModeController.setEnabled(_this.duoModeEnabled);
                                 _this._setDuoOverlayActive(_this.duoModeEnabled);
                                 if (!_this.duoModeEnabled) {
+                                    _this.musicManager.stopArpeggio(0);
+                                    drumManager.updateActiveDrums({});
+                                    if (_this.musicManager.setFilterCutoff) {
+                                        _this.musicManager.setFilterCutoff(8000);
+                                    }
+                                    if (_this.musicManager.setDelayWet) {
+                                        _this.musicManager.setDelayWet(0, { manual: false });
+                                    }
+                                    if (_this.musicManager.setDelayFeedback) {
+                                        _this.musicManager.setDelayFeedback(0.15);
+                                    }
+                                    if (_this.musicManager.setReverbWet) {
+                                        var currentSynthPreset = _this.musicManager.synthPresets && _this.musicManager.synthPresets[_this.musicManager.currentSynthIndex];
+                                        var presetReverbWet = currentSynthPreset && currentSynthPreset.effects && typeof currentSynthPreset.effects.reverbWet === 'number' ? currentSynthPreset.effects.reverbWet : 0.4;
+                                        _this.musicManager.setReverbWet(presetReverbWet);
+                                    }
+                                    _this.duoEffectState.filterCutoff = 8000;
+                                    _this.duoEffectState.reverbWet = 0.05;
+                                    _this.duoEffectState.delayWet = 0;
+                                    _this.duoEffectState.delayFeedback = 0.15;
+                                    _this._updateDuoOverlay();
                                     for (i = 2; i < _this.hands.length; i += 1) {
                                         _this.hands[i].landmarks = null;
                                         if (_this.hands[i].lineGroup) {
@@ -2478,7 +2767,21 @@ export var Game = /*#__PURE__*/ function () {
         {
             key: "_setupDuoModeController",
             value: function _setupDuoModeController() {
-                this.duoModeController = new DuoModeController();
+                var _this = this;
+                this.duoModeController = new DuoModeController({
+                    handlePerformerMelody: function (payload) {
+                        _this._handlePerformerMelodyHand(payload.hand.trackingIndex, payload.hand.landmarks, payload.context.videoParams, payload.context.canvasWidth, payload.context.canvasHeight);
+                    },
+                    handlePerformerDrums: function (payload) {
+                        _this._handlePerformerDrumHand(payload.hand.trackingIndex, payload.hand.landmarks, payload.context.videoParams, payload.context.canvasWidth, payload.context.canvasHeight);
+                    },
+                    handleMixer: function (payload) {
+                        _this._handleMixerHands(payload.roles, payload.context);
+                    },
+                    handleOverlay: function (payload) {
+                        _this._updateDuoOverlay(payload.roles);
+                    }
+                });
             }
         },
         {
