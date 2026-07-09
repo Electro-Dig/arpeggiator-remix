@@ -150,6 +150,7 @@ export var MusicManager = /*#__PURE__*/ function() {
         this.polySynth = null;
         this.reverb = null;
         this.stereoDelay = null; // Add a delay effect property
+        this.mixFilter = null;
         this.analyser = null; // For waveform visualization
         this.isStarted = false;
         // Use a Map to store the active arpeggio pattern for each hand
@@ -444,13 +445,16 @@ export var MusicManager = /*#__PURE__*/ function() {
                                 // Create a stereo delay and connect it to the reverb
                                 _this.stereoDelay = new Tone.FeedbackDelay("8n", 0.5).connect(_this.reverb);
                                 _this.stereoDelay.wet.value = 0; // Start with no delay effect
+                                _this.mixFilter = new Tone.Filter(8000, 'lowpass');
+                                _this.mixFilter.frequency.value = 8000;
                                 // Create an analyser for the waveform visualizer
                                 _this.analyser = new Tone.Analyser('waveform', 1024);
                                 // Use PolySynth to allow multiple arpeggios (one per hand) to play simultaneously.
                                 // The synth now connects to the analyser, then to the delay, which then connects to the reverb.
                                 _this.polySynth = new Tone.PolySynth(Tone.FMSynth, _this.synthPresets[_this.currentSynthIndex]);
                                 _this.polySynth.connect(_this.analyser);
-                                _this.analyser.connect(_this.stereoDelay);
+                                _this.analyser.connect(_this.mixFilter);
+                                _this.mixFilter.connect(_this.stereoDelay);
                                 // Set a conservative level to avoid clipping; note velocity controls loudness per note
                                 _this.polySynth.volume.value = -12;
                                 _this.isStarted = true;
@@ -767,13 +771,50 @@ export var MusicManager = /*#__PURE__*/ function() {
         {
             key: "setDelayWet",
             value: function setDelayWet(wet, options) {
-                var clamped = Math.max(0, Math.min(1, wet || 0));
+                var numeric = Number(wet);
+                var clamped = Math.max(0, Math.min(1, Number.isFinite(numeric) ? numeric : 0));
                 this.delayWetManual = clamped;
                 if (!options || options.manual !== false) {
                     this.delayManualOverride = true;
                 }
                 if (this.stereoDelay) {
                     this.stereoDelay.wet.value = clamped;
+                }
+            }
+        }
+        ,
+        {
+            key: "setFilterCutoff",
+            value: function setFilterCutoff(frequency) {
+                var numeric = Number(frequency);
+                var clamped = Math.max(300, Math.min(8000, Number.isFinite(numeric) ? numeric : 8000));
+                this.filterCutoff = clamped;
+                if (this.mixFilter) {
+                    this.mixFilter.frequency.value = clamped;
+                }
+            }
+        }
+        ,
+        {
+            key: "setReverbWet",
+            value: function setReverbWet(wet) {
+                var numeric = Number(wet);
+                var clamped = Math.max(0, Math.min(1, Number.isFinite(numeric) ? numeric : 0));
+                this.reverbWetManual = clamped;
+                if (this.reverb) {
+                    this.reverb.wet.value = clamped;
+                }
+            }
+        }
+        ,
+        {
+            key: "setDelayFeedback",
+            value: function setDelayFeedback(feedback) {
+                var numeric = Number(feedback);
+                var clamped = Math.max(0, Math.min(0.95, Number.isFinite(numeric) ? numeric : 0));
+                this.delayFeedbackManual = clamped;
+                if (this.stereoDelay) {
+                    this.stereoDelay.feedback.value = clamped;
                 }
             }
         }
