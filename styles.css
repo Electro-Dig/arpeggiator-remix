@@ -1045,6 +1045,16 @@ body {
         height: 45px;
         font-size: 18px;
     }
+
+    .mode-text-btn {
+        width: auto;
+        min-width: 58px;
+        height: 45px;
+        padding: 0 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        line-height: 1.1;
+    }
 }
 
 /* ===== 鼓组颜色区分样式 ===== */

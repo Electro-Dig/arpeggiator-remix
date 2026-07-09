@@ -2395,6 +2395,7 @@ export var Game = /*#__PURE__*/ function () {
                 var thumbPos = points3D[4];
                 var indexPos = points3D[8];
                 var wristPos = points3D[0];
+                var roleLabelText = controlData && controlData.roleLabel;
 
                 // 简化模式下跳过所有文本标签的渲染，但添加颜色方块标识
                 if (this.simpleMode) {
@@ -2434,8 +2435,18 @@ export var Game = /*#__PURE__*/ function () {
                 }
 
                 if (wristPos) {
+                    if (roleLabelText) {
+                        var isMixerRole = roleLabelText === 'Filter' || roleLabelText === 'Space';
+                        var roleLabel = this._createTextSprite(roleLabelText, {
+                            fontsize: 16,
+                            backgroundColor: isMixerRole ? this.labelColors.evaPurple : this.labelColors.evaGreen,
+                            textColor: this.labelColors.white
+                        });
+                        roleLabel.position.set(wristPos.x, wristPos.y + 95, 2);
+                        lineGroup.add(roleLabel);
+                    }
                     // Labels depend on which hand it is
-                    if (handIndex === 0 && thumbPos && indexPos) {
+                    if ((handIndex === 0 || roleLabelText === 'Melody') && thumbPos && indexPos) {
                         // Connecting line
                         var lineGeom = new THREE.BufferGeometry().setFromPoints([
                             thumbPos,
@@ -2473,7 +2484,7 @@ export var Game = /*#__PURE__*/ function () {
                             pitchLabel.position.set(wristPos.x, wristPos.y + 60, 2); // Position above the wrist
                             lineGroup.add(pitchLabel);
                         }
-                    } else if (handIndex === 1) {
+                    } else if (handIndex === 1 || roleLabelText === 'Drums') {
                         var fingerStates = controlData.fingerStates;
                         var activeDrums = Object.entries(fingerStates).filter(function (param) {
                             var _param = _sliced_to_array(param, 2), _ = _param[0], isUp = _param[1];
