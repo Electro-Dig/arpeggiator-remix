@@ -34,6 +34,17 @@ test('visual shell supports control deck, simple mode, and reduced motion', () =
   assert.match(main, /classList\.toggle\('simple-mode'/);
 });
 
+test('rhythm space uses a transform-only overlay and event-driven confirmed status', () => {
+  for (const id of ['rhythm-space', 'rhythm-cursor', 'rhythm-cell-label']) {
+    assert.match(html, new RegExp(`id=["']${id}["']`));
+  }
+  assert.match(styles, /\.rhythm-space/);
+  assert.match(styles, /\.simple-mode\s+\.rhythm-space/);
+  assert.match(main, /new RhythmGridOverlay/);
+  assert.match(main, /onRhythmCellChange/);
+  assert.doesNotMatch(main, /\n\s{4}observeDrumManager\(drumMgr\)[\s\S]{0,500}setInterval/);
+});
+
 test('editorial hierarchy remains restrained and semantic', () => {
   for (const className of ['hud-metric', 'operator-action__meta', 'guide-card__step', 'guide-card__notations']) {
     assert.match(html, new RegExp(`class=["'][^"']*${className}`));

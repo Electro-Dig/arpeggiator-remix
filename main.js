@@ -8,6 +8,7 @@ import { actionForThumbIntent } from './recording/recording-state.js';
 import { combineThumbPoses, GestureLatch } from './recording/thumb-gesture.js';
 import { stateManager } from './StateManager.js';
 import { container, errorHandler } from './DIContainer.js';
+import { RhythmGridOverlay } from './RhythmGridOverlay.js';
 
 // 改进的实时状态同步器 - 现在使用依赖注入
 class RealTimeStatusSync {
@@ -83,22 +84,9 @@ class RealTimeStatusSync {
     }
 
     observeDrumManager(drumMgr) {
-        let lastDrumPreset = null;
-
-        const checkInterval = setInterval(() => {
-            this.errorHandler.safeExecute(() => {
-                const currentPreset = drumMgr.getCurrentDrumPreset();
-
-                if (!lastDrumPreset || lastDrumPreset.name !== currentPreset.name) {
-                    this.stateManager.setState({
-                        drumPresetName: currentPreset.name
-                    });
-                    lastDrumPreset = currentPreset;
-                }
-            }, '鼓组状态检查');
-        }, 1000);
-
-        return () => clearInterval(checkInterval);
+        const sync = (cell) => this.stateManager.setState({ drumPresetName: cell.label });
+        sync(drumMgr.getCurrentGridCell());
+        return drumMgr.onRhythmCellChange(sync);
     }
 
     syncInitialState() {
@@ -112,12 +100,12 @@ class RealTimeStatusSync {
 
         const synthName = game.musicManager.getSynthName();
         const musicPreset = game.musicManager.getCurrentMusicPreset();
-        const drumPreset = drumMgr.getCurrentDrumPreset();
+        const drumPreset = drumMgr.getCurrentGridCell();
 
         this.stateManager.setState({
             synthName: synthName,
             musicPresetName: musicPreset.name,
-            drumPresetName: drumPreset.name,
+            drumPresetName: drumPreset.label,
             tempo: musicPreset.tempo
         });
     }
@@ -160,6 +148,7 @@ function initializeApp() {
 
         // Initialize the game with the render target
         var game = new Game(renderDiv);
+        const rhythmOverlay = new RhythmGridOverlay(document);
         const guideController = new GuideController(document);
         const recordingController = new RecordingController({
             stream: audioBus.recordingStream,
@@ -180,6 +169,12 @@ function initializeApp() {
         window.drumManager = drumManager;
         window.stateManager = stateManager;
         window.errorHandler = errorHandler;
+
+        renderDiv.addEventListener('rhythmposition', ({ detail }) => {
+            rhythmOverlay.updatePosition(detail);
+        });
+        drumManager.onRhythmCellChange((cell) => rhythmOverlay.confirm(cell));
+        rhythmOverlay.confirm(drumManager.getCurrentGridCell());
 
         document.getElementById('recording-primary')?.addEventListener('pointerdown', () => {
             audioBus.start().catch((error) => console.error('无法启动内部音频总线', error));

@@ -273,6 +273,75 @@ dt,
   color: var(--cyan);
 }
 
+.rhythm-space {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  z-index: 20;
+  width: 156px;
+  color: var(--muted);
+  font: 500 7px/1 var(--mono);
+  letter-spacing: 0.12em;
+  pointer-events: none;
+  opacity: 0.82;
+  transition: opacity 160ms ease;
+}
+
+.rhythm-space__grid {
+  position: relative;
+  width: 126px;
+  height: 126px;
+  margin: 13px 0 0 24px;
+  border: 1px solid var(--line-strong);
+  background:
+    linear-gradient(rgba(128, 231, 236, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(128, 231, 236, 0.15) 1px, transparent 1px);
+  background-size: calc(100% / 7) calc(100% / 7);
+}
+
+.rhythm-space__cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% / 7);
+  height: calc(100% / 7);
+  border: 1px solid var(--cyan);
+  background: rgba(128, 231, 236, 0.28);
+  box-shadow: 0 0 16px rgba(128, 231, 236, 0.18);
+  transform: translate3d(0, 300%, 0);
+  transition: transform 90ms linear;
+  will-change: transform;
+}
+
+.rhythm-space__axis {
+  position: absolute;
+  white-space: nowrap;
+}
+
+.rhythm-space__axis--x {
+  top: 0;
+  right: 5px;
+}
+
+.rhythm-space__axis--y {
+  top: 91px;
+  left: -41px;
+  transform: rotate(-90deg);
+}
+
+#rhythm-cell-label {
+  display: block;
+  margin-top: 9px;
+  color: var(--cyan);
+  font: 600 9px/1.2 var(--mono);
+  letter-spacing: 0.06em;
+  text-align: right;
+}
+
+.simple-mode .rhythm-space {
+  opacity: 0;
+}
+
 .control-deck {
   position: absolute;
   top: 72px;
@@ -870,6 +939,13 @@ dt,
   .social-links {
     bottom: 12px;
     left: 12px;
+  }
+
+  .rhythm-space {
+    right: 12px;
+    bottom: 12px;
+    transform: scale(0.82);
+    transform-origin: right bottom;
   }
 }
 
