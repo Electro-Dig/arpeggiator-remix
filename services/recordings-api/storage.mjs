@@ -36,6 +36,7 @@ export class RecordingStore {
   async put(body, mime) {
     const extension = EXTENSIONS.get(mime);
     if (!extension) throw httpError('Unsupported type', 415);
+    if (body.byteLength === 0) throw httpError('Empty recording', 400);
     if (body.byteLength > MAX_BYTES) throw httpError('Too large', 413);
 
     const token = randomBytes(24).toString('base64url');

@@ -1,5 +1,6 @@
 import { chooseRecordingFormat } from './recording/mime.js';
 import { initialRecordingState, reduceRecording } from './recording/recording-state.js';
+import { renderQr as defaultRenderQr } from './share/qr.js';
 
 export const RECORDING_COUNTDOWN_MS = 3_000;
 export const RECORDING_MAX_MS = 60_000;
@@ -16,6 +17,11 @@ function defaultTriggerDownload({ url, filename }) {
   document.body.appendChild(link);
   link.click();
   link.remove();
+}
+
+function defaultCopyText(value) {
+  if (!navigator?.clipboard?.writeText) throw new Error('当前浏览器不支持自动复制');
+  return navigator.clipboard.writeText(value);
 }
 
 function stateChangeEvent(detail) {
@@ -36,6 +42,8 @@ export class RecordingController extends EventTarget {
     createObjectURL = (blob) => URL.createObjectURL(blob),
     revokeObjectURL = (url) => URL.revokeObjectURL(url),
     triggerDownload = defaultTriggerDownload,
+    renderQr = defaultRenderQr,
+    copyText = defaultCopyText,
     onUploadRequest = async () => {
       throw new Error('云端分享将在下一阶段接入，当前录音仍可试听或下载');
     },
@@ -53,6 +61,8 @@ export class RecordingController extends EventTarget {
     this.createObjectURL = createObjectURL;
     this.revokeObjectURL = revokeObjectURL;
     this.triggerDownload = triggerDownload;
+    this.renderQr = renderQr;
+    this.copyText = copyText;
     this.onUploadRequest = onUploadRequest;
 
     this.state = initialRecordingState();
@@ -63,6 +73,7 @@ export class RecordingController extends EventTarget {
     this.currentFormat = null;
     this.currentFilename = '';
     this.previewUrl = '';
+    this.shareResult = null;
     this.countdownTimer = null;
     this.stopTimer = null;
     this.elapsedTimer = null;
@@ -91,6 +102,11 @@ export class RecordingController extends EventTarget {
       rerecord: byId('recording-rerecord'),
       cancel: byId('recording-cancel'),
       download: byId('recording-download'),
+      share: byId('recording-share'),
+      qr: byId('recording-qr'),
+      shareLink: byId('recording-share-link'),
+      shareExpiry: byId('recording-share-expiry'),
+      copyLink: byId('recording-copy-link'),
       status: byId('recording-status'),
       stateLabel: byId('recording-state-label'),
       timer: byId('recording-timer'),
@@ -123,6 +139,15 @@ export class RecordingController extends EventTarget {
       }
     });
     this.elements.download?.addEventListener('click', () => this.downloadCurrentTake());
+    this.elements.copyLink?.addEventListener('click', async () => {
+      if (!this.shareResult?.shareUrl) return;
+      try {
+        await this.copyText(this.shareResult.shareUrl);
+        this.elements.copyLink.textContent = '已复制链接';
+      } catch {
+        this.elements.copyLink.textContent = '请长按上方链接复制';
+      }
+    });
   }
 
   dispatch(event) {
@@ -136,6 +161,9 @@ export class RecordingController extends EventTarget {
     if (nextState === previousState) return false;
 
     this.state = nextState;
+    if (normalizedEvent.type === 'START_REQUEST' || normalizedEvent.type === 'DISCARD_REQUEST') {
+      this.clearShareResult();
+    }
     this.render();
     this.dispatchEvent(stateChangeEvent({ state: nextState, event: normalizedEvent }));
 
@@ -339,7 +367,9 @@ export class RecordingController extends EventTarget {
         mimeType: take.type,
       });
       if (this.state.phase === 'uploading') {
+        this.shareResult = result;
         this.dispatch({ type: 'UPLOAD_SUCCEEDED', result });
+        await this.showShareResult();
       }
       return result;
     } catch (error) {
@@ -373,11 +403,53 @@ export class RecordingController extends EventTarget {
 
   discardCurrentTake() {
     this.destroyPreviewUrl();
+    this.clearShareResult();
     this.currentTake = null;
     this.previousTake = null;
     this.currentFilename = '';
     this.closeDialog();
     this.render();
+  }
+
+  clearShareResult() {
+    this.shareResult = null;
+    if (this.elements.share) this.elements.share.hidden = true;
+    if (this.elements.shareLink) {
+      this.elements.shareLink.textContent = '';
+      this.elements.shareLink.removeAttribute?.('href');
+    }
+    if (this.elements.shareExpiry) this.elements.shareExpiry.textContent = '';
+    if (this.elements.copyLink) this.elements.copyLink.textContent = '复制链接';
+  }
+
+  formatShareExpiry(expiresAt) {
+    const date = new Date(Number(expiresAt));
+    if (!Number.isFinite(date.getTime())) return '链接将在上传后 24 小时失效';
+    return `有效至 ${new Intl.DateTimeFormat('zh-CN', {
+      month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    }).format(date)}`;
+  }
+
+  async showShareResult() {
+    const result = this.shareResult;
+    if (!result?.shareUrl) return;
+    this.openDialog();
+    if (this.elements.share) this.elements.share.hidden = false;
+    if (this.elements.shareLink) {
+      this.elements.shareLink.href = result.shareUrl;
+      this.elements.shareLink.textContent = result.shareUrl;
+    }
+    if (this.elements.shareExpiry) {
+      this.elements.shareExpiry.textContent = this.formatShareExpiry(result.expiresAt);
+    }
+    if (!this.elements.qr) return;
+    try {
+      await this.renderQr(this.elements.qr, result.shareUrl);
+    } catch {
+      if (this.elements.message) {
+        this.elements.message.textContent = '分享链接已生成；二维码暂时无法显示，请直接复制链接。';
+      }
+    }
   }
 
   setGestureProgress(progress) {
@@ -417,7 +489,11 @@ export class RecordingController extends EventTarget {
     }
     if (this.elements.dialog) this.elements.dialog.dataset.phase = phase;
     if (this.elements.title) {
-      this.elements.title.textContent = phase === 'review' ? '确认这段录音' : '内部混音录制';
+      this.elements.title.textContent = phase === 'shared'
+        ? '扫码带走这段录音'
+        : phase === 'review'
+          ? '确认这段录音'
+          : '内部混音录制';
     }
     if (this.elements.message) this.elements.message.textContent = messages[phase] || '';
     if (this.elements.timer) {
@@ -442,6 +518,7 @@ export class RecordingController extends EventTarget {
           : '放弃这段';
     }
     if (this.elements.preview) this.elements.preview.hidden = !hasTake || phase !== 'review';
+    if (this.elements.share) this.elements.share.hidden = phase !== 'shared' || !this.shareResult;
   }
 
   destroy() {

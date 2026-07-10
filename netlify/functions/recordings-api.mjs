@@ -23,6 +23,9 @@ export async function handleRecordingProxy(request, env, fetchImpl = fetch) {
   if (isUpload && body.byteLength > MAX_BYTES) {
     return new Response('Recording too large', { status: 413 });
   }
+  if (isUpload && body.byteLength === 0) {
+    return new Response('Empty recording', { status: 400 });
+  }
   if (isUpload && !AUDIO_TYPES.has(mime)) {
     return new Response('Unsupported recording type', { status: 415 });
   }
@@ -49,13 +52,19 @@ export async function handleRecordingProxy(request, env, fetchImpl = fetch) {
     body: isUpload ? body : undefined,
   });
 
+  const responseHeaders = {
+    'content-type': upstream.headers.get('content-type') || 'application/octet-stream',
+    'cache-control': isUpload ? 'no-store' : 'private, max-age=300',
+    'x-content-type-options': 'nosniff',
+  };
+  const expiresAt = upstream.headers.get('x-recording-expires-at');
+  if (!isUpload && expiresAt) {
+    responseHeaders['x-recording-expires-at'] = expiresAt;
+  }
+
   return new Response(upstream.body, {
     status: upstream.status,
-    headers: {
-      'content-type': upstream.headers.get('content-type') || 'application/octet-stream',
-      'cache-control': isUpload ? 'no-store' : 'private, max-age=300',
-      'x-content-type-options': 'nosniff',
-    },
+    headers: responseHeaders,
   });
 }
 

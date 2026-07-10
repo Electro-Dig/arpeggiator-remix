@@ -1,6 +1,7 @@
 import { Game } from './game.js';
 import { GuideController } from './GuideController.js';
 import { RecordingController } from './RecordingController.js';
+import { uploadRecording } from './share/recordings-client.js';
 import { audioBus } from './audio/AudioBus.js';
 import * as drumManager from './DrumManager.js';
 import { actionForThumbIntent } from './recording/recording-state.js';
@@ -162,6 +163,7 @@ function initializeApp() {
         const guideController = new GuideController(document);
         const recordingController = new RecordingController({
             stream: audioBus.recordingStream,
+            onUploadRequest: (blob) => uploadRecording(blob),
         });
         const recordingGestureLatch = new GestureLatch({ holdMs: 800, neutralMs: 1000 });
 

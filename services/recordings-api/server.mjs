@@ -106,6 +106,7 @@ export function createRecordingServer({ store, secret, nowSeconds = () => Math.f
         'content-length': String(recording.body.length),
         'cache-control': 'private, max-age=300',
         'x-content-type-options': 'nosniff',
+        'x-recording-expires-at': String(recording.expiresAt),
       });
       response.end(recording.body);
     } catch (error) {

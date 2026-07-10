@@ -66,6 +66,7 @@ test('signed upload and download round-trip audio bytes', async () => {
     });
     assert.equal(download.status, 200);
     assert.equal(download.headers.get('content-type'), 'audio/webm');
+    assert.equal(download.headers.get('x-recording-expires-at'), String(result.expiresAt));
     assert.deepEqual(new Uint8Array(await download.arrayBuffer()), body);
   });
 });

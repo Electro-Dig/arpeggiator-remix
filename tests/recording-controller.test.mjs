@@ -50,6 +50,8 @@ class FakeRecorder extends EventTarget {
 
 function createHarness({
   onUploadRequest = async () => ({}),
+  renderQr = async () => {},
+  copyText = async () => {},
   empty = false,
   withView = false,
 } = {}) {
@@ -62,9 +64,13 @@ function createHarness({
   const createdUrls = [];
   const revokedUrls = [];
   const downloads = [];
+  const qrRenders = [];
+  const copiedTexts = [];
   const viewIds = [
     'recording-dialog', 'recording-status', 'recording-state-label',
     'recording-timer', 'recording-message', 'recording-preview',
+    'recording-share', 'recording-qr', 'recording-share-link',
+    'recording-share-expiry', 'recording-copy-link',
   ];
   const elements = withView
     ? Object.fromEntries(viewIds.map((id) => [id, new FakeElement()]))
@@ -117,6 +123,14 @@ function createHarness({
     revokeObjectURL: (url) => revokedUrls.push(url),
     triggerDownload: (download) => downloads.push(download),
     onUploadRequest,
+    renderQr: async (canvas, value) => {
+      qrRenders.push({ canvas, value });
+      return renderQr(canvas, value);
+    },
+    copyText: async (value) => {
+      copiedTexts.push(value);
+      return copyText(value);
+    },
   });
 
   return {
@@ -126,6 +140,8 @@ function createHarness({
     createdUrls,
     revokedUrls,
     downloads,
+    qrRenders,
+    copiedTexts,
     elements,
   };
 }
@@ -213,6 +229,35 @@ test('failed upload preserves the approved Blob for retry or download', async ()
   assert.equal(harness.controller.state.phase, 'review');
   assert.match(harness.controller.state.error, /network unavailable/);
   assert.equal(harness.controller.currentTake, approvedTake);
+  assert.equal(harness.qrRenders.length, 0);
+});
+
+test('successful upload renders a share URL, expiry and QR without discarding the take', async () => {
+  const shareResult = {
+    token: 'a'.repeat(32),
+    expiresAt: Date.UTC(2026, 6, 11, 12, 0),
+    shareUrl: `https://app.example.test/r/${'a'.repeat(32)}`,
+  };
+  const harness = createHarness({
+    withView: true,
+    onUploadRequest: async () => shareResult,
+  });
+  beginTake(harness);
+  harness.controller.dispatch({ type: 'STOP_REQUEST' });
+  const approvedTake = harness.controller.currentTake;
+
+  await harness.controller.dispatch({ type: 'UPLOAD_REQUEST' });
+
+  assert.equal(harness.controller.state.phase, 'shared');
+  assert.equal(harness.controller.currentTake, approvedTake);
+  assert.equal(harness.elements['recording-share'].hidden, false);
+  assert.equal(harness.elements['recording-share-link'].href, shareResult.shareUrl);
+  assert.equal(harness.elements['recording-share-link'].textContent, shareResult.shareUrl);
+  assert.match(harness.elements['recording-share-expiry'].textContent, /有效至/);
+  assert.equal(harness.qrRenders.length, 1);
+  assert.equal(harness.qrRenders[0].canvas, harness.elements['recording-qr']);
+  assert.equal(harness.qrRenders[0].value, shareResult.shareUrl);
+  assert.equal(harness.elements['recording-dialog'].open, true);
 });
 
 test('download filename matches MIME and temporary object URLs are revoked', () => {

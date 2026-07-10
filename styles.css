@@ -628,6 +628,62 @@ dt,
   filter: grayscale(1) contrast(1.1);
 }
 
+.recording-share {
+  display: grid;
+  grid-template-columns: minmax(152px, 210px) minmax(0, 1fr);
+  gap: 26px;
+  align-items: center;
+  margin-top: 22px;
+}
+
+.recording-share__qr {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 8px solid #edf7f9;
+  background: #edf7f9;
+}
+
+.recording-share__details {
+  min-width: 0;
+}
+
+.recording-share__label,
+.recording-share__expiry {
+  margin: 0;
+  color: var(--muted);
+  font: 600 9px/1.5 var(--mono);
+  letter-spacing: 0.13em;
+}
+
+.recording-share__link {
+  display: block;
+  margin: 14px 0;
+  overflow: hidden;
+  color: var(--cyan);
+  font: 500 11px/1.5 var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recording-share__copy {
+  margin-top: 22px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--cyan);
+  background: transparent;
+  color: var(--text);
+  font: 600 11px/1 var(--ui);
+}
+
+.recording-dialog[data-phase="shared"] .recording-card__body {
+  min-height: 390px;
+}
+
+.recording-dialog[data-phase="shared"] .recording-card__index {
+  color: var(--cyan);
+}
+
 .recording-actions {
   display: flex;
   align-items: center;
@@ -739,6 +795,14 @@ dt,
 
   .recording-card__content {
     padding: 32px 24px;
+  }
+
+  .recording-share {
+    grid-template-columns: 1fr;
+  }
+
+  .recording-share__qr {
+    width: min(210px, 100%);
   }
 
   .recording-actions {

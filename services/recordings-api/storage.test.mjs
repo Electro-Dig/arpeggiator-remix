@@ -36,10 +36,14 @@ test('writes accepted audio and metadata with a 192-bit token', async () => {
   });
 });
 
-test('rejects invalid MIME and files over five megabytes', async () => {
+test('rejects empty files, invalid MIME and files over five megabytes', async () => {
   await withStore(async (root) => {
     const store = new RecordingStore(root);
     await store.init();
+    await assert.rejects(
+      store.put(new Uint8Array(), 'audio/webm'),
+      (error) => error.status === 400,
+    );
     await assert.rejects(
       store.put(new Uint8Array([1]), 'audio/wav'),
       (error) => error.status === 415,

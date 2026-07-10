@@ -28,6 +28,17 @@ test('rejects oversized uploads before calling upstream', async () => {
   assert.equal(fetchCalls, 0);
 });
 
+test('rejects empty uploads before calling upstream', async () => {
+  let fetchCalls = 0;
+  const response = await handleRecordingProxy(
+    uploadRequest(new Uint8Array()),
+    env,
+    async () => { fetchCalls += 1; },
+  );
+  assert.equal(response.status, 400);
+  assert.equal(fetchCalls, 0);
+});
+
 test('rejects unsupported recording MIME before calling upstream', async () => {
   let fetchCalls = 0;
   const response = await handleRecordingProxy(
@@ -76,7 +87,10 @@ test('maps a valid public token to the signed audio route', async () => {
     async (url, init) => {
       captured = { url, init };
       return new Response(new Uint8Array([9, 8]), {
-        headers: { 'content-type': 'audio/webm' },
+        headers: {
+          'content-type': 'audio/webm',
+          'x-recording-expires-at': '1234',
+        },
       });
     },
   );
@@ -84,6 +98,7 @@ test('maps a valid public token to the signed audio route', async () => {
   assert.equal(captured.url, `https://recordings.example.test/v1/recordings/${token}`);
   assert.equal(captured.init.method, 'GET');
   assert.equal(response.headers.get('content-type'), 'audio/webm');
+  assert.equal(response.headers.get('x-recording-expires-at'), '1234');
 });
 
 test('rejects malformed public tokens without calling upstream', async () => {
