@@ -69,8 +69,11 @@ export class GuideController extends EventTarget {
     const card = GUIDE_CARDS[this.index];
     if (!card) return;
     this.root.getElementById('guide-kicker').textContent = card.kicker;
+    this.root.getElementById('guide-step').textContent = String(this.index + 1).padStart(2, '0');
     this.root.getElementById('guide-title').textContent = card.title;
     this.root.getElementById('guide-body').textContent = card.body;
+    this.root.getElementById('guide-notation-primary').textContent = card.notations[0];
+    this.root.getElementById('guide-notation-secondary').textContent = card.notations[1];
     this.root.getElementById('guide-progress').textContent = `${this.index + 1} / ${GUIDE_CARDS.length}`;
     this.root.getElementById('guide-previous').disabled = this.index === 0;
     this.root.getElementById('guide-next').textContent = this.index === GUIDE_CARDS.length - 1

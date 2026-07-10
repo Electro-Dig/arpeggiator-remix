@@ -25,9 +25,22 @@ test('exhibition controls and social links remain discoverable', () => {
 });
 
 test('visual shell supports control deck, simple mode, and reduced motion', () => {
-  assert.match(styles, /--cyan:\s*#7af3ff/i);
+  assert.match(styles, /--cyan:\s*#80e7ec/i);
   assert.match(styles, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   assert.match(styles, /\.simple-mode\s+#renderDiv::after/);
   assert.match(main, /control-deck-toggle/);
   assert.match(main, /classList\.toggle\('simple-mode'/);
+});
+
+test('editorial hierarchy remains restrained and semantic', () => {
+  for (const className of ['hud-metric', 'operator-action__meta', 'guide-card__step', 'guide-card__notations']) {
+    assert.match(html, new RegExp(`class=["'][^"']*${className}`));
+  }
+  for (const id of ['guide-step', 'guide-notation-primary', 'guide-notation-secondary', 'delay-diagnostics']) {
+    assert.match(html, new RegExp(`id=["']${id}["']`));
+  }
+  assert.match(styles, /--text:\s*#f2efe8/i);
+  assert.match(styles, /--signal:\s*#ff9a4a/i);
+  assert.match(styles, /Bahnschrift/);
+  assert.doesNotMatch(styles, /\.guide-card::after/);
 });

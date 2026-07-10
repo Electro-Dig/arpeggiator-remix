@@ -178,11 +178,12 @@ function initializeApp() {
 
         // 设置简化模式按钮事件监听
         const simpleModeBtn = document.getElementById('toggle-simple-mode');
+        const simpleModeLabel = document.getElementById('simple-mode-label');
         simpleModeBtn?.addEventListener('click', () => {
             game.simpleMode = !game.simpleMode;
             document.body.classList.toggle('simple-mode', game.simpleMode);
             simpleModeBtn.setAttribute('aria-pressed', String(game.simpleMode));
-            simpleModeBtn.textContent = game.simpleMode ? '标准模式' : '简化模式';
+            simpleModeLabel.textContent = game.simpleMode ? '标准模式' : '简化模式';
         });
 
         const deckToggle = document.getElementById('control-deck-toggle');

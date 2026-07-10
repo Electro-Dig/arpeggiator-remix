@@ -25,7 +25,8 @@ class FakeElement extends EventTarget {
 function createRoot() {
   const ids = [
     'guide-dialog', 'open-guide', 'guide-previous', 'guide-next', 'guide-skip',
-    'guide-kicker', 'guide-title', 'guide-body', 'guide-progress',
+    'guide-kicker', 'guide-title', 'guide-body', 'guide-progress', 'guide-step',
+    'guide-notation-primary', 'guide-notation-secondary',
   ];
   const elements = Object.fromEntries(ids.map((id) => [id, new FakeElement()]));
   return {
@@ -48,9 +49,14 @@ test('guide opens only on demand and navigates all three cards', async () => {
   assert.equal(root.elements['guide-progress'].textContent, '1 / 3');
 
   root.elements['guide-next'].click();
+  assert.equal(root.elements['guide-step'].textContent, '02');
+  assert.equal(root.elements['guide-notation-primary'].textContent, 'L / MELODY');
+  assert.equal(root.elements['guide-notation-secondary'].textContent, 'R / RHYTHM');
   root.elements['guide-next'].click();
   assert.equal(root.elements['guide-progress'].textContent, '3 / 3');
   assert.equal(root.elements['guide-next'].textContent, '开始体验');
+  assert.equal(root.elements['guide-notation-primary'].textContent, '↑↑ / CONFIRM');
+  assert.equal(root.elements['guide-notation-secondary'].textContent, '↓↓ / CANCEL');
 
   root.elements['guide-next'].click();
   assert.equal(root.elements['guide-dialog'].open, false);

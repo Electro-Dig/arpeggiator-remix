@@ -152,6 +152,15 @@ python -m http.server
 
 Then navigate to `http://localhost:8000` in your browser.
 
+## Exhibition V2 — Visual refinement checkpoint
+
+- The archived first visual shell remains available at Git tag `exhibition-v2-ui-v1`.
+- The current HUD keeps the original camera-first layout while refining typography, contrast, status hierarchy, operator controls, and social links.
+- The three guide cards use an asymmetric step/content layout with concise action notation and no emoji.
+- The face-obscuring Delay line and NoteLen sprite were removed; diagnostics now update inside Control Deck at the existing 100 ms sampling interval.
+- The main 2048×1055 exhibition view was reviewed from a live local-camera screenshot and accepted as a clear improvement.
+- Production deployment remains prohibited until explicit final approval.
+
 ## License
 
 MIT License

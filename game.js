@@ -317,9 +317,6 @@ export var Game = /*#__PURE__*/ function () {
             new THREE.Color("#D72828"),
             new THREE.Color("#66ffff")
         ];
-        // Delay visualization group (lazy init)
-        this.delayVizGroup = null;
-
         // 添加手部平滑处理相关属性
         this.smoothingFactor = 0.7; // 平滑系数，值越大响应越快
         this.lastLandmarkPositions = []; // 存储上一帧的手部位置用于平滑
@@ -1114,9 +1111,6 @@ export var Game = /*#__PURE__*/ function () {
                                         velocity: velocity,
                                         isFist: isFistNow
                                     });
-
-                                    // 更新/创建 Delay 可视化（左/右拇指连线+数值）
-                                    _this1._updateDelayVisualization(canvasWidth, canvasHeight);
 
                                     // 🎵 简化的琶音播放逻辑 - 以根音为基础生成琶音
                                     if (!isFistNow) {
@@ -2274,104 +2268,6 @@ export var Game = /*#__PURE__*/ function () {
             }
         },
         {
-            key: "_updateDelayVisualization",
-            value: function _updateDelayVisualization(canvasWidth, canvasHeight) {
-                // 简化模式下隐藏并跳过 Delay 可视化更新
-                if (this.simpleMode) {
-                    if (this.delayVizGroup) {
-                        this.delayVizGroup.visible = false;
-                    }
-                    return;
-                }
-                if (this.delayVizGroup) {
-                    this.delayVizGroup.visible = true;
-                }
-
-                // 需要两只手的拇指指尖
-                if (!this.hands || this.hands.length < 2) return;
-                var lmA = (this.hands[0] && this.hands[0].landmarks) ? this.hands[0].landmarks : null;
-                var lmB = (this.hands[1] && this.hands[1].landmarks) ? this.hands[1].landmarks : null;
-                if (!lmA || !lmB || lmA.length < 21 || lmB.length < 21) return;
-
-                var thumbA = lmA[4];
-                var thumbB = lmB[4];
-                if (!thumbA || !thumbB) return;
-
-                // 将归一化坐标转换到渲染坐标（与 _updateHandLines 同一坐标系）
-                var videoParams = this._getVisibleVideoParameters();
-                if (!videoParams) return;
-                var toCanvasXY = (lm) => {
-                    var lmOriginalX = lm.x * videoParams.videoNaturalWidth;
-                    var lmOriginalY = lm.y * videoParams.videoNaturalHeight;
-                    var normX = (lmOriginalX - videoParams.offsetX) / videoParams.visibleWidth;
-                    var normY = (lmOriginalY - videoParams.offsetY) / videoParams.visibleHeight;
-                    var x = (1 - normX) * canvasWidth - canvasWidth / 2;
-                    var y = (1 - normY) * canvasHeight - canvasHeight / 2;
-                    return new THREE.Vector3(x, y, 2);
-                };
-                var pA = toCanvasXY(thumbA);
-                var pB = toCanvasXY(thumbB);
-
-                // 延迟可视化容器（一次性创建）
-                if (!this.delayVizGroup) {
-                    this.delayVizGroup = new THREE.Group();
-                    this.scene.add(this.delayVizGroup);
-                    // 线
-                    var mat = new THREE.LineBasicMaterial({ color: 0x7B4394, linewidth: 2 });
-                    var geom = new THREE.BufferGeometry();
-                    geom.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 2, 0, 0, 2], 3));
-                    var line = new THREE.Line(geom, mat);
-                    line.name = 'delay_line';
-                    this.delayVizGroup.add(line);
-                    // 文本（用精灵显示数值）
-                    var label = this._createTextSprite('Delay: --', {
-                        fontsize: 16,
-                        backgroundColor: this.labelColors.evaPurple,
-                        textColor: this.labelColors.white
-                    });
-                    label.name = 'delay_label';
-                    this.delayVizGroup.add(label);
-                }
-
-                // 更新线条
-                var lineObj = this.delayVizGroup.getObjectByName('delay_line');
-                if (lineObj && lineObj.geometry && lineObj.geometry.attributes && lineObj.geometry.attributes.position) {
-                    var pos = lineObj.geometry.attributes.position.array;
-                    pos[0] = pA.x; pos[1] = pA.y; pos[2] = 2;
-                    pos[3] = pB.x; pos[4] = pB.y; pos[5] = 2;
-                    lineObj.geometry.attributes.position.needsUpdate = true;
-                }
-
-                // 计算显示文本（距离、Level、时值、湿度）
-                var normDx = Math.abs(thumbA.x - thumbB.x); // 归一化的水平距离（0..1）
-                var level = this.delayCtrl ? this.delayCtrl.level : 0;
-                var beatsMap = [0, 0.25, 0.5, 0.75, 1.0];
-                var beats = beatsMap[level];
-                // 当前湿度按 Level/4 * baseWet（与自动逻辑一致）
-                var wet = (level / 4) * (this.delayCtrl ? this.delayCtrl.baseWet : 0.18);
-                // 同屏显示 NoteLen 档位
-                var nl = (typeof this._currentNoteLenLevelApplied === 'number') ? this._currentNoteLenLevelApplied : 4;
-                var nlFactor = (this.noteLenFactors && this.noteLenFactors[nl] !== undefined) ? this.noteLenFactors[nl] : 1.0;
-                var text = `Dx: ${normDx.toFixed(3)} | Delay L${level} ${beats.toFixed(2)}b | NoteLen L${nl} (${nlFactor.toFixed(2)}x)`;
-
-                var labelObj = this.delayVizGroup.getObjectByName('delay_label');
-                if (labelObj) {
-                    // 重新创建精灵以更新文字（简单可靠）
-                    this.delayVizGroup.remove(labelObj);
-                    var newLabel = this._createTextSprite(text, {
-                        fontsize: 16,
-                        backgroundColor: this.labelColors.evaPurple,
-                        textColor: this.labelColors.white
-                    });
-                    newLabel.name = 'delay_label';
-                    // 放在连线中点稍上方
-                    var mid = new THREE.Vector3((pA.x + pB.x) / 2, (pA.y + pB.y) / 2 + 20, 2);
-                    newLabel.position.copy(mid);
-                    this.delayVizGroup.add(newLabel);
-                }
-            }
-        },
-        {
             // 右手上下位置 → 全局 NoteLen 五档（0.2,0.4,0.6,0.8,1.0）;
             // 使用可见视频区域的 Y 来划分 5 个等距区间
             key: "_updateGlobalNoteLengthByRightHandY",
@@ -2503,6 +2399,7 @@ export var Game = /*#__PURE__*/ function () {
                 var xB = (lmB && lmB[4]) ? lmB[4].x : undefined;
                 if (typeof xA !== 'number' || typeof xB !== 'number') return;
                 var d = Math.abs(xA - xB);
+                this._updateDelayDiagnostics(d);
                 // 维护环形缓冲（最大 50）
                 var buf = this.delayCtrl.buffer;
                 buf.push(d);
@@ -2527,6 +2424,23 @@ export var Game = /*#__PURE__*/ function () {
                         if (label) label.textContent = 'Level: 0';
                     }
                 }
+            }
+        },
+        {
+            key: "_updateDelayDiagnostics",
+            value: function _updateDelayDiagnostics(distance) {
+                var deck = document.getElementById('control-deck');
+                if (!deck || deck.hidden) return;
+                var level = this.delayCtrl && typeof this.delayCtrl.level === 'number' ? this.delayCtrl.level : 0;
+                var beats = [0, 0.25, 0.5, 0.75, 1][level] || 0;
+                var noteLevel = typeof this._currentNoteLenLevelApplied === 'number' ? this._currentNoteLenLevelApplied : 4;
+                var noteFactor = this.noteLenFactors && this.noteLenFactors[noteLevel] !== undefined ? this.noteLenFactors[noteLevel] : 1;
+                var distanceValue = document.getElementById('delay-distance-value');
+                var levelValue = document.getElementById('delay-level-value');
+                var noteValue = document.getElementById('note-length-value');
+                if (distanceValue) distanceValue.textContent = Number(distance).toFixed(3);
+                if (levelValue) levelValue.textContent = `L${level} / ${beats.toFixed(2)}B`;
+                if (noteValue) noteValue.textContent = `L${noteLevel} / ${noteFactor.toFixed(2)}×`;
             }
         },
         {
