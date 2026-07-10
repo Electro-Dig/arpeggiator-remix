@@ -235,6 +235,8 @@ export var Game = /*#__PURE__*/ function () {
         this.handLandmarker = null;
         this.lastVideoTime = -1;
         this.hands = []; // Stores data about detected hands (landmarks, anchor position, line group)
+        this.handsBySide = { Left: null, Right: null };
+        this.interactionSuppressed = false;
         // 初始化空的手部对象作为备用，防止undefined错误
         this.handsInitialized = false;
         this.handLineMaterial = null; // Material for hand lines
@@ -1001,6 +1003,18 @@ export var Game = /*#__PURE__*/ function () {
             }
         },
         {
+            key: "setInteractionSuppressed",
+            value: function setInteractionSuppressed(value) {
+                var nextValue = Boolean(value);
+                if (nextValue === this.interactionSuppressed) return;
+                this.interactionSuppressed = nextValue;
+                if (nextValue) {
+                    this.musicManager.stopArpeggio(0);
+                    drumManager.updateActiveDrums({});
+                }
+            }
+        },
+        {
             // _startSpawning, _scheduleNextSpawn, _stopSpawning, _spawnGhost methods removed.
             key: "_updateHands",
             value: function _updateHands() {
@@ -1025,8 +1039,10 @@ export var Game = /*#__PURE__*/ function () {
                             }
                             var hand = _this1.hands[i];
                             var wasVisible = hand.landmarks !== null;
-                            if (results.landmarks && results.landmarks[i]) {
-                                var currentRawLandmarks = results.landmarks[i];
+                            var detectedHand = detectedBySlot[i];
+                            if (detectedHand) {
+                                var currentRawLandmarks = detectedHand.landmarks;
+                                hand.side = detectedHand.side;
                                 if (!_this1.lastLandmarkPositions[i] || _this1.lastLandmarkPositions[i].length !== currentRawLandmarks.length) {
                                     _this1.lastLandmarkPositions[i] = currentRawLandmarks.map(function (lm) {
                                         return _object_spread({}, lm);
@@ -1052,10 +1068,11 @@ export var Game = /*#__PURE__*/ function () {
                                 var handX = (1 - normX_visible) * canvasWidth - canvasWidth / 2;
                                 var handY = (1 - normY_visible) * canvasHeight - canvasHeight / 2;
                                 hand.anchorPos.set(handX, handY, 1);
+                                var interactionsEnabled = !_this1.interactionSuppressed;
                                 if (i === 0) {
                                     // --- Music & Gesture Control ---
                                     var isFistNow = _this1._isFist(smoothedLandmarks);
-                                    if (isFistNow && !hand.isFist) {
+                                    if (interactionsEnabled && isFistNow && !hand.isFist) {
                                         // Fist gesture was just made
                                         _this1.musicManager.cycleSynth();
                                         _this1.musicManager.stopArpeggio(i); // Stop any old arpeggio
@@ -1069,7 +1086,7 @@ export var Game = /*#__PURE__*/ function () {
                                     var now = performance.now();
                                     var timeSinceLastChange = now - (hand.lastGestureChangeTime || 0);
                                     var canTrigger = timeSinceLastChange > 300; // 300ms防抖
-                                    if (canTrigger && fourFingersChanged && fourFingersVerticalNow) {
+                                    if (interactionsEnabled && canTrigger && fourFingersChanged && fourFingersVerticalNow) {
                                         var newMusicPreset = _this1.musicManager.cycleMusicPreset();
                                         _this1._showPresetChangeNotification(`琶音风格: ${newMusicPreset.name} (${newMusicPreset.tempo} BPM)`, 'music');
                                         hand.lastGestureChangeTime = now;
@@ -1113,7 +1130,9 @@ export var Game = /*#__PURE__*/ function () {
                                     });
 
                                     // 🎵 简化的琶音播放逻辑 - 以根音为基础生成琶音
-                                    if (!isFistNow) {
+                                    if (!interactionsEnabled) {
+                                        _this1.musicManager.stopArpeggio(i);
+                                    } else if (!isFistNow) {
                                         var arpeggioIsActive = _this1.musicManager.activePatterns.has(i);
 
                                         if (!wasVisible || !arpeggioIsActive) {
@@ -1144,7 +1163,7 @@ export var Game = /*#__PURE__*/ function () {
                                     var canTrigger = timeSinceLastChange > 300; // 300ms防抖
 
                                     // 执行切换逻辑
-                                    if (canTrigger && fistChanged && isFistNow) {
+                                    if (interactionsEnabled && canTrigger && fistChanged && isFistNow) {
                                         // 握拳：切换鼓组预设
                                         var newDrumPreset = drumManager.cycleDrumPreset();
                                         _this1._showPresetChangeNotification(`鼓组: ${newDrumPreset.name}`, 'drum');
@@ -1156,10 +1175,12 @@ export var Game = /*#__PURE__*/ function () {
                                     hand.wasFourFingersVertical = fourFingersVerticalNow;
 
                                     // 实时：右手上下位置 → 全局 NoteLen 档位（5档），按当前帧计算
-                                    _this1._updateGlobalNoteLengthByRightHandY(smoothedLandmarks, videoParams, canvasWidth, canvasHeight);
+                                    if (interactionsEnabled) {
+                                        _this1._updateGlobalNoteLengthByRightHandY(smoothedLandmarks, videoParams, canvasWidth, canvasHeight);
+                                    }
 
                                     // 更新鼓组
-                                    drumManager.updateActiveDrums(fingerStates);
+                                    drumManager.updateActiveDrums(interactionsEnabled ? fingerStates : {});
 
                                     // 更新可视化
                                     _this1._updateHandLines(i, smoothedLandmarks, videoParams, canvasWidth, canvasHeight, {
@@ -1182,12 +1203,39 @@ export var Game = /*#__PURE__*/ function () {
                             }
                         };
                         var results = this.handLandmarker.detectForVideo(this.videoElement, performance.now());
+                        var detectedBySlot = [null, null];
+                        (results.landmarks || []).forEach(function(landmarks, detectedIndex) {
+                            var side = results.handednesses && results.handednesses[detectedIndex]
+                                && results.handednesses[detectedIndex][0]
+                                && results.handednesses[detectedIndex][0].categoryName;
+                            var slot = side === 'Left' ? 0 : side === 'Right' ? 1 : detectedIndex;
+                            if (slot < 2 && !detectedBySlot[slot]) {
+                                detectedBySlot[slot] = {
+                                    side: slot === 0 ? 'Left' : 'Right',
+                                    landmarks: landmarks
+                                };
+                            }
+                        });
                         var videoParams = this._getVisibleVideoParameters();
                         if (!videoParams) return;
                         var canvasWidth = this.renderDiv.clientWidth;
                         var canvasHeight = this.renderDiv.clientHeight;
                         // 注意：现在使用MusicManager中的预设系统，这里的硬编码音阶已被移除
                         for (var i = 0; i < this.hands.length; i++)_this1 = this, _loop(i);
+                        this.handsBySide = {
+                            Left: this.hands[0] && this.hands[0].landmarks ? {
+                                side: 'Left', landmarks: this.hands[0].landmarks
+                            } : null,
+                            Right: this.hands[1] && this.hands[1].landmarks ? {
+                                side: 'Right', landmarks: this.hands[1].landmarks
+                            } : null
+                        };
+                        this.renderDiv.dispatchEvent(new CustomEvent('handframe', {
+                            detail: {
+                                handsBySide: this.handsBySide,
+                                now: performance.now()
+                            }
+                        }));
                     } catch (error) {
                         console.error("Error during hand detection:", error);
                         // 优雅降级：清理无效的手部数据
@@ -2272,6 +2320,7 @@ export var Game = /*#__PURE__*/ function () {
             // 使用可见视频区域的 Y 来划分 5 个等距区间
             key: "_updateGlobalNoteLengthByRightHandY",
             value: function _updateGlobalNoteLengthByRightHandY(rightHandLandmarks, videoParams, canvasWidth, canvasHeight) {
+                if (this.interactionSuppressed) return;
                 if (!rightHandLandmarks || rightHandLandmarks.length < 21) return;
                 // 取右手中指 MCP 作为手掌代表（更稳定）
                 var palm = rightHandLandmarks[9];
@@ -2387,6 +2436,7 @@ export var Game = /*#__PURE__*/ function () {
         {
             key: "_sampleDelayDistanceIfDue",
             value: function _sampleDelayDistanceIfDue() {
+                if (this.interactionSuppressed) return;
                 var now = performance.now();
                 if (now - (this.delayCtrl.lastSampleTs || 0) < this.delayCtrl.sampleIntervalMs) return;
                 this.delayCtrl.lastSampleTs = now;
@@ -2461,6 +2511,7 @@ export var Game = /*#__PURE__*/ function () {
         {
             key: "_updateDelayLevelIfDue",
             value: function _updateDelayLevelIfDue() {
+                if (this.interactionSuppressed) return;
                 if (!this.delayCtrl.active || !this.delayCtrl.auto) return;
                 var now = performance.now();
                 if (now - (this.delayCtrl.lastUpdateTs || 0) < this.delayCtrl.updateCooldownMs) return;
@@ -2491,6 +2542,7 @@ export var Game = /*#__PURE__*/ function () {
         {
             key: "_updateNoteLengthLevelIfDue",
             value: function _updateNoteLengthLevelIfDue() {
+                if (this.interactionSuppressed) return;
                 if (!this.noteLenCtrl.active) return;
                 var now = performance.now();
                 if (now - (this.noteLenCtrl.lastUpdateTs || 0) < this.noteLenCtrl.updateCooldownMs) return;
