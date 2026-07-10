@@ -219,7 +219,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'; // Import GLTFLoader
 import { HandLandmarker, FilesetResolver } from 'https://esm.sh/@mediapipe/tasks-vision@0.10.14';
 import { MusicManager } from './MusicManager.js'; // Import the MusicManager
-import * as Tone from 'https://esm.sh/tone'; // Import Tone to access Transport
+import * as Tone from './audio/tone.js'; // Use the shared pinned Tone module.
 import * as drumManager from './DrumManager.js'; // Import the new drum manager module
 import { WaveformVisualizer } from './WaveformVisualizer.js'; // Import the new waveform visualizer
 export var Game = /*#__PURE__*/ function () {

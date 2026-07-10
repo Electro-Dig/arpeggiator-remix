@@ -44,7 +44,8 @@ function _unsupported_iterable_to_array(o, minLen) {
     if (n === "Map" || n === "Set") return Array.from(n);
     if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _array_like_to_array(o, minLen);
 }
-import * as Tone from 'https://esm.sh/tone';
+import * as Tone from './audio/tone.js';
+import { audioBus } from './audio/AudioBus.js';
 // --- Module State ---
 var players = null;
 var isLoaded = false;
@@ -197,7 +198,8 @@ var fingerToDrumMap = {
                 console.error("Error loading drum samples:", error);
                 reject(error);
             }
-        }).toDestination();
+        });
+        players.connect(audioBus.input);
     });
 }
 /**

@@ -141,7 +141,8 @@ function _ts_generator(thisArg, body) {
         };
     }
 }
-import * as Tone from 'https://esm.sh/tone';
+import * as Tone from './audio/tone.js';
+import { audioBus } from './audio/AudioBus.js';
 // A simple manager for our Tone.js based music generation
 export var MusicManager = /*#__PURE__*/ function() {
     "use strict";
@@ -426,31 +427,24 @@ export var MusicManager = /*#__PURE__*/ function() {
                                 ];
                                 return [
                                     4,
-                                    Tone.start()
+                                    audioBus.start()
                                 ];
                             case 1:
                                 _state.sent();
-                                // Install a master limiter once to prevent clipping across the entire mix
-                                if (!_this._limiterInstalled) {
-                                    _this.masterLimiter = new Tone.Limiter(-1);
-                                    Tone.Destination.chain(_this.masterLimiter);
-                                    _this._limiterInstalled = true;
-                                }
                                 _this.reverb = new Tone.Reverb({
                                     decay: 5,
                                     preDelay: 0.0,
                                     wet: 0.4
-                                }).toDestination();
+                                }).connect(audioBus.input);
                                 // Create a stereo delay and connect it to the reverb
                                 _this.stereoDelay = new Tone.FeedbackDelay("8n", 0.5).connect(_this.reverb);
                                 _this.stereoDelay.wet.value = 0; // Start with no delay effect
-                                // Create an analyser for the waveform visualizer
-                                _this.analyser = new Tone.Analyser('waveform', 1024);
+                                // Visualize the complete master mix, including drums.
+                                _this.analyser = audioBus.analyser;
                                 // Use PolySynth to allow multiple arpeggios (one per hand) to play simultaneously.
-                                // The synth now connects to the analyser, then to the delay, which then connects to the reverb.
+                                // The synth feeds the effects chain, then the shared master bus.
                                 _this.polySynth = new Tone.PolySynth(Tone.FMSynth, _this.synthPresets[_this.currentSynthIndex]);
-                                _this.polySynth.connect(_this.analyser);
-                                _this.analyser.connect(_this.stereoDelay);
+                                _this.polySynth.connect(_this.stereoDelay);
                                 // Set a conservative level to avoid clipping; note velocity controls loudness per note
                                 _this.polySynth.volume.value = -12;
                                 _this.isStarted = true;
@@ -593,8 +587,8 @@ export var MusicManager = /*#__PURE__*/ function() {
                 var newPreset = this.synthPresets[this.currentSynthIndex];
                 // Create the new synth but don't connect it yet
                 this.polySynth = new Tone.PolySynth(Tone.FMSynth, newPreset);
-                // Re-establish the audio chain: synth -> analyser -> delay
-                this.polySynth.connect(this.analyser);
+                // Re-establish the audio chain: synth -> delay -> reverb -> master bus
+                this.polySynth.connect(this.stereoDelay);
                 this.polySynth.volume.value = -12; // Conservative headroom
                 var _newPreset_effects_reverbWet;
                 // Adjust global effects based on the new preset's settings
@@ -634,8 +628,8 @@ export var MusicManager = /*#__PURE__*/ function() {
                 // Create the new synth but don't connect it yet
                 this.polySynth = new Tone.PolySynth(Tone.FMSynth, newPreset);
                 
-                // Re-establish the audio chain: synth -> analyser -> delay
-                this.polySynth.connect(this.analyser);
+                // Re-establish the audio chain: synth -> delay -> reverb -> master bus
+                this.polySynth.connect(this.stereoDelay);
                 this.polySynth.volume.value = -12; // Conservative headroom
                 
                 var _newPreset_effects_reverbWet;
