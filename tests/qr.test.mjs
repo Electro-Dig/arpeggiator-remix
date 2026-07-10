@@ -1,23 +1,52 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { renderQr } from '../share/qr.js';
+import { QR_RECT, renderQr } from '../share/qr.js';
 
-test('loads and renders the QR implementation only when called', async () => {
-  const canvas = { id: 'qr' };
-  let loadCalls = 0;
-  let rendered;
-  const loadQr = async () => {
-    loadCalls += 1;
-    return {
-      toCanvas: async (...args) => { rendered = args; },
-    };
+test('lazy-loads the selected poster and composites an offscreen QR into its safe zone', async () => {
+  const drawCalls = [];
+  const canvas = {
+    width: 0,
+    height: 0,
+    getContext: () => ({ drawImage: (...args) => drawCalls.push(args) }),
+  };
+  const template = { naturalWidth: 1254, naturalHeight: 1254 };
+  const qrCanvas = { id: 'offscreen-qr' };
+  let templateLoads = 0;
+  let qrLoads = 0;
+  let qrRender;
+
+  const dependencies = {
+    loadTemplate: async () => {
+      templateLoads += 1;
+      return template;
+    },
+    createCanvas: () => qrCanvas,
+    loadQr: async () => {
+      qrLoads += 1;
+      return {
+        toCanvas: async (...args) => { qrRender = args; },
+      };
+    },
   };
 
-  assert.equal(loadCalls, 0);
-  await renderQr(canvas, 'https://app.example.test/r/token', loadQr);
-  assert.equal(loadCalls, 1);
-  assert.equal(rendered[0], canvas);
-  assert.equal(rendered[1], 'https://app.example.test/r/token');
-  assert.equal(rendered[2].width, 280);
+  assert.equal(templateLoads, 0);
+  assert.equal(qrLoads, 0);
+  await renderQr(canvas, 'https://app.example.test/r/token', dependencies);
+
+  assert.equal(templateLoads, 1);
+  assert.equal(qrLoads, 1);
+  assert.equal(canvas.width, 1254);
+  assert.equal(canvas.height, 1254);
+  assert.equal(qrRender[0], qrCanvas);
+  assert.equal(qrRender[1], 'https://app.example.test/r/token');
+  assert.equal(qrRender[2].width, QR_RECT.size);
+  assert.deepEqual(drawCalls[0], [template, 0, 0, 1254, 1254]);
+  assert.deepEqual(drawCalls[1], [
+    qrCanvas,
+    QR_RECT.x,
+    QR_RECT.y,
+    QR_RECT.size,
+    QR_RECT.size,
+  ]);
 });
