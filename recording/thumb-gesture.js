@@ -43,6 +43,13 @@ export class GestureLatch {
     this.lastNow = 0;
   }
 
+  requireNeutral() {
+    this.candidate = 'neutral';
+    this.since = 0;
+    this.armed = false;
+    this.neutralSince = 0;
+  }
+
   update(intent, now) {
     this.lastNow = now;
     if (!this.armed) {

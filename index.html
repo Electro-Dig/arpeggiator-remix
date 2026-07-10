@@ -46,6 +46,9 @@
       </dl>
 
       <nav class="operator-actions" aria-label="现场操作">
+        <button id="recording-primary" class="operator-action operator-action--record" type="button" data-phase="idle">
+          <span id="recording-primary-label">开始录音</span><small class="operator-action__meta">RECORD / 60 SEC</small>
+        </button>
         <button id="open-guide" class="operator-action" type="button">
           <span>动作指引</span><small class="operator-action__meta">GUIDE</small>
         </button>
@@ -60,6 +63,10 @@
 
     <aside id="control-deck" class="control-deck" hidden aria-label="高级控制">
       <p class="control-deck__title">CONTROL DECK</p>
+      <section class="control-section control-section--recording">
+        <label><input id="recording-gestures-enabled" type="checkbox" checked> 录音手势</label>
+        <p>双手 👍 保持 0.8 秒确认；双手 👎 取消或重录。按钮始终可用。</p>
+      </section>
       <section id="delay-control-panel" class="control-section">
         <label><input id="delay-auto-toggle" type="checkbox" checked> AUTO DELAY</label>
         <label>DELAY WET
@@ -113,6 +120,33 @@
         <button id="guide-skip" class="guide-action guide-action--quiet" type="button">跳过</button>
         <button id="guide-next" class="guide-action guide-action--primary" type="button">下一张</button>
       </footer>
+    </dialog>
+
+    <dialog id="recording-dialog" class="recording-dialog" aria-labelledby="recording-dialog-title">
+      <article class="recording-card">
+        <header class="recording-card__header">
+          <p>INTERNAL MASTER / TAKE 01</p>
+          <span>MAX 60 SEC</span>
+        </header>
+        <section class="recording-card__body">
+          <span class="recording-card__index" aria-hidden="true">REC</span>
+          <div class="recording-card__content">
+            <p class="recording-card__kicker">ARPEGGIATOR REMIX</p>
+            <h2 id="recording-dialog-title">内部混音录制</h2>
+            <p id="recording-message" class="recording-card__message" role="status" aria-live="polite"></p>
+            <div id="recording-hold-progress" class="hold-progress" hidden aria-hidden="true">
+              <span></span>
+            </div>
+            <audio id="recording-preview" controls preload="metadata" hidden></audio>
+          </div>
+        </section>
+        <footer class="recording-actions">
+          <button id="recording-confirm" class="recording-action recording-action--primary" type="button" hidden>确认并生成二维码</button>
+          <button id="recording-rerecord" class="recording-action" type="button" hidden>重新录制</button>
+          <button id="recording-download" class="recording-action" type="button" hidden>下载到这台电脑</button>
+          <button id="recording-cancel" class="recording-action recording-action--quiet" type="button">取消</button>
+        </footer>
+      </article>
     </dialog>
 
     <div class="compatibility-status" hidden aria-hidden="true">

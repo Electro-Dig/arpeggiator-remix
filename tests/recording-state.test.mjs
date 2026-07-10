@@ -28,6 +28,7 @@ test('happy path reaches review and upload', () => {
 test('cancel and rerecord return to a safe idle or countdown path', () => {
   const countdown = step(initialRecordingState(), 'START_REQUEST');
   assert.equal(step(countdown, 'CANCEL_REQUEST').phase, 'idle');
+  assert.equal(step(countdown, 'CANCEL_TO_REVIEW').phase, 'review');
 
   const review = { phase: 'review', error: '', pendingRerecord: false };
   assert.equal(step(review, 'RERECORD_REQUEST').phase, 'countdown');
@@ -51,6 +52,16 @@ test('upload failure returns to review with an actionable error', () => {
     error: '网络暂时不可用',
     pendingRerecord: false,
   });
+});
+
+test('an empty recorder result returns to review instead of exposing a broken file', () => {
+  const state = step(
+    { phase: 'stopping', error: '', pendingRerecord: false },
+    'RECORDER_EMPTY',
+    { error: '未捕获到内部声音' },
+  );
+  assert.equal(state.phase, 'review');
+  assert.equal(state.error, '未捕获到内部声音');
 });
 
 test('invalid events preserve object identity', () => {

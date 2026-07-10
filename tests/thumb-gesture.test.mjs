@@ -78,6 +78,17 @@ test('changing intent restarts the hold timer', () => {
   assert.equal(latch.update('both-down', 1699), 'both-down');
 });
 
+test('guide close can require a full neutral re-arm', () => {
+  const latch = new GestureLatch({ holdMs: 800, neutralMs: 1000 });
+  latch.requireNeutral();
+  assert.equal(latch.update('both-up', 1000), null);
+  assert.equal(latch.update('neutral', 1100), null);
+  assert.equal(latch.update('neutral', 2099), null);
+  assert.equal(latch.update('neutral', 2100), null);
+  assert.equal(latch.update('both-up', 2101), null);
+  assert.equal(latch.update('both-up', 2901), 'both-up');
+});
+
 test('game frames are normalized by handedness and emitted once per result', async () => {
   const source = await readFile(new URL('../game.js', import.meta.url), 'utf8');
   assert.match(source, /results\.handednesses/);

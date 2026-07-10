@@ -1,6 +1,10 @@
 import { Game } from './game.js';
 import { GuideController } from './GuideController.js';
+import { RecordingController } from './RecordingController.js';
+import { audioBus } from './audio/AudioBus.js';
 import * as drumManager from './DrumManager.js';
+import { actionForThumbIntent } from './recording/recording-state.js';
+import { combineThumbPoses, GestureLatch } from './recording/thumb-gesture.js';
 import { stateManager } from './StateManager.js';
 import { container, errorHandler } from './DIContainer.js';
 
@@ -156,18 +160,63 @@ function initializeApp() {
         // Initialize the game with the render target
         var game = new Game(renderDiv);
         const guideController = new GuideController(document);
+        const recordingController = new RecordingController({
+            stream: audioBus.recordingStream,
+        });
+        const recordingGestureLatch = new GestureLatch({ holdMs: 800, neutralMs: 1000 });
 
         // 注册核心服务
         container.register('game', () => game, { singleton: true });
         container.register('guideController', () => guideController, { singleton: true });
+        container.register('recordingController', () => recordingController, { singleton: true });
         container.register('drumManager', () => drumManager, { singleton: true });
 
         // Make everything available globally (向后兼容)
         window.game = game;
         window.guideController = guideController;
+        window.recordingController = recordingController;
         window.drumManager = drumManager;
         window.stateManager = stateManager;
         window.errorHandler = errorHandler;
+
+        document.getElementById('recording-primary')?.addEventListener('pointerdown', () => {
+            audioBus.start().catch((error) => console.error('无法启动内部音频总线', error));
+        });
+
+        const updateGuideAvailability = (phase) => {
+            guideController.setRecordingBusy(!['idle', 'shared'].includes(phase));
+        };
+        updateGuideAvailability(recordingController.state.phase);
+        recordingController.addEventListener('statechange', ({ detail }) => {
+            updateGuideAvailability(detail.state.phase);
+        });
+
+        guideController.addEventListener('contextchange', ({ detail }) => {
+            if (detail.active) {
+                game.setInteractionSuppressed(true);
+            } else {
+                recordingGestureLatch.requireNeutral();
+            }
+        });
+
+        renderDiv.addEventListener('handframe', ({ detail }) => {
+            const intent = combineThumbPoses(detail.handsBySide);
+            const trigger = recordingGestureLatch.update(intent, detail.now);
+            recordingController.setGestureProgress(recordingGestureLatch.progress);
+
+            if (guideController.dialog?.open) {
+                game.setInteractionSuppressed(true);
+                if (trigger === 'both-up') guideController.skipFromGesture();
+                return;
+            }
+
+            const gesturesEnabled = document.getElementById('recording-gestures-enabled')?.checked;
+            const action = gesturesEnabled && trigger
+                ? actionForThumbIntent(recordingController.state.phase, trigger)
+                : null;
+            game.setInteractionSuppressed(Boolean(action) || intent !== 'neutral');
+            if (action) recordingController.dispatch({ type: action });
+        });
 
         // 启动状态同步
         setTimeout(() => {

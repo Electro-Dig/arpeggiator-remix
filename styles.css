@@ -124,7 +124,8 @@ button:disabled {
 .hud button,
 .control-deck,
 .social-links,
-.guide-dialog {
+.guide-dialog,
+.recording-dialog {
   pointer-events: auto;
 }
 
@@ -215,6 +216,18 @@ dt,
   color: var(--cyan);
 }
 
+.operator-action--record {
+  border-top-color: rgba(255, 77, 95, 0.72);
+}
+
+.operator-action--record .operator-action__meta {
+  color: rgba(255, 123, 137, 0.82);
+}
+
+.operator-action--record[data-phase="recording"] {
+  color: var(--record);
+}
+
 .operator-action__meta {
   color: var(--muted);
   font: 500 8px/1 var(--mono);
@@ -282,6 +295,17 @@ dt,
   grid-template-columns: minmax(88px, auto) 1fr;
   align-items: center;
   gap: 12px;
+}
+
+.control-section--recording p {
+  margin: 0;
+  color: var(--body-text);
+  font: 400 11px/1.7 var(--ui);
+  letter-spacing: 0.02em;
+}
+
+.control-section--recording input {
+  accent-color: var(--record);
 }
 
 .control-section input[type="range"] {
@@ -472,6 +496,158 @@ dt,
   letter-spacing: 0.15em;
 }
 
+.recording-dialog {
+  width: min(720px, calc(100vw - 48px));
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: rgba(8, 11, 14, 0.98);
+  color: var(--text);
+  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.78);
+}
+
+.recording-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(6px);
+}
+
+.recording-card {
+  margin: 0;
+  background:
+    linear-gradient(125deg, rgba(255, 77, 95, 0.045), transparent 46%),
+    var(--panel);
+}
+
+.recording-card__header {
+  display: flex;
+  justify-content: space-between;
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font: 600 8px/1 var(--mono);
+  letter-spacing: 0.18em;
+}
+
+.recording-card__header p {
+  margin: 0;
+}
+
+.recording-card__body {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  min-height: 330px;
+}
+
+.recording-card__index {
+  display: flex;
+  align-items: flex-end;
+  padding: 34px 26px;
+  border-right: 1px solid var(--line);
+  color: var(--record);
+  font: 500 42px/0.9 var(--mono);
+  letter-spacing: -0.06em;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.recording-card__content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 42px 48px 38px;
+}
+
+.recording-card__kicker {
+  margin: 0;
+  color: var(--muted);
+  font: 600 9px/1 var(--mono);
+  letter-spacing: 0.2em;
+}
+
+.recording-card h2 {
+  margin: 22px 0 16px;
+  font-size: clamp(30px, 4vw, 48px);
+  font-weight: 520;
+  letter-spacing: -0.04em;
+  line-height: 1.06;
+}
+
+.recording-card__message {
+  min-height: 54px;
+  margin: 0;
+  color: var(--body-text);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.recording-dialog[data-phase="countdown"] .recording-card__message {
+  color: var(--record);
+  font: 500 clamp(68px, 10vw, 108px)/0.9 var(--mono);
+  letter-spacing: -0.08em;
+}
+
+.recording-dialog[data-phase="recording"] .recording-card__index {
+  text-shadow: 0 0 24px rgba(255, 77, 95, 0.38);
+}
+
+.hold-progress {
+  height: 2px;
+  margin-top: 24px;
+  overflow: hidden;
+  background: var(--line);
+}
+
+.hold-progress span {
+  display: block;
+  width: calc(var(--hold-progress, 0) * 100%);
+  height: 100%;
+  background: var(--record);
+  transition: width 80ms linear;
+}
+
+#recording-preview {
+  width: 100%;
+  margin-top: auto;
+  padding-top: 28px;
+  filter: grayscale(1) contrast(1.1);
+}
+
+.recording-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 64px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line);
+  background: rgba(3, 5, 7, 0.54);
+}
+
+.recording-action {
+  min-height: 34px;
+  padding: 8px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--body-text);
+  font: 600 11px/1 var(--ui);
+}
+
+.recording-action--primary {
+  border-bottom-color: var(--record);
+  color: var(--text);
+}
+
+.recording-action--quiet {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.recording-action:hover {
+  border-bottom-color: var(--cyan);
+  color: var(--cyan);
+}
+
 .simple-mode #renderDiv::before,
 .simple-mode #renderDiv::after,
 .simple-mode .rec-status__lamp {
@@ -531,6 +707,31 @@ dt,
 
   .guide-dialog {
     width: calc(100vw - 24px);
+  }
+
+  .recording-dialog {
+    width: calc(100vw - 24px);
+  }
+
+  .recording-card__body {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+
+  .recording-card__index {
+    padding: 24px 18px;
+    font-size: 30px;
+  }
+
+  .recording-card__content {
+    padding: 32px 24px;
+  }
+
+  .recording-actions {
+    flex-wrap: wrap;
+  }
+
+  .recording-action--quiet {
+    margin-left: 0;
   }
 
   .guide-card {

@@ -1,8 +1,16 @@
 const TRANSITIONS = Object.freeze({
   idle: Object.freeze({ START_REQUEST: 'countdown' }),
-  countdown: Object.freeze({ COUNTDOWN_DONE: 'recording', CANCEL_REQUEST: 'idle' }),
+  countdown: Object.freeze({
+    COUNTDOWN_DONE: 'recording',
+    CANCEL_REQUEST: 'idle',
+    CANCEL_TO_REVIEW: 'review',
+  }),
   recording: Object.freeze({ STOP_REQUEST: 'stopping', RERECORD_REQUEST: 'stopping' }),
-  stopping: Object.freeze({ RECORDER_STOPPED: 'review', STOP_FAILED: 'error' }),
+  stopping: Object.freeze({
+    RECORDER_STOPPED: 'review',
+    RECORDER_EMPTY: 'review',
+    STOP_FAILED: 'error',
+  }),
   review: Object.freeze({
     UPLOAD_REQUEST: 'uploading',
     RERECORD_REQUEST: 'countdown',
@@ -28,7 +36,7 @@ export function reduceRecording(state, event) {
 
   return Object.freeze({
     phase: nextPhase,
-    error: event.type.endsWith('FAILED') ? String(event.error || '录音失败') : '',
+    error: event.error ? String(event.error) : '',
     pendingRerecord: nextPhase === 'stopping' ? pendingRerecord : false,
   });
 }
