@@ -1,4 +1,4 @@
-const TEMPLATE_URL = '/assets/qr-share-template-bauhaus.png';
+const TEMPLATE_URL = '/assets/qr-share-template-bauhaus.webp';
 const loadDefaultQr = () => import('https://esm.sh/qrcode@1.5.4');
 
 export const QR_RECT = Object.freeze({ x: 112, y: 112, size: 430 });

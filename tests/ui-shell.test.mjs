@@ -66,7 +66,7 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
   assert.match(styles, /--record:\s*#ff4d5f/i);
   assert.match(styles, /\.rec-status\[data-phase=["']recording["']\]/);
   assert.match(styles, /@keyframes\s+rec-status-pulse/);
-  assert.match(qr, /qr-share-template-bauhaus\.png/);
+  assert.match(qr, /qr-share-template-bauhaus\.webp/);
   assert.match(html, /id="recording-qr"[^>]+width="1254"[^>]+height="1254"/);
   assert.match(styles, /\.recording-share\s*\{[^}]*grid-template-columns:\s*1fr/s);
 });
