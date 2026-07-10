@@ -12,6 +12,8 @@ test('guide has exactly the three approved cards', () => {
   assert.deepEqual(GUIDE_CARDS.map(({ id }) => id), ['stage', 'hands', 'recording']);
   assert.match(GUIDE_CARDS[0].body, /观众.*不要.*举手/);
   assert.match(GUIDE_CARDS[2].body, /双手大拇指/);
+  assert.match(GUIDE_CARDS[2].body, /向下.*取消.*自由演奏/);
+  assert.doesNotMatch(GUIDE_CARDS[2].body, /重录/);
   assert.deepEqual(GUIDE_CARDS.map(({ notations }) => notations.length), [2, 2, 2]);
   assert.deepEqual(GUIDE_CARDS[1].notations, ['L / MELODY', 'R / RHYTHM']);
   assert.deepEqual(GUIDE_CARDS[2].notations, ['↑↑ / CONFIRM', '↓↓ / CANCEL']);

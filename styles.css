@@ -148,6 +148,21 @@ button:disabled {
   box-shadow: 0 0 0 3px rgba(255, 77, 95, 0.12);
 }
 
+.rec-status[data-phase="recording"] {
+  color: var(--record);
+}
+
+.rec-status[data-phase="recording"] .rec-status__lamp {
+  animation: rec-status-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes rec-status-pulse {
+  50% {
+    opacity: 0.42;
+    box-shadow: 0 0 0 6px rgba(255, 77, 95, 0.08);
+  }
+}
+
 .performance-status {
   display: flex;
   justify-content: center;

@@ -32,7 +32,7 @@
     <span id="info-text" class="sr-status" role="status" aria-live="polite"></span>
 
     <header class="hud hud--top" aria-label="当前演奏状态">
-      <section class="rec-status" aria-label="录音状态">
+      <section id="recording-status" class="rec-status" data-phase="idle" aria-label="录音状态">
         <span class="rec-status__lamp" aria-hidden="true"></span>
         <span id="recording-state-label">READY</span>
         <time id="recording-timer">00:00</time>
@@ -65,7 +65,7 @@
       <p class="control-deck__title">CONTROL DECK</p>
       <section class="control-section control-section--recording">
         <label><input id="recording-gestures-enabled" type="checkbox" checked> 录音手势</label>
-        <p>双手 👍 保持 0.8 秒确认；双手 👎 取消或重录。按钮始终可用。</p>
+        <p>双手 👍 保持 0.8 秒确认；双手 👎 取消录制或放弃试听。按钮始终可用。</p>
       </section>
       <section id="delay-control-panel" class="control-section">
         <label><input id="delay-auto-toggle" type="checkbox" checked> AUTO DELAY</label>

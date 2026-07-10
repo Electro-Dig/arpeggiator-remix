@@ -17,7 +17,7 @@ export const GUIDE_CARDS = Object.freeze([
     id: 'recording',
     kicker: '03 / 录音',
     title: '用双手表达选择',
-    body: '双手大拇指向上用于开始、停止或确认；双手大拇指向下用于取消或重录。界面按钮始终可用。',
+    body: '双手大拇指向上用于开始、停止或确认；双手大拇指向下用于取消，并回到自由演奏。界面按钮始终可用。',
     notations: ['↑↑ / CONFIRM', '↓↓ / CANCEL'],
   }),
 ]);

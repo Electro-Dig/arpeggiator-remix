@@ -51,6 +51,7 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
     'recording-primary', 'recording-dialog', 'recording-preview',
     'recording-confirm', 'recording-rerecord', 'recording-download',
     'recording-cancel', 'recording-gestures-enabled',
+    'recording-status',
   ]) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
@@ -60,4 +61,6 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
   assert.match(recordingController, /结束并试听/);
   assert.match(styles, /\.recording-dialog/);
   assert.match(styles, /--record:\s*#ff4d5f/i);
+  assert.match(styles, /\.rec-status\[data-phase=["']recording["']\]/);
+  assert.match(styles, /@keyframes\s+rec-status-pulse/);
 });

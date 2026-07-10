@@ -70,6 +70,7 @@ export class RecordingController extends EventTarget {
     this.recordingStartedAt = 0;
     this.countdownRemaining = 0;
     this.elapsedMs = 0;
+    this.cancelOnStop = false;
 
     this.elements = this.collectElements();
     this.bind();
@@ -90,6 +91,7 @@ export class RecordingController extends EventTarget {
       rerecord: byId('recording-rerecord'),
       cancel: byId('recording-cancel'),
       download: byId('recording-download'),
+      status: byId('recording-status'),
       stateLabel: byId('recording-state-label'),
       timer: byId('recording-timer'),
     };
@@ -139,7 +141,13 @@ export class RecordingController extends EventTarget {
 
     if (normalizedEvent.type === 'START_REQUEST') this.startCountdown();
     if (normalizedEvent.type === 'COUNTDOWN_DONE') this.beginRecording();
-    if (normalizedEvent.type === 'CANCEL_REQUEST') this.cancelCountdown();
+    if (normalizedEvent.type === 'CANCEL_REQUEST') {
+      if (previousState.phase === 'countdown') this.cancelCountdown();
+      if (previousState.phase === 'recording') {
+        this.cancelOnStop = true;
+        this.requestRecorderStop();
+      }
+    }
     if (normalizedEvent.type === 'CANCEL_TO_REVIEW') {
       this.clearCountdownTimer();
       this.countdownRemaining = 0;
@@ -219,6 +227,7 @@ export class RecordingController extends EventTarget {
       this.recordingStartedAt = this.now();
       this.elapsedMs = 0;
       this.recorder.start(250);
+      this.closeDialog();
       this.stopTimer = this.setTimer(() => {
         if (this.state.phase === 'recording') this.dispatch({ type: 'STOP_REQUEST' });
       }, RECORDING_MAX_MS);
@@ -250,6 +259,21 @@ export class RecordingController extends EventTarget {
   handleRecorderStopped() {
     this.clearStopTimer();
     this.clearElapsedTimer();
+
+    if (this.cancelOnStop) {
+      this.cancelOnStop = false;
+      this.chunks = [];
+      this.destroyPreviewUrl();
+      this.currentTake = null;
+      this.previousTake = null;
+      this.currentFilename = '';
+      this.elapsedMs = 0;
+      this.dispatch({ type: 'RECORDER_CANCELLED' });
+      this.closeDialog();
+      this.render();
+      return;
+    }
+
     const discardAndRestart = this.state.pendingRerecord;
     const mimeType = this.recorder?.mimeType || this.currentFormat?.mimeType || '';
     const stoppedBlob = new Blob(this.chunks, { type: mimeType });
@@ -385,6 +409,7 @@ export class RecordingController extends EventTarget {
     };
 
     if (this.elements.stateLabel) this.elements.stateLabel.textContent = stateLabels[phase];
+    if (this.elements.status) this.elements.status.dataset.phase = phase;
     if (this.elements.primaryLabel) this.elements.primaryLabel.textContent = primaryLabels[phase];
     if (this.elements.primary) {
       this.elements.primary.disabled = ['stopping', 'review', 'uploading', 'error'].includes(phase);
@@ -396,10 +421,11 @@ export class RecordingController extends EventTarget {
     }
     if (this.elements.message) this.elements.message.textContent = messages[phase] || '';
     if (this.elements.timer) {
-      const displayedMs = phase === 'countdown'
-        ? (this.countdownRemaining || 3) * 1000
-        : this.elapsedMs;
-      const seconds = Math.floor(displayedMs / 1000);
+      const seconds = phase === 'countdown'
+        ? this.countdownRemaining || 3
+        : phase === 'recording'
+          ? Math.max(0, Math.ceil((RECORDING_MAX_MS - this.elapsedMs) / 1000))
+          : Math.floor(this.elapsedMs / 1000);
       this.elements.timer.textContent = `00:${String(seconds).padStart(2, '0')}`;
     }
 

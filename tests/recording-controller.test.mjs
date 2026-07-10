@@ -3,6 +3,22 @@ import test from 'node:test';
 
 import { RecordingController } from '../RecordingController.js';
 
+class FakeElement extends EventTarget {
+  constructor() {
+    super();
+    this.open = false;
+    this.hidden = false;
+    this.disabled = false;
+    this.textContent = '';
+    this.dataset = {};
+    this.style = { setProperty() {} };
+  }
+
+  showModal() { this.open = true; }
+  close() { this.open = false; }
+  removeAttribute(name) { delete this[name]; }
+}
+
 class FakeRecorder extends EventTarget {
   constructor(id, options = {}, empty = false) {
     super();
@@ -32,7 +48,11 @@ class FakeRecorder extends EventTarget {
   }
 }
 
-function createHarness({ onUploadRequest = async () => ({}), empty = false } = {}) {
+function createHarness({
+  onUploadRequest = async () => ({}),
+  empty = false,
+  withView = false,
+} = {}) {
   let now = 0;
   let timerId = 0;
   let recorderId = 0;
@@ -42,6 +62,16 @@ function createHarness({ onUploadRequest = async () => ({}), empty = false } = {
   const createdUrls = [];
   const revokedUrls = [];
   const downloads = [];
+  const viewIds = [
+    'recording-dialog', 'recording-status', 'recording-state-label',
+    'recording-timer', 'recording-message', 'recording-preview',
+  ];
+  const elements = withView
+    ? Object.fromEntries(viewIds.map((id) => [id, new FakeElement()]))
+    : {};
+  const root = withView ? {
+    getElementById(id) { return elements[id] || null; },
+  } : null;
 
   const setTimer = (callback, delay) => {
     const id = ++timerId;
@@ -66,7 +96,7 @@ function createHarness({ onUploadRequest = async () => ({}), empty = false } = {
 
   const controller = new RecordingController({
     stream: { id: 'internal-master-mix' },
-    root: null,
+    root,
     recorderFactory: (_stream, options) => {
       const recorder = new FakeRecorder(++recorderId, options, empty);
       recorders.push(recorder);
@@ -96,6 +126,7 @@ function createHarness({ onUploadRequest = async () => ({}), empty = false } = {
     createdUrls,
     revokedUrls,
     downloads,
+    elements,
   };
 }
 
@@ -207,5 +238,33 @@ test('an empty take stays recoverable and never creates a broken preview URL', (
   assert.equal(harness.controller.state.phase, 'review');
   assert.match(harness.controller.state.error, /未捕获到内部声音/);
   assert.equal(harness.controller.currentTake, null);
+  assert.equal(harness.createdUrls.length, 0);
+});
+
+test('active recording closes the dialog and counts down from 60 in the HUD', () => {
+  const harness = createHarness({ withView: true });
+  harness.controller.dispatch({ type: 'START_REQUEST' });
+  assert.equal(harness.elements['recording-dialog'].open, true);
+  harness.advance(3000);
+  assert.equal(harness.controller.state.phase, 'recording');
+  assert.equal(harness.elements['recording-dialog'].open, false);
+  assert.equal(harness.elements['recording-status'].dataset.phase, 'recording');
+  assert.equal(harness.elements['recording-timer'].textContent, '00:60');
+  harness.advance(1000);
+  assert.equal(harness.elements['recording-timer'].textContent, '00:59');
+  harness.controller.dispatch({ type: 'STOP_REQUEST' });
+  assert.equal(harness.elements['recording-dialog'].open, true);
+});
+
+test('cancel during recording discards the take and returns to free mode', () => {
+  const harness = createHarness({ withView: true });
+  beginTake(harness);
+  const recorder = harness.recorders[0];
+  harness.controller.dispatch({ type: 'CANCEL_REQUEST' });
+  assert.equal(recorder.stopCalls, 1);
+  assert.equal(harness.controller.state.phase, 'idle');
+  assert.equal(harness.controller.currentTake, null);
+  assert.equal(harness.controller.previousTake, null);
+  assert.equal(harness.elements['recording-dialog'].open, false);
   assert.equal(harness.createdUrls.length, 0);
 });
