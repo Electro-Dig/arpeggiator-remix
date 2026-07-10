@@ -12,12 +12,16 @@ export function parseShareToken(pathname) {
   return match && TOKEN.test(match[1]) ? match[1] : null;
 }
 
-export async function fetchSharedRecording(token, fetchImpl = fetch) {
+export async function probeSharedRecording(token, fetchImpl = fetch) {
   if (!TOKEN.test(String(token))) throw sharedRecordingError(400);
+
+  const audioUrl = `/r/audio/${token}`;
 
   let response;
   try {
-    response = await fetchImpl(`/r/audio/${token}`);
+    response = await fetchImpl(audioUrl, {
+      headers: { range: 'bytes=0-0' },
+    });
   } catch (cause) {
     throw Object.assign(sharedRecordingError(503), { cause });
   }
@@ -25,8 +29,9 @@ export async function fetchSharedRecording(token, fetchImpl = fetch) {
   if (!response.ok) throw sharedRecordingError(response.status);
   const expiresAt = Number(response.headers.get('x-recording-expires-at'));
   return {
-    blob: await response.blob(),
+    audioUrl,
     expiresAt: Number.isFinite(expiresAt) && expiresAt > 0 ? expiresAt : null,
+    mime: (response.headers.get('content-type') || 'audio/webm').split(';')[0],
   };
 }
 
@@ -60,17 +65,26 @@ async function initSharePage() {
   }
 
   try {
-    const result = await fetchSharedRecording(token);
-    const objectUrl = URL.createObjectURL(result.blob);
-    player.src = objectUrl;
+    const result = await probeSharedRecording(token);
+    player.src = result.audioUrl;
     player.hidden = false;
-    download.href = objectUrl;
-    download.download = `arpeggiator-remix.${extensionFor(result.blob.type)}`;
+    download.href = result.audioUrl;
+    download.download = `arpeggiator-remix.${extensionFor(result.mime)}`;
     download.hidden = false;
     expiry.textContent = formatExpiry(result.expiresAt);
-    status.textContent = '录音已就绪';
-    status.dataset.state = 'ready';
-    addEventListener('pagehide', () => URL.revokeObjectURL(objectUrl), { once: true });
+    status.textContent = '正在准备播放…';
+    status.dataset.state = 'loading';
+
+    const markReady = () => {
+      status.textContent = '录音已就绪';
+      status.dataset.state = 'ready';
+    };
+    player.addEventListener('loadedmetadata', markReady, { once: true });
+    player.addEventListener('canplay', markReady, { once: true });
+    player.addEventListener('error', () => {
+      status.textContent = '音频加载失败，请刷新后重试。';
+      status.dataset.state = 'error';
+    });
   } catch (error) {
     status.textContent = error.message;
     status.dataset.state = 'error';

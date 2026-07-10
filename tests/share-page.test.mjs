@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
-  fetchSharedRecording,
+  probeSharedRecording,
   parseShareToken,
 } from '../r/share-page.js';
 
@@ -15,29 +15,39 @@ test('extracts only valid unguessable tokens from share paths', () => {
   assert.equal(parseShareToken('/r/../../secret'), null);
 });
 
-test('fetches shared audio and exposes its expiry', async () => {
+test('probes one byte and returns a direct streaming URL without reading a Blob', async () => {
   const token = 'a'.repeat(32);
   let requested;
-  const result = await fetchSharedRecording(token, async (url) => {
-    requested = url;
-    return new Response(new Blob(['audio'], { type: 'audio/webm' }), {
-      headers: { 'x-recording-expires-at': '123456' },
+  const result = await probeSharedRecording(token, async (url, init) => {
+    requested = { url, init };
+    const response = new Response(new Uint8Array([0]), {
+      status: 206,
+      headers: {
+        'content-type': 'audio/webm',
+        'content-range': 'bytes 0-0/1000',
+        'x-recording-expires-at': '123456',
+      },
     });
+    response.blob = () => assert.fail('probe must not read the complete recording Blob');
+    return response;
   });
 
-  assert.equal(requested, `/r/audio/${token}`);
-  assert.equal(result.expiresAt, 123456);
-  assert.equal(result.blob.type, 'audio/webm');
-  assert.equal(await result.blob.text(), 'audio');
+  assert.equal(requested.url, `/r/audio/${token}`);
+  assert.equal(requested.init.headers.range, 'bytes=0-0');
+  assert.deepEqual(result, {
+    audioUrl: `/r/audio/${token}`,
+    expiresAt: 123456,
+    mime: 'audio/webm',
+  });
 });
 
 test('maps expired and unavailable recordings to clear states', async () => {
   await assert.rejects(
-    fetchSharedRecording('a'.repeat(32), async () => new Response('', { status: 410 })),
+    probeSharedRecording('a'.repeat(32), async () => new Response('', { status: 410 })),
     (error) => error.status === 410 && /已失效/.test(error.message),
   );
   await assert.rejects(
-    fetchSharedRecording('a'.repeat(32), async () => new Response('', { status: 503 })),
+    probeSharedRecording('a'.repeat(32), async () => new Response('', { status: 503 })),
     (error) => error.status === 503 && /暂时无法/.test(error.message),
   );
 });
@@ -51,4 +61,6 @@ test('public page stays lightweight and includes playback, download and noindex'
   assert.match(html, /name="robots" content="noindex,nofollow,noarchive"/);
   assert.doesNotMatch(html, /MediaPipe|Tone\.js|mediapipe|main\.js|camera/i);
   assert.match(css, /\[hidden\]\s*\{\s*display:\s*none\s*!important/);
+  const script = await readFile(new URL('../r/share-page.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(script, /response\.blob\(|URL\.createObjectURL/);
 });
