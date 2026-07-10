@@ -5,9 +5,14 @@ const TRANSITIONS = Object.freeze({
     CANCEL_REQUEST: 'idle',
     CANCEL_TO_REVIEW: 'review',
   }),
-  recording: Object.freeze({ STOP_REQUEST: 'stopping', RERECORD_REQUEST: 'stopping' }),
+  recording: Object.freeze({
+    STOP_REQUEST: 'stopping',
+    RERECORD_REQUEST: 'stopping',
+    CANCEL_REQUEST: 'stopping',
+  }),
   stopping: Object.freeze({
     RECORDER_STOPPED: 'review',
+    RECORDER_CANCELLED: 'idle',
     RECORDER_EMPTY: 'review',
     STOP_FAILED: 'error',
   }),
@@ -52,8 +57,8 @@ export function actionForThumbIntent(phase, intent) {
   if (intent === 'both-down') {
     return ({
       countdown: 'CANCEL_REQUEST',
-      recording: 'RERECORD_REQUEST',
-      review: 'RERECORD_REQUEST',
+      recording: 'CANCEL_REQUEST',
+      review: 'DISCARD_REQUEST',
     })[phase] || null;
   }
   return null;

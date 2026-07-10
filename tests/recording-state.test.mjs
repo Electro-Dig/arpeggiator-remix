@@ -39,6 +39,13 @@ test('cancel and rerecord return to a safe idle or countdown path', () => {
   );
   assert.equal(stopping.pendingRerecord, true);
   assert.equal(step(stopping, 'RECORDER_STOPPED').phase, 'countdown');
+
+  const canceling = step(
+    { phase: 'recording', error: '', pendingRerecord: false },
+    'CANCEL_REQUEST',
+  );
+  assert.equal(canceling.phase, 'stopping');
+  assert.equal(step(canceling, 'RECORDER_CANCELLED').phase, 'idle');
 });
 
 test('upload failure returns to review with an actionable error', () => {
@@ -73,9 +80,9 @@ test('approved two-thumb intents map only in actionable phases', () => {
   assert.equal(actionForThumbIntent('idle', 'both-up'), 'START_REQUEST');
   assert.equal(actionForThumbIntent('countdown', 'both-down'), 'CANCEL_REQUEST');
   assert.equal(actionForThumbIntent('recording', 'both-up'), 'STOP_REQUEST');
-  assert.equal(actionForThumbIntent('recording', 'both-down'), 'RERECORD_REQUEST');
+  assert.equal(actionForThumbIntent('recording', 'both-down'), 'CANCEL_REQUEST');
   assert.equal(actionForThumbIntent('review', 'both-up'), 'UPLOAD_REQUEST');
-  assert.equal(actionForThumbIntent('review', 'both-down'), 'RERECORD_REQUEST');
+  assert.equal(actionForThumbIntent('review', 'both-down'), 'DISCARD_REQUEST');
   assert.equal(actionForThumbIntent('uploading', 'both-up'), null);
   assert.equal(actionForThumbIntent('shared', 'both-down'), null);
   assert.equal(actionForThumbIntent('idle', 'neutral'), null);
