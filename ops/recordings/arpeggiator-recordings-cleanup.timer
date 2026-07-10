@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Arpeggiator recording cleanup hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=300
+Unit=arpeggiator-recordings-cleanup.service
+
+[Install]
+WantedBy=timers.target

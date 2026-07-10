@@ -161,6 +161,17 @@ Then navigate to `http://localhost:8000` in your browser.
 - The main 2048×1055 exhibition view was reviewed from a live local-camera screenshot and accepted as a clear improvement.
 - Production deployment remains prohibited until explicit final approval.
 
+## Exhibition V2 — Batch 3 checkpoint
+
+- Public URL shape: `/r/<192-bit-token>`; no participant identity, title, or account is stored.
+- Maximum upload: 5 MB; allowed formats are MP4/M4A, WebM/Opus, and OGG/Opus.
+- Retention: 24 hours, enforced on read and by an hourly cleanup timer.
+- Browser requests pass through a same-origin Netlify proxy; cloud requests carry a time-bounded HMAC signature.
+- The cloud API rejects unsigned requests and binds its Node service to `127.0.0.1:8787`.
+- The recording Blob remains available for retry or manual download during outages.
+- The server deployment is isolated under `/srv/arpeggiator-recordings`; it does not use the podcast workspace.
+- Only a Netlify draft deploy may be used until production replacement is explicitly approved.
+
 ## License
 
 MIT License

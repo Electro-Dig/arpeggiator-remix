@@ -1,0 +1,19 @@
+[Unit]
+Description=Delete expired Arpeggiator recordings
+After=arpeggiator-recordings.service
+
+[Service]
+Type=oneshot
+User=arprec
+Group=arprec
+WorkingDirectory=/srv/arpeggiator-recordings/app
+EnvironmentFile=/etc/arpeggiator-recordings.env
+Environment=RECORDINGS_DATA_DIR=/srv/arpeggiator-recordings/data
+ExecStart=/usr/bin/node services/recordings-api/server.mjs --cleanup
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/arpeggiator-recordings/data
+MemoryMax=192M
+TasksMax=64

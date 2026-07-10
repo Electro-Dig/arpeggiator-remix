@@ -1,0 +1,25 @@
+[Unit]
+Description=Arpeggiator temporary recording API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=arprec
+Group=arprec
+WorkingDirectory=/srv/arpeggiator-recordings/app
+EnvironmentFile=/etc/arpeggiator-recordings.env
+Environment=RECORDINGS_DATA_DIR=/srv/arpeggiator-recordings/data
+ExecStart=/usr/bin/node services/recordings-api/server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/arpeggiator-recordings/data
+MemoryMax=192M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target
