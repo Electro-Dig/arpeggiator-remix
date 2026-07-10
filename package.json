@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js --dev",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test tests/*.test.mjs services/recordings-api/*.test.mjs",
     "python-server": "python server.py"
   },
   "dependencies": {
