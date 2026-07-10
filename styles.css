@@ -1007,8 +1007,8 @@ dt,
   }
 
   .performance-controls {
-    bottom: 8px;
-    width: calc(100vw - 150px);
+    bottom: 168px;
+    width: calc(100vw - 24px);
   }
 
   .scene-selector {
@@ -1017,8 +1017,8 @@ dt,
   }
 
   .scene-selector button {
-    padding: 7px 5px;
-    font-size: 7px;
+    padding: 9px 6px;
+    font-size: 8px;
   }
 
   .rhythm-space {

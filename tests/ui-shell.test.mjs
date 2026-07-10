@@ -58,6 +58,12 @@ test('manual Synthwave scenes and semantic HUD remain available without tracking
   assert.doesNotMatch(main, /setInterval\(/);
 });
 
+test('narrow screens stack scene fallback controls above the lower corner utilities', () => {
+  assert.match(styles, /@media \(max-width: 620px\)[\s\S]*?\.performance-controls\s*\{[\s\S]*?bottom:\s*168px/);
+  assert.match(styles, /@media \(max-width: 620px\)[\s\S]*?\.performance-controls\s*\{[\s\S]*?width:\s*calc\(100vw - 24px\)/);
+  assert.match(styles, /@media \(max-width: 620px\)[\s\S]*?\.scene-selector\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2/);
+});
+
 test('editorial hierarchy remains restrained and semantic', () => {
   for (const className of ['hud-metric', 'operator-action__meta', 'guide-card__step', 'guide-card__notations']) {
     assert.match(html, new RegExp(`class=["'][^"']*${className}`));
