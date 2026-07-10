@@ -223,6 +223,7 @@ import * as Tone from './audio/tone.js'; // Use the shared pinned Tone module.
 import * as drumManager from './DrumManager.js'; // Import the new drum manager module
 import { WaveformVisualizer } from './WaveformVisualizer.js'; // Import the new waveform visualizer
 import { RhythmSpace } from './rhythm/RhythmSpace.js';
+import { EdgeGesture, pinchVelocity } from './music/gesture-controls.js';
 export var Game = /*#__PURE__*/ function () {
     "use strict";
     function Game(renderDiv) {
@@ -258,6 +259,8 @@ export var Game = /*#__PURE__*/ function () {
         this.clock = new THREE.Clock();
         this.musicManager = new MusicManager(); // Create an instance of MusicManager
         this.rhythmSpace = new RhythmSpace({ smoothing: 0.25, hysteresis: 0.03 });
+        this.leftFistEdge = new EdgeGesture(700);
+        this.leftFourFingerEdge = new EdgeGesture(700);
         this.waveformVisualizer = null; // To be initialized
         // this.drumManager = new DrumManager(); // DrumManager is now a static module, no instance needed
         this.lastLandmarkPositions = [
@@ -1007,7 +1010,7 @@ export var Game = /*#__PURE__*/ function () {
                 if (nextValue === this.interactionSuppressed) return;
                 this.interactionSuppressed = nextValue;
                 if (nextValue) {
-                    this.musicManager.stopArpeggio(0);
+                    this.musicManager.stopArpeggio('Left');
                     drumManager.updateActiveDrums({});
                 }
             }
@@ -1067,85 +1070,37 @@ export var Game = /*#__PURE__*/ function () {
                                 var handY = (1 - normY_visible) * canvasHeight - canvasHeight / 2;
                                 hand.anchorPos.set(handX, handY, 1);
                                 var interactionsEnabled = !_this1.interactionSuppressed;
-                                if (i === 0) {
-                                    // --- Music & Gesture Control ---
-                                    var isFistNow = _this1._isFist(smoothedLandmarks);
-                                    if (interactionsEnabled && isFistNow && !hand.isFist) {
-                                        // Fist gesture was just made
-                                        _this1.musicManager.cycleSynth();
-                                        _this1.musicManager.stopArpeggio(i); // Stop any old arpeggio
-
-                                    }
-                                    hand.isFist = isFistNow;
-
-                                    // 左手四指竖直：切换琶音风格（从右手迁移）
-                                    var fourFingersVerticalNow = _this1._isFourFingersVertical(smoothedLandmarks);
-                                    var fourFingersChanged = fourFingersVerticalNow !== hand.wasFourFingersVertical;
+                                if (hand.side === 'Left') {
                                     var now = performance.now();
-                                    var timeSinceLastChange = now - (hand.lastGestureChangeTime || 0);
-                                    var canTrigger = timeSinceLastChange > 300; // 300ms防抖
-                                    if (interactionsEnabled && canTrigger && fourFingersChanged && fourFingersVerticalNow) {
-                                        var newMusicPreset = _this1.musicManager.cycleMusicPreset();
-                                        _this1._showPresetChangeNotification(`琶音风格: ${newMusicPreset.name} (${newMusicPreset.tempo} BPM)`, 'music');
-                                        hand.lastGestureChangeTime = now;
+                                    var isFistNow = _this1._isFist(smoothedLandmarks);
+                                    var fourFingersVerticalNow = _this1._isFourFingersVertical(smoothedLandmarks);
+                                    var velocity = pinchVelocity(smoothedLandmarks);
+                                    var rootNote = _this1.musicManager.currentRoot;
+                                    if (interactionsEnabled) {
+                                        rootNote = _this1.musicManager.setRootFromPosition(normY_visible);
+                                        _this1.musicManager.setBrightness(1 - normX_visible);
+                                        _this1.musicManager.updateArpeggioVolume('Left', velocity);
+                                        if (_this1.leftFistEdge.update(isFistNow, now)) {
+                                            var toneName = _this1.musicManager.setToneVariant();
+                                            _this1._showPresetChangeNotification(`音色: ${toneName}`, 'music');
+                                        }
+                                        if (_this1.leftFourFingerEdge.update(fourFingersVerticalNow, now)) {
+                                            var newScene = _this1.musicManager.cycleScene();
+                                            _this1._showPresetChangeNotification(`场景: ${newScene.name} (${newScene.bpm} BPM)`, 'music');
+                                        }
+                                    } else {
+                                        _this1.musicManager.stopArpeggio('Left');
                                     }
-                                    hand.wasFourFingersVertical = fourFingersVerticalNow;
-
-                                    // 🎵 音阶识别逻辑（参考原版arpeggiator-main）
-
-                                    // 获取当前音乐预设的音阶（E3到A4完整半音音阶）
-                                    var currentMusicPreset = _this1.musicManager.getCurrentMusicPreset();
-                                    var currentScale = currentMusicPreset.scale || ['E3', 'F3', 'F#3', 'G3', 'G#3', 'A3', 'A#3', 'B3', 'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4']; // fallback
-
-                                    var noteIndex = Math.floor((1 - normY_visible) * currentScale.length);
-                                    var rootNote = currentScale[Math.max(0, Math.min(currentScale.length - 1, noteIndex))];
-
-
-
-                                    // 2. 琶音播放 - 以识别的根音为基础，应用当前预设的音程关系
-                                    // 不再使用固定的音阶序列，而是以根音+音程关系来生成琶音
-
-                                    // 更新波形可视化颜色
                                     if (_this1.waveformVisualizer) {
-                                        var colorIndex = noteIndex % _this1.waveformColors.length;
-                                        var newColor = _this1.waveformColors[colorIndex];
-                                        _this1.waveformVisualizer.updateColor(newColor);
+                                        var colorIndex = Math.max(0, _this1.musicManager.scale.indexOf(rootNote)) % _this1.waveformColors.length;
+                                        _this1.waveformVisualizer.updateColor(_this1.waveformColors[colorIndex]);
                                     }
-
-                                    // 计算音量（拇指和食指距离）
-                                    var thumbTip = smoothedLandmarks[4];
-                                    var indexTip = smoothedLandmarks[8];
-                                    var dx = thumbTip.x - indexTip.x;
-                                    var dy = thumbTip.y - indexTip.y;
-                                    var distance = Math.sqrt(dx * dx + dy * dy);
-                                    var velocity = Math.max(0.1, Math.min(1.0, distance * 5));
-
-                                    // 更新手部可视化
                                     _this1._updateHandLines(i, smoothedLandmarks, videoParams, canvasWidth, canvasHeight, {
-                                        note: rootNote,  // 使用识别到的根音
+                                        note: rootNote,
                                         velocity: velocity,
                                         isFist: isFistNow
                                     });
-
-                                    // 🎵 简化的琶音播放逻辑 - 以根音为基础生成琶音
-                                    if (!interactionsEnabled) {
-                                        _this1.musicManager.stopArpeggio(i);
-                                    } else if (!isFistNow) {
-                                        var arpeggioIsActive = _this1.musicManager.activePatterns.has(i);
-
-                                        if (!wasVisible || !arpeggioIsActive) {
-                                            // 手刚出现或琶音未激活：启动琶音
-                                            _this1.musicManager.startArpeggio(i, rootNote);
-                                        } else if (arpeggioIsActive) {
-                                            // 琶音已激活：更新根音和音量
-                                            _this1.musicManager.updateArpeggio(i, rootNote);
-                                            _this1.musicManager.updateArpeggioVolume(i, velocity);
-                                        }
-                                    } else {
-                                        // 握拳状态：停止琶音
-                                        _this1.musicManager.stopArpeggio(i);
-                                    }
-                                } else if (i === 1) {
+                                } else if (hand.side === 'Right') {
                                     // Right hand: position selects a stable rhythm cell while fingers gate tracks.
                                     var fingerStates = _this1._getFingerStates(smoothedLandmarks);
                                     if (interactionsEnabled) {
@@ -1167,9 +1122,9 @@ export var Game = /*#__PURE__*/ function () {
                                 hand.lineGroup.visible = true;
                             } else {
                                 if (wasVisible) {
-                                    if (i === 0) {
-                                        _this1.musicManager.stopArpeggio(i);
-                                    } else if (i === 1) {
+                                    if (hand.side === 'Left') {
+                                        _this1.musicManager.stopArpeggio('Left');
+                                    } else if (hand.side === 'Right') {
                                         // Disable all drums when hand is gone
                                         drumManager.updateActiveDrums({});
                                     }
@@ -1216,14 +1171,14 @@ export var Game = /*#__PURE__*/ function () {
                     } catch (error) {
                         console.error("Error during hand detection:", error);
                         // 优雅降级：清理无效的手部数据
-                        this.hands.forEach(function (hand, index) {
+                        this.hands.forEach(function (hand) {
                             if (hand.landmarks) {
                                 hand.landmarks = null;
                                 if (hand.lineGroup) hand.lineGroup.visible = false;
                                 // 停止相关的音频
-                                if (index === 0) {
-                                    _this.musicManager.stopArpeggio(index);
-                                } else if (index === 1) {
+                                if (hand.side === 'Left') {
+                                    _this.musicManager.stopArpeggio('Left');
+                                } else if (hand.side === 'Right') {
                                     drumManager.updateActiveDrums({});
                                 }
                             }
