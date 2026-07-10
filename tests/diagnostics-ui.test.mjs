@@ -14,8 +14,10 @@ test('face-obscuring Three.js diagnostics are removed', () => {
 
 test('diagnostics are exposed only inside Control Deck', () => {
   assert.match(game, /_updateDelayDiagnostics/);
-  for (const id of ['delay-distance-value', 'delay-level-value', 'note-length-value']) {
+  for (const id of ['delay-distance-value', 'delay-level-value']) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
     assert.match(game, new RegExp(id));
   }
+  assert.doesNotMatch(html, /note-length-value/);
+  assert.doesNotMatch(game, /note-length-value/);
 });

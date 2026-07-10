@@ -222,6 +222,7 @@ import { MusicManager } from './MusicManager.js'; // Import the MusicManager
 import * as Tone from './audio/tone.js'; // Use the shared pinned Tone module.
 import * as drumManager from './DrumManager.js'; // Import the new drum manager module
 import { WaveformVisualizer } from './WaveformVisualizer.js'; // Import the new waveform visualizer
+import { RhythmSpace } from './rhythm/RhythmSpace.js';
 export var Game = /*#__PURE__*/ function () {
     "use strict";
     function Game(renderDiv) {
@@ -256,6 +257,7 @@ export var Game = /*#__PURE__*/ function () {
         this.gameOverText = null; // Will be repurposed or simplified
         this.clock = new THREE.Clock();
         this.musicManager = new MusicManager(); // Create an instance of MusicManager
+        this.rhythmSpace = new RhythmSpace({ smoothing: 0.25, hysteresis: 0.03 });
         this.waveformVisualizer = null; // To be initialized
         // this.drumManager = new DrumManager(); // DrumManager is now a static module, no instance needed
         this.lastLandmarkPositions = [
@@ -346,10 +348,6 @@ export var Game = /*#__PURE__*/ function () {
             updateCooldownMs: 200,
             baseWet: 0.18 // UI 滑杆（最大湿度，对应 Level4）
         };
-        // Note length control (5-level) via right hand Y position (global)
-        this.noteLenCtrl = null; // remove previous state machine usage
-        this.noteLenFactors = [0.2, 0.4, 0.6, 0.8, 1.0];
-
         // 简化模式：减少信息显示以提升性能
         this.simpleMode = false; // false = 详细模式，true = 简化模式
         // Initialize asynchronously
@@ -1148,38 +1146,17 @@ export var Game = /*#__PURE__*/ function () {
                                         _this1.musicManager.stopArpeggio(i);
                                     }
                                 } else if (i === 1) {
-                                    // 🥁 右手控制：简化版本
+                                    // Right hand: position selects a stable rhythm cell while fingers gate tracks.
                                     var fingerStates = _this1._getFingerStates(smoothedLandmarks);
-                                    var isFistNow = _this1._isFist(smoothedLandmarks);
-                                    var fourFingersVerticalNow = _this1._isFourFingersVertical(smoothedLandmarks);
-
-                                    // 检测手势变化（简化状态管理）
-                                    var fistChanged = isFistNow !== hand.wasFist;
-                                    var fourFingersChanged = fourFingersVerticalNow !== hand.wasFourFingersVertical;
-
-                                    // 防抖机制：避免过快切换
-                                    var now = performance.now();
-                                    var timeSinceLastChange = now - (hand.lastGestureChangeTime || 0);
-                                    var canTrigger = timeSinceLastChange > 300; // 300ms防抖
-
-                                    // 执行切换逻辑
-                                    if (interactionsEnabled && canTrigger && fistChanged && isFistNow) {
-                                        // 握拳：切换鼓组预设
-                                        var newDrumPreset = drumManager.cycleDrumPreset();
-                                        _this1._showPresetChangeNotification(`鼓组: ${newDrumPreset.name}`, 'drum');
-                                        hand.lastGestureChangeTime = now;
-                                    }
-
-                                    // 更新状态
-                                    hand.wasFist = isFistNow;
-                                    hand.wasFourFingersVertical = fourFingersVerticalNow;
-
-                                    // 实时：右手上下位置 → 全局 NoteLen 档位（5档），按当前帧计算
                                     if (interactionsEnabled) {
-                                        _this1._updateGlobalNoteLengthByRightHandY(smoothedLandmarks, videoParams, canvasWidth, canvasHeight);
+                                        var cell = _this1.rhythmSpace.update(1 - normX_visible, normY_visible);
+                                        if (cell.changed) {
+                                            var pendingCell = drumManager.queueRhythmCell(cell.x, cell.y);
+                                            _this1.renderDiv.dispatchEvent(new CustomEvent('rhythmposition', {
+                                                detail: { ...cell, label: pendingCell.label, pending: true }
+                                            }));
+                                        }
                                     }
-
-                                    // 更新鼓组
                                     drumManager.updateActiveDrums(interactionsEnabled ? fingerStates : {});
 
                                     // 更新可视化
@@ -2316,31 +2293,6 @@ export var Game = /*#__PURE__*/ function () {
             }
         },
         {
-            // 右手上下位置 → 全局 NoteLen 五档（0.2,0.4,0.6,0.8,1.0）;
-            // 使用可见视频区域的 Y 来划分 5 个等距区间
-            key: "_updateGlobalNoteLengthByRightHandY",
-            value: function _updateGlobalNoteLengthByRightHandY(rightHandLandmarks, videoParams, canvasWidth, canvasHeight) {
-                if (this.interactionSuppressed) return;
-                if (!rightHandLandmarks || rightHandLandmarks.length < 21) return;
-                // 取右手中指 MCP 作为手掌代表（更稳定）
-                var palm = rightHandLandmarks[9];
-                var lmOriginalY = palm.y * videoParams.videoNaturalHeight;
-                var normY = (lmOriginalY - videoParams.offsetY) / videoParams.visibleHeight; // 0..1（顶部0、底部1）
-                if (typeof normY !== 'number') return;
-                // 将可见高度分为五等分（顶部→L0=0.2x，底部→L4=1.0x）
-                var clamped = Math.max(0, Math.min(1, normY));
-                var idx = Math.floor(clamped * 5); // 0..5 → 0..4
-                if (idx > 4) idx = 4;
-                // 仅当档位变化时再应用
-                if (!this._currentNoteLenLevelApplied || this._currentNoteLenLevelApplied !== idx) {
-                    this._currentNoteLenLevelApplied = idx;
-                    if (this.musicManager && this.musicManager.setNoteLengthLevel) {
-                        this.musicManager.setNoteLengthLevel(idx);
-                    }
-                }
-            }
-        },
-        {
             key: "_setupEventListeners",
             value: function _setupEventListeners() {
                 var _this = this;
@@ -2367,9 +2319,6 @@ export var Game = /*#__PURE__*/ function () {
                         }
                     });
                 }
-
-                // 预设选择器功能
-                this._checkInitialization();
 
                 // 窗口大小变化处理
                 window.addEventListener('resize', this._onResize.bind(this));
@@ -2461,10 +2410,6 @@ export var Game = /*#__PURE__*/ function () {
                         // 标定基准为中位数，初始关闭
                         this.delayCtrl.baseline = this._computeMedian(buf);
                         this.delayCtrl.active = true;
-                        // 同步开启 NoteLen 控制
-                        this.noteLenCtrl.active = true;
-                        this.noteLenCtrl.locked = false;
-                        this.noteLenCtrl.activatedTs = performance.now();
                         this.delayCtrl.level = 0;
                         if (this.musicManager && this.musicManager.setDelayTimeBeats) this.musicManager.setDelayTimeBeats(0);
                         // 不强制改动湿度，保持用户设置
@@ -2483,14 +2428,10 @@ export var Game = /*#__PURE__*/ function () {
                 if (!deck || deck.hidden) return;
                 var level = this.delayCtrl && typeof this.delayCtrl.level === 'number' ? this.delayCtrl.level : 0;
                 var beats = [0, 0.25, 0.5, 0.75, 1][level] || 0;
-                var noteLevel = typeof this._currentNoteLenLevelApplied === 'number' ? this._currentNoteLenLevelApplied : 4;
-                var noteFactor = this.noteLenFactors && this.noteLenFactors[noteLevel] !== undefined ? this.noteLenFactors[noteLevel] : 1;
                 var distanceValue = document.getElementById('delay-distance-value');
                 var levelValue = document.getElementById('delay-level-value');
-                var noteValue = document.getElementById('note-length-value');
                 if (distanceValue) distanceValue.textContent = Number(distance).toFixed(3);
                 if (levelValue) levelValue.textContent = `L${level} / ${beats.toFixed(2)}B`;
-                if (noteValue) noteValue.textContent = `L${noteLevel} / ${noteFactor.toFixed(2)}×`;
             }
         },
         {
@@ -2537,50 +2478,6 @@ export var Game = /*#__PURE__*/ function () {
                 // 湿度不再自动随档位变化，由用户滑杆控制
                 var label = document.getElementById('delay-level-label');
                 if (label) label.textContent = 'Level: ' + target;
-            }
-        },
-        {
-            key: "_updateNoteLengthLevelIfDue",
-            value: function _updateNoteLengthLevelIfDue() {
-                if (this.interactionSuppressed) return;
-                if (!this.noteLenCtrl.active) return;
-                var now = performance.now();
-                if (now - (this.noteLenCtrl.lastUpdateTs || 0) < this.noteLenCtrl.updateCooldownMs) return;
-                // 逻辑更新：进入后即可实时根据 |yL-yR| 调整；
-                // 若检测到“右手全部打开”的边沿（从否到是），则锁定当前档位。
-                var right = (this.hands && this.hands[1]) ? this.hands[1] : null;
-                var lmR = right && right.landmarks;
-                var lmL = (this.hands && this.hands[0]) ? this.hands[0].landmarks : null;
-                if (!lmR || !lmL || lmR.length < 21 || lmL.length < 21) return;
-                var fingerStatesR = this._getFingerStates(lmR);
-                var allOpenR = fingerStatesR.index && fingerStatesR.middle && fingerStatesR.ring && fingerStatesR.pinky;
-                // 边沿检测：从非全开 -> 全开，触发“锁定”
-                if (allOpenR && !this.noteLenCtrl.wasAllOpenR) {
-                    this.noteLenCtrl.locked = true;
-                    this._showInfoTransient('🎼 Note Length locked', 1200);
-                }
-                this.noteLenCtrl.wasAllOpenR = allOpenR;
-                if (this.noteLenCtrl.locked) return; // 已锁定则不再自动更新
-                // 计算两拇指垂直差，并做范围归一化（避免过小无效/过大钳制）
-                var yL = lmL[4].y;
-                var yR = lmR[4].y;
-                var dy = Math.abs(yL - yR); // 0..1
-                var dyClamped = Math.max(this.noteLenCtrl.rangeMin, Math.min(this.noteLenCtrl.rangeMax, dy));
-                var norm = (dyClamped - this.noteLenCtrl.rangeMin) / (this.noteLenCtrl.rangeMax - this.noteLenCtrl.rangeMin); // 0..1
-                // 五档阈值（0..1）: 0-0.2-0.4-0.6-0.8-1.0，默认保持 1.0（L4），向上拉开才减少
-                var idx = 4;
-                var th = this.noteLenCtrl.thresholds;
-                for (var i = 0; i < th.length - 1; i++) {
-                    if (norm >= th[i] - this.noteLenCtrl.hysteresis) idx = i; // 0..4
-                }
-                if (idx === this.noteLenCtrl.level) return;
-                this.noteLenCtrl.level = idx;
-                this.noteLenCtrl.lastUpdateTs = now;
-                // 应用到音乐管理器
-                if (this.musicManager && this.musicManager.setNoteLengthLevel) this.musicManager.setNoteLengthLevel(idx);
-                // 即时提示当前时值系数
-                var factor = (this.noteLenFactors && this.noteLenFactors[idx] !== undefined) ? this.noteLenFactors[idx] : 1.0;
-                this._showInfoTransient(`🎼 NoteLen L${idx} (${factor.toFixed(2)}x)`, 600);
             }
         },
         {
@@ -2892,7 +2789,7 @@ export var Game = /*#__PURE__*/ function () {
 
                 // 循环到目标索引
                 while (currentIndex !== targetIndex) {
-                    drumManager.cycleDrumPreset();
+                    drumManager.queueRhythmCell(currentIndex % 7, Math.floor(currentIndex / 7));
                     currentIndex = (currentIndex + 1) % drumManager.getAllDrumPresets().length;
                 }
 
