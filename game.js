@@ -2431,72 +2431,6 @@ export var Game = /*#__PURE__*/ function () {
 
                 // 初始化 Delay 控制 UI
                 this._initDelayControlUI();
-
-                // 绑定编辑器打开/关闭与实时循环的暂停/恢复
-                this._wireEditorPauseResume();
-            }
-        },
-        {
-            key: "_wireEditorPauseResume",
-            value: function _wireEditorPauseResume() {
-                var _this = this;
-                // 打开按钮 -> 暂停
-                var openArp = document.getElementById('open-arpeggio-editor');
-                if (openArp) {
-                    openArp.addEventListener('click', function () { _this._pauseRealtime(); });
-                }
-                var openDrum = document.getElementById('open-drum-editor');
-                if (openDrum) {
-                    openDrum.addEventListener('click', function () { _this._pauseRealtime(); });
-                }
-                // 关闭控件/背景点击 -> 恢复
-                var arpModal = document.getElementById('arpeggio-editor-modal');
-                if (arpModal) {
-                    var closeSpan = arpModal.querySelector('.close');
-                    if (closeSpan) closeSpan.addEventListener('click', function () { _this._resumeRealtime(); });
-                    var closeBtn = document.getElementById('closeBtn');
-                    if (closeBtn) closeBtn.addEventListener('click', function () { _this._resumeRealtime(); });
-                    arpModal.addEventListener('click', function (e) {
-                        if (e.target === arpModal) { _this._resumeRealtime(); }
-                    });
-                }
-                var drumModal = document.getElementById('drum-editor-modal');
-                if (drumModal) {
-                    var dClose = drumModal.querySelector('.close');
-                    if (dClose) dClose.addEventListener('click', function () { _this._resumeRealtime(); });
-                    drumModal.addEventListener('click', function (e) {
-                        if (e.target === drumModal) { _this._resumeRealtime(); }
-                    });
-                }
-            }
-        },
-        {
-            key: "_pauseRealtime",
-            value: function _pauseRealtime() {
-                if (this._isPaused) return;
-                this._isPaused = true;
-                this._prevGameState = this.gameState;
-                this.gameState = 'paused';
-                // 可选：暂停波形更新不需要其它操作，因为 _animate 中已按 gameState 判断
-                console.log('⏸️ Realtime paused for editor');
-            }
-        },
-        {
-            key: "_resumeRealtime",
-            value: function _resumeRealtime() {
-                if (!this._isPaused) return;
-                this._isPaused = false;
-                // 若之前是 tracking 则恢复，否则也强制恢复到 tracking（排除 error/no-camera）
-                if (this._prevGameState === 'tracking' || this._prevGameState === 'paused') {
-                    this.gameState = 'tracking';
-                } else if (this._prevGameState === 'no-camera') {
-                    this.gameState = 'no-camera';
-                } else if (this._prevGameState === 'error') {
-                    this.gameState = 'error';
-                } else {
-                    this.gameState = 'tracking';
-                }
-                console.log('▶️ Realtime resumed after editor');
             }
         },
         {
@@ -2605,7 +2539,7 @@ export var Game = /*#__PURE__*/ function () {
                 statusElement.textContent = msg;
                 statusElement.style.color = '#7B4394';
                 setTimeout(() => {
-                    statusElement.textContent = prev || 'raise your hands to raise the roof';
+                    statusElement.textContent = prev || '';
                     statusElement.style.color = prevColor || '#FFFFFF';
                 }, Math.max(1000, durationMs || 2000));
             }
@@ -3034,7 +2968,7 @@ export var Game = /*#__PURE__*/ function () {
                     statusElement.style.color = '#FFFFFF';
 
                     setTimeout(() => {
-                        statusElement.textContent = 'raise your hands to raise the roof';
+                        statusElement.textContent = '';
                         statusElement.style.opacity = '1';
                     }, 500);
                 }, 2000);

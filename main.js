@@ -1,6 +1,4 @@
 import { Game } from './game.js';
-import { CustomEditor } from './CustomEditor.js';
-import { ArpeggioEditor } from './ArpeggioEditor.js';
 import * as drumManager from './DrumManager.js';
 import { stateManager } from './StateManager.js';
 import { container, errorHandler } from './DIContainer.js';
@@ -157,30 +155,12 @@ function initializeApp() {
         // Initialize the game with the render target
         var game = new Game(renderDiv);
 
-        // Initialize the custom editor
-        var customEditor = new CustomEditor();
-
-        // Check Tone.js availability
-        if (window.Tone) {
-            console.log('🎵 [MAIN] Tone.js 已加载，版本:', window.Tone.version || 'unknown');
-            console.log('🎵 [MAIN] 音频上下文状态:', window.Tone.context.state);
-        } else {
-            console.error('❌ [MAIN] Tone.js 未加载！音频功能将不可用');
-        }
-
-        // Initialize the arpeggio editor
-        var arpeggioEditor = new ArpeggioEditor();
-
         // 注册核心服务
         container.register('game', () => game, { singleton: true });
-        container.register('customEditor', () => customEditor, { singleton: true });
-        container.register('arpeggioEditor', () => arpeggioEditor, { singleton: true });
         container.register('drumManager', () => drumManager, { singleton: true });
 
         // Make everything available globally (向后兼容)
         window.game = game;
-        window.customEditor = customEditor;
-        window.arpeggioEditor = arpeggioEditor;
         window.drumManager = drumManager;
         window.stateManager = stateManager;
         window.errorHandler = errorHandler;
