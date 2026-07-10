@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [html, main, game, styles, recordingController] = await Promise.all([
+const [html, main, game, styles, recordingController, qr] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../main.js', import.meta.url), 'utf8'),
   readFile(new URL('../game.js', import.meta.url), 'utf8'),
   readFile(new URL('../styles.css', import.meta.url), 'utf8'),
   readFile(new URL('../RecordingController.js', import.meta.url), 'utf8'),
+  readFile(new URL('../share/qr.js', import.meta.url), 'utf8'),
 ]);
 
 test('runtime editor surfaces and legacy slogan are absent', () => {
@@ -65,4 +66,7 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
   assert.match(styles, /--record:\s*#ff4d5f/i);
   assert.match(styles, /\.rec-status\[data-phase=["']recording["']\]/);
   assert.match(styles, /@keyframes\s+rec-status-pulse/);
+  assert.match(qr, /qr-share-template-bauhaus\.png/);
+  assert.match(html, /id="recording-qr"[^>]+width="1254"[^>]+height="1254"/);
+  assert.match(styles, /\.recording-share\s*\{[^}]*grid-template-columns:\s*1fr/s);
 });

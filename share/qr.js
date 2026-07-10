@@ -48,4 +48,11 @@ export async function renderQr(canvas, value, {
     QR_RECT.size,
     QR_RECT.size,
   );
+  context.fillStyle = '#11120f';
+  context.textAlign = 'left';
+  context.textBaseline = 'alphabetic';
+  context.font = '700 36px "Arial Black", "Segoe UI", sans-serif';
+  context.fillText('SCAN TO LISTEN / DOWNLOAD', 72, 1172);
+  context.font = '600 24px "Cascadia Mono", Consolas, monospace';
+  context.fillText('ARPEGGIATOR REMIX · 24H', 72, 1222);
 }

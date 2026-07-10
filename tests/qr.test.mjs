@@ -5,10 +5,15 @@ import { QR_RECT, renderQr } from '../share/qr.js';
 
 test('lazy-loads the selected poster and composites an offscreen QR into its safe zone', async () => {
   const drawCalls = [];
+  const textCalls = [];
+  const context = {
+    drawImage: (...args) => drawCalls.push(args),
+    fillText: (...args) => textCalls.push(args),
+  };
   const canvas = {
     width: 0,
     height: 0,
-    getContext: () => ({ drawImage: (...args) => drawCalls.push(args) }),
+    getContext: () => context,
   };
   const template = { naturalWidth: 1254, naturalHeight: 1254 };
   const qrCanvas = { id: 'offscreen-qr' };
@@ -48,5 +53,9 @@ test('lazy-loads the selected poster and composites an offscreen QR into its saf
     QR_RECT.y,
     QR_RECT.size,
     QR_RECT.size,
+  ]);
+  assert.deepEqual(textCalls, [
+    ['SCAN TO LISTEN / DOWNLOAD', 72, 1172],
+    ['ARPEGGIATOR REMIX · 24H', 72, 1222],
   ]);
 });
