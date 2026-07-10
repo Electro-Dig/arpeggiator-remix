@@ -25,6 +25,10 @@ export default async (request, context) => {
     );
   }
 
+  if (url.pathname === '/r' || url.pathname.startsWith('/r/')) {
+    return withSecurityHeaders(await context.next());
+  }
+
   if (url.pathname === LOGOUT_PATH) {
     return redirectWithCookieClear(new URL(LOGIN_PATH, url));
   }

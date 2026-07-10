@@ -30,3 +30,19 @@ test('valid invite submission redirects and sets the auth cookie', async () => {
   assert.equal(response.headers.get('location'), 'https://example.test/');
   assert.match(response.headers.get('set-cookie'), /arp_invite_auth=/);
 });
+
+test('public share routes bypass invite while upload remains protected', async () => {
+  const next = () => new Response('public');
+  assert.equal((await inviteGate(
+    new Request('https://example.test/r/token'),
+    { next },
+  )).status, 200);
+  assert.equal((await inviteGate(
+    new Request('https://example.test/r/audio/token'),
+    { next },
+  )).status, 200);
+  assert.equal((await inviteGate(
+    new Request('https://example.test/recordings-api/upload'),
+    { next },
+  )).status, 303);
+});

@@ -5,6 +5,23 @@
   path = "/*"
   function = "invite-gate"
 
+[[redirects]]
+  from = "/recordings-api/*"
+  to = "/.netlify/functions/recordings-api"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/r/audio/*"
+  to = "/.netlify/functions/recordings-api"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/r/*"
+  to = "/r/index.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
