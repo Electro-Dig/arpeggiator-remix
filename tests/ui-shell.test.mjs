@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const [html, main, game] = await Promise.all([
+const [html, main, game, styles] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../main.js', import.meta.url), 'utf8'),
   readFile(new URL('../game.js', import.meta.url), 'utf8'),
+  readFile(new URL('../styles.css', import.meta.url), 'utf8'),
 ]);
 
 test('runtime editor surfaces and legacy slogan are absent', () => {
@@ -21,4 +22,12 @@ test('exhibition controls and social links remain discoverable', () => {
   }
   assert.match(html, /https:\/\/github\.com\/Electro-Dig/);
   assert.match(html, /https:\/\/www\.xiaohongshu\.com\/user\/profile\/6070457c000000000101efac/);
+});
+
+test('visual shell supports control deck, simple mode, and reduced motion', () => {
+  assert.match(styles, /--cyan:\s*#7af3ff/i);
+  assert.match(styles, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  assert.match(styles, /\.simple-mode\s+#renderDiv::after/);
+  assert.match(main, /control-deck-toggle/);
+  assert.match(main, /classList\.toggle\('simple-mode'/);
 });

@@ -178,22 +178,19 @@ function initializeApp() {
 
         // 设置简化模式按钮事件监听
         const simpleModeBtn = document.getElementById('toggle-simple-mode');
-        if (simpleModeBtn && game) {
-            simpleModeBtn.addEventListener('click', () => {
-                game.simpleMode = !game.simpleMode;
-                if (game.simpleMode) {
-                    simpleModeBtn.textContent = '🚀 简化';
-                    simpleModeBtn.style.backgroundColor = 'rgba(255, 152, 0, 0.9)';
-                    simpleModeBtn.title = '当前：简化模式（性能优先）';
-                    console.log('🚀 切换到简化模式：减少信息显示以提升性能');
-                } else {
-                    simpleModeBtn.textContent = '🚀 详细';
-                    simpleModeBtn.style.backgroundColor = 'rgba(76, 175, 80, 0.9)';
-                    simpleModeBtn.title = '当前：详细模式（显示全部信息）';
-                    console.log('📊 切换到详细模式：显示完整手势信息');
-                }
-            });
-        }
+        simpleModeBtn?.addEventListener('click', () => {
+            game.simpleMode = !game.simpleMode;
+            document.body.classList.toggle('simple-mode', game.simpleMode);
+            simpleModeBtn.setAttribute('aria-pressed', String(game.simpleMode));
+            simpleModeBtn.textContent = game.simpleMode ? '标准模式' : '简化模式';
+        });
+
+        const deckToggle = document.getElementById('control-deck-toggle');
+        const deck = document.getElementById('control-deck');
+        deckToggle?.addEventListener('click', () => {
+            deck.hidden = !deck.hidden;
+            deckToggle.setAttribute('aria-expanded', String(!deck.hidden));
+        });
 
         // 初始化鼓组音量控制 UI
         const drumVolPanel = document.getElementById('drum-volume-panel');
@@ -202,7 +199,8 @@ function initializeApp() {
         if (drumVolPanel && drumVolToggle && drumVolSliders && drumManager) {
             // 展开/收起切换
             drumVolToggle.addEventListener('click', () => {
-                drumVolSliders.style.display = (drumVolSliders.style.display === 'none') ? 'flex' : 'none';
+                drumVolSliders.hidden = !drumVolSliders.hidden;
+                drumVolToggle.setAttribute('aria-expanded', String(!drumVolSliders.hidden));
             });
 
             // 初始值从 DrumManager 获取
