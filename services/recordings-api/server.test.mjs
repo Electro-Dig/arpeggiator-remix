@@ -71,6 +71,38 @@ test('signed upload and download round-trip audio bytes', async () => {
   });
 });
 
+test('signed range reads return 206 and reject unsatisfiable ranges with 416', async () => {
+  await withServer(async ({ origin }) => {
+    const body = new Uint8Array([10, 20, 30, 40]);
+    const uploadPath = '/v1/recordings';
+    const upload = await fetch(`${origin}${uploadPath}`, {
+      method: 'POST',
+      headers: await signedHeaders({
+        method: 'POST', path: uploadPath, body, mime: 'audio/webm',
+      }),
+      body,
+    });
+    const result = await upload.json();
+    const downloadPath = `/v1/recordings/${result.token}`;
+    const authHeaders = await signedHeaders({ method: 'GET', path: downloadPath });
+
+    const partial = await fetch(`${origin}${downloadPath}`, {
+      headers: { ...authHeaders, range: 'bytes=1-2' },
+    });
+    assert.equal(partial.status, 206);
+    assert.equal(partial.headers.get('accept-ranges'), 'bytes');
+    assert.equal(partial.headers.get('content-range'), 'bytes 1-2/4');
+    assert.equal(partial.headers.get('content-length'), '2');
+    assert.deepEqual(new Uint8Array(await partial.arrayBuffer()), new Uint8Array([20, 30]));
+
+    const unsatisfiable = await fetch(`${origin}${downloadPath}`, {
+      headers: { ...authHeaders, range: 'bytes=9-10' },
+    });
+    assert.equal(unsatisfiable.status, 416);
+    assert.equal(unsatisfiable.headers.get('content-range'), 'bytes */4');
+  });
+});
+
 test('unsigned and oversized uploads cannot mutate storage', async () => {
   await withServer(async ({ origin, root }) => {
     const unsigned = await fetch(`${origin}/v1/recordings`, {

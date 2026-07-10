@@ -11,6 +11,39 @@ function httpError(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
+function parseByteRange(value, size) {
+  if (!value) return null;
+  const match = String(value).match(/^bytes=(\d*)-(\d*)$/);
+  if (!match || (!match[1] && !match[2])) {
+    throw Object.assign(httpError('Unsatisfiable range', 416), { size });
+  }
+
+  let start;
+  let end;
+  if (!match[1]) {
+    const suffixLength = Number(match[2]);
+    if (!Number.isSafeInteger(suffixLength) || suffixLength <= 0) {
+      throw Object.assign(httpError('Unsatisfiable range', 416), { size });
+    }
+    start = Math.max(0, size - suffixLength);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] ? Number(match[2]) : size - 1;
+    if (
+      !Number.isSafeInteger(start)
+      || !Number.isSafeInteger(end)
+      || start >= size
+      || end < start
+    ) {
+      throw Object.assign(httpError('Unsatisfiable range', 416), { size });
+    }
+    end = Math.min(end, size - 1);
+  }
+
+  return { start, end };
+}
+
 async function readBody(request, maxBytes) {
   const declaredLength = Number(request.headers['content-length']);
   if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
@@ -44,7 +77,7 @@ function sendJson(response, status, value, headers = {}) {
 }
 
 function sendError(response, error) {
-  const status = [400, 401, 404, 410, 413, 415].includes(error.status)
+  const status = [400, 401, 404, 410, 413, 415, 416].includes(error.status)
     ? error.status
     : 500;
   const messages = {
@@ -54,9 +87,13 @@ function sendError(response, error) {
     410: 'Expired',
     413: 'Recording too large',
     415: 'Unsupported recording type',
+    416: 'Unsatisfiable range',
     500: 'Internal server error',
   };
-  sendJson(response, status, { error: messages[status] });
+  const headers = status === 416 && Number.isSafeInteger(error.size)
+    ? { 'content-range': `bytes */${error.size}` }
+    : {};
+  sendJson(response, status, { error: messages[status] }, headers);
 }
 
 export function createRecordingServer({ store, secret, nowSeconds = () => Math.floor(Date.now() / 1000) }) {
@@ -101,14 +138,22 @@ export function createRecordingServer({ store, secret, nowSeconds = () => Math.f
       }
 
       const recording = await store.get(tokenMatch[1]);
-      response.writeHead(200, {
+      const range = parseByteRange(request.headers.range, recording.body.length);
+      const responseBody = range
+        ? recording.body.subarray(range.start, range.end + 1)
+        : recording.body;
+      response.writeHead(range ? 206 : 200, {
         'content-type': recording.mime,
-        'content-length': String(recording.body.length),
+        'content-length': String(responseBody.length),
         'cache-control': 'private, max-age=300',
         'x-content-type-options': 'nosniff',
         'x-recording-expires-at': String(recording.expiresAt),
+        'accept-ranges': 'bytes',
+        ...(range ? {
+          'content-range': `bytes ${range.start}-${range.end}/${recording.body.length}`,
+        } : {}),
       });
-      response.end(recording.body);
+      response.end(responseBody);
     } catch (error) {
       sendError(response, error);
     }

@@ -82,22 +82,32 @@ test('maps a valid public token to the signed audio route', async () => {
   const token = 'Abc_123-'.repeat(4);
   let captured;
   const response = await handleRecordingProxy(
-    new Request(`https://app.example.test/r/audio/${token}`),
+    new Request(`https://app.example.test/r/audio/${token}`, {
+      headers: { range: 'bytes=1-2' },
+    }),
     env,
     async (url, init) => {
       captured = { url, init };
       return new Response(new Uint8Array([9, 8]), {
+        status: 206,
         headers: {
           'content-type': 'audio/webm',
+          'content-range': 'bytes 1-2/4',
+          'content-length': '2',
+          'accept-ranges': 'bytes',
           'x-recording-expires-at': '1234',
         },
       });
     },
   );
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 206);
   assert.equal(captured.url, `https://recordings.example.test/v1/recordings/${token}`);
   assert.equal(captured.init.method, 'GET');
+  assert.equal(captured.init.headers.range, 'bytes=1-2');
   assert.equal(response.headers.get('content-type'), 'audio/webm');
+  assert.equal(response.headers.get('content-range'), 'bytes 1-2/4');
+  assert.equal(response.headers.get('content-length'), '2');
+  assert.equal(response.headers.get('accept-ranges'), 'bytes');
   assert.equal(response.headers.get('x-recording-expires-at'), '1234');
 });
 

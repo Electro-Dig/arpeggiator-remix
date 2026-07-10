@@ -41,14 +41,18 @@ export async function handleRecordingProxy(request, env, fetchImpl = fetch) {
     path: upstreamPath,
     body,
   });
+  const upstreamHeaders = {
+    'content-type': isUpload ? mime : 'application/octet-stream',
+    'content-length': String(body.byteLength),
+    'x-arp-timestamp': timestamp,
+    'x-arp-signature': signature,
+  };
+  const range = request.headers.get('range');
+  if (!isUpload && range) upstreamHeaders.range = range;
+
   const upstream = await fetchImpl(`${env.RECORDINGS_ORIGIN}${upstreamPath}`, {
     method: request.method,
-    headers: {
-      'content-type': isUpload ? mime : 'application/octet-stream',
-      'content-length': String(body.byteLength),
-      'x-arp-timestamp': timestamp,
-      'x-arp-signature': signature,
-    },
+    headers: upstreamHeaders,
     body: isUpload ? body : undefined,
   });
 
@@ -60,6 +64,12 @@ export async function handleRecordingProxy(request, env, fetchImpl = fetch) {
   const expiresAt = upstream.headers.get('x-recording-expires-at');
   if (!isUpload && expiresAt) {
     responseHeaders['x-recording-expires-at'] = expiresAt;
+  }
+  if (!isUpload) {
+    for (const header of ['accept-ranges', 'content-range', 'content-length']) {
+      const value = upstream.headers.get(header);
+      if (value) responseHeaders[header] = value;
+    }
   }
 
   return new Response(upstream.body, {
