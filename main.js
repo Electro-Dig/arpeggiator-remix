@@ -1,4 +1,5 @@
 import { Game } from './game.js';
+import { GuideController } from './GuideController.js';
 import * as drumManager from './DrumManager.js';
 import { stateManager } from './StateManager.js';
 import { container, errorHandler } from './DIContainer.js';
@@ -154,13 +155,16 @@ function initializeApp() {
 
         // Initialize the game with the render target
         var game = new Game(renderDiv);
+        const guideController = new GuideController(document);
 
         // 注册核心服务
         container.register('game', () => game, { singleton: true });
+        container.register('guideController', () => guideController, { singleton: true });
         container.register('drumManager', () => drumManager, { singleton: true });
 
         // Make everything available globally (向后兼容)
         window.game = game;
+        window.guideController = guideController;
         window.drumManager = drumManager;
         window.stateManager = stateManager;
         window.errorHandler = errorHandler;
