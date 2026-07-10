@@ -6,10 +6,11 @@ export class StateManager extends EventTarget {
     constructor() {
         super();
         this.state = {
-            synthName: 'DX7 MARIMBA',
-            musicPresetName: 'Minimal Groove',
-            drumPresetName: 'Rhythm1',
-            tempo: 122,
+            sceneName: 'Neon Drive',
+            synthName: 'NEON PLUCK',
+            rhythmName: 'STEADY / FULL',
+            tempo: 120,
+            rootNote: 'E3',
             isPlaying: false,
             handPosition: { left: null, right: null }
         };
@@ -99,14 +100,17 @@ export class StateManager extends EventTarget {
                 case 'synthName':
                     this.updateElement('current-synth', changes[key].to);
                     break;
-                case 'musicPresetName':
+                case 'sceneName':
                     this.updateElement('current-music-preset', changes[key].to);
                     break;
-                case 'drumPresetName':
+                case 'rhythmName':
                     this.updateElement('current-drum-preset', changes[key].to);
                     break;
                 case 'tempo':
-                    this.updateElement('current-tempo', changes[key].to + ' BPM');
+                    this.updateElement('current-tempo', String(changes[key].to));
+                    break;
+                case 'rootNote':
+                    this.updateElement('current-root-note', changes[key].to);
                     break;
             }
         });

@@ -45,6 +45,19 @@ test('rhythm space uses a transform-only overlay and event-driven confirmed stat
   assert.doesNotMatch(main, /\n\s{4}observeDrumManager\(drumMgr\)[\s\S]{0,500}setInterval/);
 });
 
+test('manual Synthwave scenes and semantic HUD remain available without tracking', () => {
+  for (const id of ['scene-selector', 'classic-pattern-control', 'classic-pattern-select', 'current-root-note']) {
+    assert.match(html, new RegExp(`id=["']${id}["']`));
+  }
+  for (const scene of ['classic', 'neon-drive', 'midnight-pulse', 'arcade-horizon']) {
+    assert.match(html, new RegExp(`data-scene=["']${scene}["']`));
+  }
+  assert.match(main, /musicManager\.setScene\(sceneId\)/);
+  assert.match(main, /musicManager\.setClassicPreset/);
+  assert.match(main, /onStatusChange/);
+  assert.doesNotMatch(main, /setInterval\(/);
+});
+
 test('editorial hierarchy remains restrained and semantic', () => {
   for (const className of ['hud-metric', 'operator-action__meta', 'guide-card__step', 'guide-card__notations']) {
     assert.match(html, new RegExp(`class=["'][^"']*${className}`));

@@ -48,6 +48,7 @@ export class MusicManager extends EventTarget {
   constructor() {
     super();
     this.isStarted = false;
+    this.startPromise = null;
     this.activePatterns = new Map();
     this.handVolumes = new Map();
     this.scene = getScene(DEFAULT_SCENE_ID);
@@ -68,8 +69,18 @@ export class MusicManager extends EventTarget {
     this.bassSequence = null;
   }
 
-  async start() {
-    if (this.isStarted) return this;
+  start() {
+    if (this.isStarted) return Promise.resolve(this);
+    if (!this.startPromise) {
+      this.startPromise = this.initialize().catch((error) => {
+        this.startPromise = null;
+        throw error;
+      });
+    }
+    return this.startPromise;
+  }
+
+  async initialize() {
     await audioBus.start();
     this.sceneFilter = new Tone.Filter({ type: 'lowpass', frequency: 2600, Q: 1.2 });
     this.sceneDelay = new Tone.FeedbackDelay('8n.', 0.32);
@@ -163,6 +174,7 @@ export class MusicManager extends EventTarget {
     this.stopAllArpeggios();
     this.scene = selected;
     this.scale = buildScale(selected.tonic, selected.mode, 3, 5);
+    this.currentRoot = this.scale[0];
     this.variantIndex = 0;
     if (this.isStarted) Tone.Transport.bpm.rampTo(selected.bpm, 0.15);
     this.setToneVariant(0, { emit: false });
@@ -186,11 +198,12 @@ export class MusicManager extends EventTarget {
 
   setRootFromPosition(normalizedY) {
     const note = noteAtPosition(this.scale, normalizedY);
+    const rootChanged = note !== this.currentRoot;
     if (this.activePatterns.has('Left')) this.updateArpeggio('Left', note);
     else this.startArpeggio('Left', note);
     this.currentRoot = note;
     this.bassRoot = note;
-    this.emitStatus();
+    if (rootChanged) this.emitStatus();
     return note;
   }
 

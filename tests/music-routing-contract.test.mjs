@@ -20,10 +20,17 @@ test('audio nodes are constructed once in start and never routed around the reco
   assert.doesNotMatch(source, /\.toDestination\(/);
   assert.doesNotMatch(source, /setToneVariant[\s\S]{0,700}\.dispose\(/);
   assert.match(source, /sceneReverb\.connect\(audioBus\.input\)/);
+  assert.match(source, /this\.startPromise/);
+  assert.match(source, /if \(!this\.startPromise\)/);
 });
 
 test('legacy Classic material remains available without editor-era note length state', () => {
   assert.match(source, /export const CLASSIC_PRESETS/);
   assert.doesNotMatch(source, /noteLengthLevels|setNoteLengthLevel/);
   assert.doesNotMatch(source, /cycleSynth\(|cycleMusicPreset\(/);
+});
+
+test('quantized root status emits only when the note changes', () => {
+  assert.match(source, /const rootChanged = note !== this\.currentRoot/);
+  assert.match(source, /if \(rootChanged\) this\.emitStatus\(\)/);
 });

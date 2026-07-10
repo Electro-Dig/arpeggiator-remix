@@ -60,31 +60,18 @@ class RealTimeStatusSync {
     }
 
     observeMusicManager(musicManager) {
-        let lastMusicState = null;
-
-        const checkInterval = setInterval(() => {
-            this.errorHandler.safeExecute(() => {
-                const currentState = {
-                    synthName: musicManager.getSynthName(),
-                    preset: musicManager.getCurrentMusicPreset()
-                };
-
-                if (!lastMusicState || this.hasChanged(lastMusicState, currentState)) {
-                    this.stateManager.setState({
-                        synthName: currentState.synthName,
-                        musicPresetName: currentState.preset.name,
-                        tempo: currentState.preset.tempo
-                    });
-                    lastMusicState = currentState;
-                }
-            }, '音乐状态检查');
-        }, 1000);
-
-        return () => clearInterval(checkInterval);
+        const sync = (status) => this.stateManager.setState({
+            sceneName: status.sceneName,
+            synthName: status.synthName,
+            tempo: status.tempo,
+            rootNote: status.rootNote,
+        });
+        sync(musicManager.getStatus());
+        return musicManager.onStatusChange(sync);
     }
 
     observeDrumManager(drumMgr) {
-        const sync = (cell) => this.stateManager.setState({ drumPresetName: cell.label });
+        const sync = (cell) => this.stateManager.setState({ rhythmName: cell.label });
         sync(drumMgr.getCurrentGridCell());
         return drumMgr.onRhythmCellChange(sync);
     }
@@ -98,24 +85,16 @@ class RealTimeStatusSync {
             return;
         }
 
-        const synthName = game.musicManager.getSynthName();
-        const musicPreset = game.musicManager.getCurrentMusicPreset();
+        const musicStatus = game.musicManager.getStatus();
         const drumPreset = drumMgr.getCurrentGridCell();
 
         this.stateManager.setState({
-            synthName: synthName,
-            musicPresetName: musicPreset.name,
-            drumPresetName: drumPreset.label,
-            tempo: musicPreset.tempo
+            sceneName: musicStatus.sceneName,
+            synthName: musicStatus.synthName,
+            rhythmName: drumPreset.label,
+            tempo: musicStatus.tempo,
+            rootNote: musicStatus.rootNote,
         });
-    }
-
-    hasChanged(oldState, newState) {
-        return (
-            oldState.synthName !== newState.synthName ||
-            oldState.preset?.name !== newState.preset?.name ||
-            oldState.preset?.tempo !== newState.preset?.tempo
-        );
     }
 }
 
@@ -170,6 +149,34 @@ function initializeApp() {
         window.stateManager = stateManager;
         window.errorHandler = errorHandler;
 
+        const musicManager = game.musicManager;
+        const sceneButtons = [...document.querySelectorAll('#scene-selector [data-scene]')];
+        const classicControl = document.getElementById('classic-pattern-control');
+        const classicSelect = document.getElementById('classic-pattern-select');
+        const updateSceneControls = ({ sceneId }) => {
+            for (const button of sceneButtons) {
+                if (button.dataset.scene === sceneId) button.setAttribute('aria-current', 'true');
+                else button.removeAttribute('aria-current');
+            }
+            if (classicControl) classicControl.hidden = sceneId !== 'classic';
+        };
+        musicManager.onStatusChange(updateSceneControls);
+        updateSceneControls(musicManager.getStatus());
+        for (const button of sceneButtons) {
+            button.addEventListener('click', async () => {
+                const sceneId = button.dataset.scene;
+                try {
+                    await musicManager.start();
+                    musicManager.setScene(sceneId);
+                } catch (error) {
+                    errorHandler.logError('场景切换失败', error);
+                }
+            });
+        }
+        classicSelect?.addEventListener('change', () => {
+            musicManager.setClassicPreset(Number(classicSelect.value));
+        });
+
         renderDiv.addEventListener('rhythmposition', ({ detail }) => {
             rhythmOverlay.updatePosition(detail);
         });
@@ -215,12 +222,9 @@ function initializeApp() {
             if (action) recordingController.dispatch({ type: action });
         });
 
-        // 启动状态同步
-        setTimeout(() => {
-            const statusSync = container.get('statusSync');
-            window.statusSync = statusSync;
-            statusSync.start();
-        }, 2000);
+        const statusSync = container.get('statusSync');
+        window.statusSync = statusSync;
+        statusSync.start();
 
         // 设置简化模式按钮事件监听
         const simpleModeBtn = document.getElementById('toggle-simple-mode');
