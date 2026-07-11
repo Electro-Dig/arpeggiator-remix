@@ -33,15 +33,15 @@ export const SCENES = Object.freeze([
     variants: ['ARCADE PULSE', 'ARCADE CRYSTAL'],
   }),
   scene({
-    id: 'afterglow-coast', name: 'Afterglow Coast', tonic: 'D', mode: 'major-pentatonic', bpm: 96,
-    sequence: [0, 4, 7, 11, 7, 4, 2, null, 0, 4, 9, 11, 7, 4, 2, null],
-    bass: [0, null, null, 0, 5, null, 7, null],
+    id: 'afterglow-coast', name: 'Afterglow Coast', tonic: 'D', mode: 'major-pentatonic', bpm: 118,
+    sequence: [0, 4, 7, 9, 11, 9, 7, 4, 2, 4, 7, 11, 9, 7, 4, 2],
+    bass: [0, null, 0, null, 5, null, 7, null],
     variants: ['AFTERGLOW PAD', 'COASTAL PLUCK'],
   }),
   scene({
-    id: 'blue-hour-drift', name: 'Blue Hour Drift', tonic: 'A', mode: 'natural-minor', bpm: 90,
-    sequence: [0, null, 3, 7, null, 10, 7, 3, 0, null, 5, 7, 10, null, 7, 3],
-    bass: [0, null, null, null, 5, null, null, 7],
+    id: 'blue-hour-drift', name: 'Blue Hour Drift', tonic: 'A', mode: 'natural-minor', bpm: 120,
+    sequence: [0, 3, 7, 10, 12, 10, 7, 3, 5, 7, 10, 14, 12, 10, 7, 3],
+    bass: [0, null, 0, 0, 5, null, 7, null],
     variants: ['BLUE HOUR KEYS', 'TAPE CHOIR'],
   }),
 ]);

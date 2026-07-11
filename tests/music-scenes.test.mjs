@@ -9,13 +9,24 @@ test('ships exactly six approved scenes and defaults to Groove Pulse', () => {
     'minimal-groove', 'groove-pulse', 'neon-drive', 'arcade-horizon',
     'afterglow-coast', 'blue-hour-drift',
   ]);
-  assert.deepEqual(SCENES.map(({ bpm }) => bpm), [122, 115, 120, 126, 96, 90]);
+  assert.deepEqual(SCENES.map(({ bpm }) => bpm), [122, 115, 120, 126, 118, 120]);
   assert.deepEqual(SCENES.map(({ tonic, mode }) => `${tonic} ${mode}`), [
     'E chromatic', 'E chromatic', 'E natural-minor', 'A dorian',
     'D major-pentatonic', 'A natural-minor',
   ]);
   assert.ok(!SCENES.some(({ id }) => id === 'midnight-pulse'));
   assert.ok(SCENES.every(Object.isFrozen));
+});
+
+test('the two newest scenes use dense 16-step synthpop hooks around 118 BPM', () => {
+  const afterglow = getScene('afterglow-coast');
+  const blueHour = getScene('blue-hour-drift');
+  assert.deepEqual(afterglow.sequence, [0, 4, 7, 9, 11, 9, 7, 4, 2, 4, 7, 11, 9, 7, 4, 2]);
+  assert.deepEqual(blueHour.sequence, [0, 3, 7, 10, 12, 10, 7, 3, 5, 7, 10, 14, 12, 10, 7, 3]);
+  assert.equal(afterglow.sequence.filter(Number.isFinite).length, 16);
+  assert.equal(blueHour.sequence.filter(Number.isFinite).length, 16);
+  assert.deepEqual(afterglow.bass, [0, null, 0, null, 5, null, 7, null]);
+  assert.deepEqual(blueHour.bass, [0, null, 0, 0, 5, null, 7, null]);
 });
 
 test('promotes only the approved Classic material into standalone scenes', () => {
