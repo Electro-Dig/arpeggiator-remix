@@ -10,6 +10,10 @@ import {
 const LOGIN_PATH = '/__invite';
 const LOGOUT_PATH = '/__invite/logout';
 const ROBOTS_PATH = '/robots.txt';
+const PUBLIC_SHARE_ASSETS = new Set([
+  '/share/qr.js',
+  '/assets/qr-share-template-bauhaus.webp',
+]);
 
 export default async (request, context) => {
   const url = new URL(request.url);
@@ -25,7 +29,11 @@ export default async (request, context) => {
     );
   }
 
-  if (url.pathname === '/r' || url.pathname.startsWith('/r/')) {
+  if (
+    url.pathname === '/r'
+    || url.pathname.startsWith('/r/')
+    || PUBLIC_SHARE_ASSETS.has(url.pathname)
+  ) {
     return withSecurityHeaders(await context.next());
   }
 

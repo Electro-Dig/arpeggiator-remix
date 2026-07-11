@@ -42,6 +42,14 @@ test('public share routes bypass invite while upload remains protected', async (
     { next },
   )).status, 200);
   assert.equal((await inviteGate(
+    new Request('https://example.test/share/qr.js'),
+    { next },
+  )).status, 200);
+  assert.equal((await inviteGate(
+    new Request('https://example.test/assets/qr-share-template-bauhaus.webp'),
+    { next },
+  )).status, 200);
+  assert.equal((await inviteGate(
     new Request('https://example.test/recordings-api/upload'),
     { next },
   )).status, 303);
