@@ -1428,11 +1428,6 @@ export var Game = /*#__PURE__*/ function () {
                         _this.waveformVisualizer = new WaveformVisualizer(_this.scene, analyser, _this.renderDiv.clientWidth, _this.renderDiv.clientHeight);
                     }
 
-                    // 初始化预设显示
-                    _this._updatePresetDisplay();
-                    // 初始化预设选择器
-                    _this._initPresetSelector();
-
                     // 游戏初始化完成，状态面板将由main.js中的StatusUpdater处理
 
                     // 移除音频激活提示
@@ -1478,10 +1473,6 @@ export var Game = /*#__PURE__*/ function () {
                     if (analyser) {
                         _this.waveformVisualizer = new WaveformVisualizer(_this.scene, analyser, _this.renderDiv.clientWidth, _this.renderDiv.clientHeight);
                     }
-
-                    // 初始化预设显示
-                    _this._updatePresetDisplay();
-                    _this._initPresetSelector();
 
                     // 显示无摄像头模式的特殊提示
                     _this._showNoCameraModeGuide();
