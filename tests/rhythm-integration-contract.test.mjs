@@ -26,3 +26,15 @@ test('drum manager applies queued grid patterns while preserving five finger gat
     "'pinky': 'clap'",
   ]) assert.match(drumSource, new RegExp(pair));
 });
+
+test('drum manager delegates sample playback and kit state to DrumKitManager', () => {
+  assert.match(drumSource, /import \{ DrumKitManager \} from ['"]\.\/drums\/DrumKitManager\.js['"]/);
+  assert.match(drumSource, /const kitManager = new DrumKitManager\(\)/);
+  assert.match(drumSource, /kitManager\.trigger\(drum, time\)/);
+  assert.match(drumSource, /export const getCurrentDrumKit/);
+  assert.match(drumSource, /export const getDrumKitStatuses/);
+  assert.match(drumSource, /export const setDrumKit/);
+  assert.match(drumSource, /export const cycleDrumKit/);
+  assert.match(drumSource, /export const onDrumKitChange/);
+  assert.doesNotMatch(drumSource, /new Tone\.Players/);
+});
