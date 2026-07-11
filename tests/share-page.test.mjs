@@ -2,10 +2,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-import {
-  probeSharedRecording,
-  parseShareToken,
-} from '../r/share-page.js';
+import * as sharePage from '../r/share-page.js';
+
+const { probeSharedRecording, parseShareToken, takeLabelForToken } = sharePage;
 
 test('extracts only valid unguessable tokens from share paths', () => {
   const token = 'Abc_123-'.repeat(4);
@@ -57,10 +56,17 @@ test('public page stays lightweight and includes playback, download and noindex'
   const css = await readFile(new URL('../r/share.css', import.meta.url), 'utf8');
   assert.match(html, /<audio[^>]+controls/);
   assert.match(html, /id="download-recording"/);
+  assert.match(html, /id="download-poster"/);
   assert.match(html, /id="recording-expiry"/);
   assert.match(html, /name="robots" content="noindex,nofollow,noarchive"/);
   assert.doesNotMatch(html, /MediaPipe|Tone\.js|mediapipe|main\.js|camera/i);
   assert.match(css, /\[hidden\]\s*\{\s*display:\s*none\s*!important/);
   const script = await readFile(new URL('../r/share-page.js', import.meta.url), 'utf8');
   assert.doesNotMatch(script, /response\.blob\(|URL\.createObjectURL/);
+  assert.match(script, /downloadPoster/);
+  assert.match(script, /addEventListener\('click'[\s\S]*downloadPoster/);
+});
+
+test('derives a stable public take label without exposing the full token', () => {
+  assert.equal(takeLabelForToken('AbCd1234'.repeat(4)), 'TAKE CD12');
 });

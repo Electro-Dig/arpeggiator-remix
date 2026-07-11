@@ -1,3 +1,5 @@
+import { renderQr } from '../share/qr.js';
+
 const TOKEN = /^[A-Za-z0-9_-]{32,128}$/;
 
 function sharedRecordingError(status) {
@@ -10,6 +12,30 @@ function sharedRecordingError(status) {
 export function parseShareToken(pathname) {
   const match = String(pathname).match(/^\/r\/([A-Za-z0-9_-]{32,128})\/?$/);
   return match && TOKEN.test(match[1]) ? match[1] : null;
+}
+
+export function takeLabelForToken(token) {
+  return `TAKE ${String(token || '').slice(2, 6).toUpperCase()}`;
+}
+
+export async function downloadPoster({
+  token,
+  url,
+  render = renderQr,
+  root = document,
+} = {}) {
+  const canvas = root.createElement('canvas');
+  await render(canvas, url, {
+    takeLabel: takeLabelForToken(token),
+    projectName: 'ARPEGGIATOR REMIX',
+  });
+  const link = root.createElement('a');
+  link.download = `arpeggiator-remix-${takeLabelForToken(token).replace(' ', '-').toLowerCase()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.hidden = true;
+  root.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 export async function probeSharedRecording(token, fetchImpl = fetch) {
@@ -56,6 +82,8 @@ async function initSharePage() {
   const player = document.querySelector('#shared-recording');
   const download = document.querySelector('#download-recording');
   const expiry = document.querySelector('#recording-expiry');
+  const takeLabel = document.querySelector('#share-take-label');
+  const posterButton = document.querySelector('#download-poster');
   const token = parseShareToken(location.pathname);
 
   if (!token) {
@@ -65,12 +93,14 @@ async function initSharePage() {
   }
 
   try {
+    takeLabel.textContent = takeLabelForToken(token);
     const result = await probeSharedRecording(token);
     player.src = result.audioUrl;
     player.hidden = false;
     download.href = result.audioUrl;
     download.download = `arpeggiator-remix.${extensionFor(result.mime)}`;
     download.hidden = false;
+    posterButton.hidden = false;
     expiry.textContent = formatExpiry(result.expiresAt);
     status.textContent = '正在准备播放…';
     status.dataset.state = 'loading';
@@ -84,6 +114,18 @@ async function initSharePage() {
     player.addEventListener('error', () => {
       status.textContent = '音频加载失败，请刷新后重试。';
       status.dataset.state = 'error';
+    });
+    posterButton.addEventListener('click', async () => {
+      posterButton.disabled = true;
+      try {
+        await downloadPoster({ token, url: location.href });
+        posterButton.textContent = '分享海报已下载';
+      } catch (error) {
+        console.error('分享海报生成失败:', error);
+        posterButton.textContent = '海报生成失败 · 重试';
+      } finally {
+        posterButton.disabled = false;
+      }
     });
   } catch (error) {
     status.textContent = error.message;

@@ -19,10 +19,14 @@
 
       <section class="recording-card__body">
         <p class="eyebrow">GESTURE-GENERATED AUDIO</p>
+        <p id="share-take-label" class="take-label">LIVE TAKE</p>
         <h1 id="share-title">你的现场录音</h1>
         <p id="share-status" class="share-status" role="status" aria-live="polite">正在读取录音…</p>
         <audio id="shared-recording" controls preload="metadata" hidden></audio>
-        <a id="download-recording" class="download-action" href="#" hidden>下载录音 <span>↓</span></a>
+        <div class="download-actions">
+          <a id="download-recording" class="download-action" href="#" hidden>下载录音 <span>↓</span></a>
+          <button id="download-poster" class="download-action" type="button" hidden>下载分享海报 <span>↓</span></button>
+        </div>
       </section>
 
       <footer class="recording-card__footer">
