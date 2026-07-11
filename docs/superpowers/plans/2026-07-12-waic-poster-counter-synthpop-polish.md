@@ -39,7 +39,7 @@
 - Modify: `tests/guide-model.test.mjs`
 - Modify: `tests/ui-shell.test.mjs`
 
-- [ ] **Step 1: Write failing SVG anatomy and typography tests**
+- [x] **Step 1: Write failing SVG anatomy and typography tests**
 
 Add file reads for both SVGs and assertions that each illustrated hand has five semantic finger markers:
 
@@ -58,13 +58,13 @@ assert.match(styles, /\.guide-card #guide-body\s*\{[^}]*font-size:\s*clamp\(18px
 assert.match(styles, /\.guide-action\s*\{[^}]*font-size:\s*16px/s);
 ```
 
-- [ ] **Step 2: Run the focused tests and verify failure**
+- [x] **Step 2: Run the focused tests and verify failure**
 
 Run: `node --test tests/guide-model.test.mjs tests/ui-shell.test.mjs`
 
 Expected: FAIL because semantic finger markers and larger typography are absent.
 
-- [ ] **Step 3: Replace the two SVG illustrations**
+- [x] **Step 3: Replace the two SVG illustrations**
 
 Draw each hand with five explicit path/circle groups. Add exactly these marker elements per hand without affecting rendering:
 
@@ -80,7 +80,7 @@ Draw each hand with five explicit path/circle groups. Add exactly these marker e
 
 Use `data-hand="right"` on the second control hand and `data-hand="confirm" data-gesture="thumbs-up"` / `data-hand="cancel" data-gesture="thumbs-down"` on the recording hands. Preserve the existing 640×480 viewBox and card palette.
 
-- [ ] **Step 4: Increase guide text and action sizes**
+- [x] **Step 4: Increase guide text and action sizes**
 
 Set the desktop values:
 
@@ -94,7 +94,7 @@ Set the desktop values:
 
 Keep the smallest responsive body text at 16 px.
 
-- [ ] **Step 5: Run focused tests and commit**
+- [x] **Step 5: Run focused tests and commit**
 
 Run: `node --test tests/guide-model.test.mjs tests/ui-shell.test.mjs`
 
@@ -113,7 +113,7 @@ git commit -m "fix: improve guide anatomy and readability"
 - Modify: `tests/ui-shell.test.mjs`
 - Modify: `tests/recording-controller.test.mjs`
 
-- [ ] **Step 1: Write failing shell assertions**
+- [x] **Step 1: Write failing shell assertions**
 
 Assert that the audio element remains hidden and has no `controls`, the status panel exists, and shared state uses a bounded two-column body:
 
@@ -126,13 +126,13 @@ assert.match(styles, /\.recording-dialog\[data-phase="shared"\] \.recording-card
 assert.match(styles, /\.recording-dialog\s*\{[^}]*max-height:\s*calc\(100dvh - 32px\)/s);
 ```
 
-- [ ] **Step 2: Run tests and verify failure**
+- [x] **Step 2: Run tests and verify failure**
 
 Run: `node --test tests/ui-shell.test.mjs tests/recording-controller.test.mjs`
 
 Expected: FAIL on the old native controls and vertical shared layout.
 
-- [ ] **Step 3: Replace the player with a static status module**
+- [x] **Step 3: Replace the player with a static status module**
 
 Use this structure in the review body:
 
@@ -148,11 +148,11 @@ Use this structure in the review body:
 
 Do not change blob URL assignment or cleanup in `RecordingController`.
 
-- [ ] **Step 4: Implement bounded desktop and mobile layouts**
+- [x] **Step 4: Implement bounded desktop and mobile layouts**
 
 Use `max-height: calc(100dvh - 32px)` on the dialog. In shared state, use a two-column body and cap the poster preview at 420 px high. Keep `.recording-actions` inside the card grid and make every action at least 56 px tall. At widths below 760 px, switch to one column and cap the preview at 300 px.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 Run: `node --test tests/ui-shell.test.mjs tests/recording-controller.test.mjs`
 
@@ -172,7 +172,7 @@ git commit -m "feat: redesign recording review and share layout"
 - Modify: `tests/qr.test.mjs`
 - Modify: `tests/invite-gate.test.mjs`
 
-- [ ] **Step 1: Write failing poster-copy tests**
+- [x] **Step 1: Write failing poster-copy tests**
 
 Update the Canvas spy to assert the new template and exact dynamic copy:
 
@@ -194,17 +194,17 @@ assert.deepEqual(fillTextCalls.map(([text]) => text), [
 
 Also assert that `/assets/qr-share-template-waic-mint.webp` is a public invite-gate bypass.
 
-- [ ] **Step 2: Run tests and verify failure**
+- [x] **Step 2: Run tests and verify failure**
 
 Run: `node --test tests/qr.test.mjs tests/invite-gate.test.mjs`
 
 Expected: FAIL because the old Bauhaus asset and project copy are still used.
 
-- [ ] **Step 3: Generate the text-free template**
+- [x] **Step 3: Generate the text-free template**
 
 Inspect the existing reference with `view_image`, then use the explicitly requested `imagegen` skill as an edit. Preserve the square layout, QR safe zone, hand/music composition and paper texture; replace the palette with fog white, pale mint, deep teal, coral orange and limited warm yellow. Require no letters, words, numbers, QR modules or logos in the generated image. Compress the chosen output to WebP and store it as `assets/qr-share-template-waic-mint.webp`.
 
-- [ ] **Step 4: Render precise copy in Canvas**
+- [x] **Step 4: Render precise copy in Canvas**
 
 Change the public API to:
 
@@ -219,7 +219,7 @@ export async function renderQr(canvas, value, {
 
 Format the number with `String(checkinNumber).padStart(3, '0')`, retain the 1080×1440 poster and draw the five approved lines below the 1080×1080 artwork.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 Run: `node --test tests/qr.test.mjs tests/invite-gate.test.mjs`
 
@@ -241,7 +241,7 @@ git commit -m "feat: add WAIC check-in poster artwork"
 - Modify: `ops/recordings/arpeggiator-recordings.service`
 - Modify: `.env.example`
 
-- [ ] **Step 1: Write failing storage tests**
+- [x] **Step 1: Write failing storage tests**
 
 Add tests that expect `put()` to return sequential values, preserve them in metadata, serialize concurrent writes, and reset:
 
@@ -261,13 +261,13 @@ assert.equal((await store.put(new Uint8Array([4]), 'audio/webm')).checkinNumber,
 
 Assert `store.get(token).checkinNumber` matches the upload result.
 
-- [ ] **Step 2: Run storage tests and verify failure**
+- [x] **Step 2: Run storage tests and verify failure**
 
 Run: `node --test services/recordings-api/storage.test.mjs`
 
 Expected: FAIL because `checkinNumber` and `resetCounter()` do not exist.
 
-- [ ] **Step 3: Implement the serialized counter**
+- [x] **Step 3: Implement the serialized counter**
 
 Initialize `this.counterQueue = Promise.resolve()` in `RecordingStore`. Add a private queue helper and a `_activity-counter.json` file containing `{"value":27,"updatedAt":...}`. Under the queue, write the next value to a temporary file and atomically rename it, then include `checkinNumber` in recording metadata. If metadata writing fails, restore the previous counter value before rejecting.
 
@@ -280,7 +280,7 @@ async resetCounter(value = 0) {
 }
 ```
 
-- [ ] **Step 4: Write failing server tests**
+- [x] **Step 4: Write failing server tests**
 
 Test `x-recording-checkin-number` on GET and the localhost admin endpoint:
 
@@ -299,13 +299,13 @@ assert.deepEqual(await reset.json(), { value: 10 });
 
 Also assert missing/wrong keys return 401 and do not alter the next number.
 
-- [ ] **Step 5: Implement the reset route and script**
+- [x] **Step 5: Implement the reset route and script**
 
 Extend `createRecordingServer` with `adminSecret`. Use `timingSafeEqual` after equal-length validation. Accept only `POST /v1/admin/counter/reset` with JSON `{ value: nonNegativeInteger }`. Add a CLI script that requires `RECORDINGS_ADMIN_SECRET` and POSTs to `http://127.0.0.1:8787/v1/admin/counter/reset`.
 
 Add `EnvironmentFile=-/etc/arpeggiator-recordings.env` to the service if not already present and document `RECORDINGS_ADMIN_SECRET` in `.env.example`.
 
-- [ ] **Step 6: Run service tests and commit**
+- [x] **Step 6: Run service tests and commit**
 
 Run: `node --test services/recordings-api/storage.test.mjs services/recordings-api/server.test.mjs`
 
@@ -330,7 +330,7 @@ git commit -m "feat: add resettable recording check-in counter"
 - Modify: `tests/recording-controller.test.mjs`
 - Modify: `tests/share-page.test.mjs`
 
-- [ ] **Step 1: Write failing propagation tests**
+- [x] **Step 1: Write failing propagation tests**
 
 Require upload JSON `{ token, expiresAt, checkinNumber: 27 }`, a `checkinNumber` property from `uploadRecording`, forwarding of `x-recording-checkin-number`, and poster rendering with the same number:
 
@@ -342,17 +342,17 @@ assert.equal(probeResult.checkinNumber, 27);
 
 Reject zero, negative, fractional or missing upload numbers as invalid server responses.
 
-- [ ] **Step 2: Run focused tests and verify failure**
+- [x] **Step 2: Run focused tests and verify failure**
 
 Run: `node --test tests/recordings-proxy.test.mjs tests/recordings-client.test.mjs tests/recording-controller.test.mjs tests/share-page.test.mjs`
 
 Expected: FAIL because the number is not forwarded or rendered.
 
-- [ ] **Step 3: Forward and validate the number**
+- [x] **Step 3: Forward and validate the number**
 
 Forward `x-recording-checkin-number` on audio responses. In `uploadRecording`, require `Number.isSafeInteger(result.checkinNumber) && result.checkinNumber > 0` and return it unchanged.
 
-- [ ] **Step 4: Integrate desktop and mobile UI**
+- [x] **Step 4: Integrate desktop and mobile UI**
 
 Pass `{ checkinNumber: result.checkinNumber }` into `renderQr`. Add `#recording-checkin` to the shared desktop details. In `probeSharedRecording`, read and validate the header. Replace token-derived TAKE copy on the mobile share page with:
 
@@ -363,7 +363,7 @@ takeLabel.textContent = `TAKE ${String(result.checkinNumber).padStart(3, '0')}`;
 
 Use the same number when the mobile page lazily downloads the poster.
 
-- [ ] **Step 5: Run focused tests and commit**
+- [x] **Step 5: Run focused tests and commit**
 
 Run: `node --test tests/recordings-proxy.test.mjs tests/recordings-client.test.mjs tests/recording-controller.test.mjs tests/share-page.test.mjs`
 
@@ -380,7 +380,7 @@ git commit -m "feat: show real WAIC check-in numbers"
 - Modify: `music/scenes.js`
 - Modify: `tests/music-scenes.test.mjs`
 
-- [ ] **Step 1: Write failing synthpop scene tests**
+- [x] **Step 1: Write failing synthpop scene tests**
 
 ```js
 const afterglow = getScene('afterglow-coast');
@@ -393,13 +393,13 @@ assert.ok(afterglow.sequence.filter(Number.isFinite).length >= 14);
 assert.ok(blueHour.sequence.filter(Number.isFinite).length >= 13);
 ```
 
-- [ ] **Step 2: Run tests and verify failure**
+- [x] **Step 2: Run tests and verify failure**
 
 Run: `node --test tests/music-scenes.test.mjs`
 
 Expected: FAIL on BPM 96 and 90.
 
-- [ ] **Step 3: Implement the approved loops**
+- [x] **Step 3: Implement the approved loops**
 
 Use these deterministic 16-step sequences:
 
@@ -415,7 +415,7 @@ bass: [0, null, 0, 0, 5, null, 7, null],
 
 Keep scene IDs, names and the existing recognized variants unchanged: `['AFTERGLOW PAD', 'COASTAL PLUCK']` and `['BLUE HOUR KEYS', 'TAPE CHOIR']`.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 Run: `node --test tests/music-scenes.test.mjs tests/music-routing-contract.test.mjs`
 
@@ -432,7 +432,7 @@ git commit -m "feat: replace chill scenes with synthpop loops"
 - Modify only if verification exposes an in-scope defect.
 - Update: `docs/superpowers/plans/2026-07-12-waic-poster-counter-synthpop-polish.md` checkbox status.
 
-- [ ] **Step 1: Run syntax and full automated tests**
+- [x] **Step 1: Run syntax and full automated tests**
 
 Run:
 
@@ -446,7 +446,7 @@ npm test
 
 Expected: all checks pass and the full suite reports zero failures.
 
-- [ ] **Step 2: Run local browser smoke**
+- [x] **Step 2: Run local browser smoke**
 
 Start the local server and use the in-app browser to capture:
 
@@ -456,15 +456,15 @@ Start the local server and use the in-app browser to capture:
 4. A narrow/mobile shared state.
 5. Console with no new errors.
 
-- [ ] **Step 3: Verify counter end to end**
+- [x] **Step 3: Verify counter end to end**
 
 Run the recording service tests, upload two sample recordings, verify consecutive numbers and audio range playback, reset to zero through `scripts/reset-recording-counter.mjs`, then verify the next successful upload returns `1`.
 
-- [ ] **Step 4: Deploy only to the existing Netlify Draft**
+- [x] **Step 4: Deploy only to the existing Netlify Draft**
 
 Use the linked test site and verify the Draft URL, guide assets, public poster template, invite gate, recording upload, QR scan/share page and mobile poster download. Do not deploy to production and do not update `origin/main`.
 
-- [ ] **Step 5: Commit verification documentation**
+- [x] **Step 5: Commit verification documentation**
 
 ```bash
 git add docs/superpowers/plans/2026-07-12-waic-poster-counter-synthpop-polish.md
