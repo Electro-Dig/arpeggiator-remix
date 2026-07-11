@@ -3,14 +3,14 @@
 ## Scope
 
 - Branch: `feature/exhibition-v2`
-- Preview commit: `4bac9cd`
-- Netlify Draft: `https://6a51cbf1592e27d6ea1a7fab--arpeggiator-remix-2.netlify.app`
+- Preview commit: `4da3cfa`
+- Netlify Draft: `https://6a524094fb0517928e960004--arpeggiator-remix-2.netlify.app`
 - Production branch remained at `59f9ef3c6b9af1ab77ab4d02693830959a93771a` during the preview push.
 - The Duo Mix branch was not merged.
 
 ## Automated verification
 
-- `npm.cmd test`: 124/124 passing.
+- `npm.cmd test`: 137/137 passing.
 - JavaScript syntax check: all project `.js` files passing.
 - `git diff --check`: clean.
 - Rhythm map: 49 unique immutable 16-step cells across `STRAIGHT → BROKEN` and `MINIMAL → ENERGY`; four anchors, center hybrid, boundary smoothing and next-bar scheduling covered by tests.
@@ -20,13 +20,20 @@
 - Audio graph: one reusable PolySynth, MonoSynth, Filter, Delay, Reverb, and bass sequence; routing to the internal recording bus covered by tests.
 - Gesture contracts: stable handedness, left-hand scene/tone/root controls, right-hand rhythm XY and five independent drum gates covered by tests.
 - Recording contracts: 3-second countdown, 60-second cap, early stop, cancel, re-record, upload retry, MIME selection, signed proxy and expiry states covered by tests.
+- Guide contracts: three local SVG cards, manual navigation, `👍👍` one-page advance, `👎👎` exit and neutral rearming covered by tests.
+- Share contracts: TAKE metadata, 1080×1440 portrait poster, lazy mobile poster download and seekable public audio remain independently tested.
+- Music scenes: six immutable modes, default Groove Pulse, no Midnight Pulse, and major-pentatonic support for Afterglow Coast covered by tests.
 
 ## Browser and service smoke
 
 - Local Chrome smoke at 1920×1080 loaded all 15 drum samples with HTTP 200, no failed requests, no page errors and no console errors.
 - Manual Control Deck switching reached Acoustic, Electronic and Synthwave and updated the event-driven kit label each time.
-- The enlarged rhythm grid measured exactly 160×160 px and did not overlap the top HUD, scene controls or social links.
+- The enlarged rhythm grid measured exactly 182×182 px and did not overlap the top HUD, scene controls or social links.
 - A 390×844 responsive capture kept the lower controls, grid and social links separated.
+- The three-page illustrated guide fit inside 1920×1080 without internal scrolling; the 390×844 layout also kept the complete third card and actions on screen.
+- Recording review and shared states fit inside 1920×1080 without internal scrolling; TAKE, duration, format, player and 48 px actions remained visible.
+- The public mobile card at 390×844 exposed playback, audio download and poster download in one viewport. Poster rendering remains lazy until the user clicks.
+- Draft HTTP smoke confirmed `/` remains a `303` invite boundary while `/r/<token>`, `/r/share-page.js`, `/share/qr.js` and the Bauhaus poster template return `200` with noindex headers.
 - The new Draft returned the expected `303` invite boundary with `X-Robots-Tag: noindex`.
 - The following recording and public-share checks were completed on the preceding Draft of the same branch before this rhythm/kit batch:
 
@@ -59,7 +66,7 @@ The second segment's negative heap delta indicates collection after warm-up; no 
 - Same-camera five-minute `origin/main` versus V2 hand-tracking FPS comparison.
 - Five-minute full-grid audible audition and a 30-minute camera/audio soak.
 - Two-background-observer crowd-interference rehearsal.
-- Subjective level matching across the four scenes and all 49 rhythm cells on the venue speakers.
+- Subjective level matching across the six scenes and all 49 rhythm cells on the venue speakers.
 
 These items are deliberately not marked as passed by headless automation. Production replacement remains behind explicit user approval.
 
@@ -67,3 +74,4 @@ These items are deliberately not marked as passed by headless automation. Produc
 
 - Before the right-hand rhythm-zone and drum-kit batch: `83085d1`.
 - Current protected production branch: `59f9ef3c6b9af1ab77ab4d02693830959a93771a`.
+- Before the guide/recording/share/chill refresh: `be07f97`.
