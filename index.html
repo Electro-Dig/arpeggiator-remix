@@ -175,7 +175,16 @@
             <div id="recording-hold-progress" class="hold-progress" hidden aria-hidden="true">
               <span></span>
             </div>
-            <audio id="recording-preview" controls preload="metadata" hidden></audio>
+            <section id="recording-review-status" class="recording-review-status" aria-label="录音已保存">
+              <div id="recording-review-wave" class="recording-review-wave" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div>
+                <strong>录音已保存</strong>
+                <span>请选择生成二维码、重录或放弃</span>
+              </div>
+            </section>
+            <audio id="recording-preview" preload="metadata" hidden></audio>
             <section id="recording-share" class="recording-share" hidden aria-label="录音分享">
               <canvas id="recording-qr" class="recording-share__qr" width="1080" height="1440"></canvas>
               <div class="recording-share__details">

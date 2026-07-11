@@ -107,6 +107,7 @@ test('editorial hierarchy remains restrained and semantic', () => {
 test('recording controls remain visible, optional, and gesture-disableable', () => {
   for (const id of [
     'recording-primary', 'recording-dialog', 'recording-preview',
+    'recording-review-status', 'recording-review-wave',
     'recording-confirm', 'recording-rerecord', 'recording-download',
     'recording-cancel', 'recording-gestures-enabled',
     'recording-status', 'recording-share', 'recording-qr',
@@ -123,9 +124,15 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
   assert.match(styles, /--record:\s*#ff4d5f/i);
   assert.match(styles, /\.rec-status\[data-phase=["']recording["']\]/);
   assert.match(styles, /@keyframes\s+rec-status-pulse/);
+  assert.match(html, /<audio id="recording-preview" preload="metadata" hidden><\/audio>/);
+  assert.doesNotMatch(html, /id="recording-preview"[^>]*controls/);
+  assert.match(styles, /\.recording-dialog\s*\{[^}]*max-height:\s*calc\(100dvh - 32px\)/s);
+  assert.match(styles, /\.recording-dialog\[data-phase="shared"\] \.recording-share\s*\{[^}]*grid-template-columns:\s*minmax\(280px,\s*\.8fr\) minmax\(0,\s*1\.2fr\)/s);
+  assert.match(styles, /\.recording-review-status\s*\{/);
+  assert.match(styles, /\.recording-review-wave\s*\{/);
+  assert.match(styles, /\.recording-action\s*\{[^}]*min-height:\s*56px[^}]*font:\s*600 14px/s);
   assert.match(qr, /qr-share-template-bauhaus\.webp/);
   assert.match(html, /id="recording-qr"[^>]+width="1080"[^>]+height="1440"/);
-  assert.match(styles, /\.recording-share\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.doesNotMatch(styles, /\.recording-dialog\[data-phase="shared"\]\s*\{[^}]*overflow:\s*auto/s);
   assert.match(styles, /\.recording-share__copy\s*\{[^}]*color:\s*#102025/s);
 });

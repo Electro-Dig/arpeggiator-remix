@@ -794,6 +794,7 @@ dt,
 
 .recording-dialog {
   width: min(720px, calc(100vw - 48px));
+  max-height: calc(100dvh - 32px);
   padding: 0;
   overflow: hidden;
   border: 1px solid rgba(128, 231, 236, 0.5);
@@ -809,6 +810,9 @@ dt,
 }
 
 .recording-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: inherit;
   margin: 0;
   background:
     linear-gradient(rgba(23, 113, 122, 0.05) 1px, transparent 1px),
@@ -932,11 +936,63 @@ dt,
   transition: width 80ms linear;
 }
 
-#recording-preview {
-  width: 100%;
+.recording-review-status {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.72fr) minmax(190px, 1fr);
+  align-items: center;
+  gap: 24px;
   margin-top: auto;
-  padding-top: 28px;
-  accent-color: #17636a;
+  padding-top: 30px;
+  border-top: 1px solid rgba(16, 32, 37, 0.22);
+}
+
+.recording-dialog:not([data-phase="review"]) .recording-review-status {
+  display: none;
+}
+
+.recording-review-status strong,
+.recording-review-status span {
+  display: block;
+}
+
+.recording-review-status strong {
+  color: #102025;
+  font: 650 18px/1.2 var(--ui);
+}
+
+.recording-review-status span {
+  margin-top: 8px;
+  color: #5e7477;
+  font: 500 13px/1.5 var(--ui);
+}
+
+.recording-review-wave {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 54px;
+  padding-inline: 4px;
+}
+
+.recording-review-wave i {
+  display: block;
+  width: 4px;
+  height: 18px;
+  border-radius: 999px;
+  background: #17636a;
+  box-shadow: 0 0 14px rgba(23, 99, 106, 0.13);
+}
+
+.recording-review-wave i:nth-child(2),
+.recording-review-wave i:nth-child(8) { height: 34px; }
+.recording-review-wave i:nth-child(3),
+.recording-review-wave i:nth-child(7) { height: 46px; background: #e86d4c; }
+.recording-review-wave i:nth-child(4),
+.recording-review-wave i:nth-child(6) { height: 27px; }
+.recording-review-wave i:nth-child(5) { height: 52px; background: #ff9a4a; }
+
+#recording-preview {
+  display: none;
 }
 
 .recording-share {
@@ -1000,9 +1056,12 @@ dt,
 }
 
 .recording-dialog[data-phase="shared"] {
-  width: min(620px, calc(100vw - 48px));
-  max-height: calc(100vh - 32px);
+  width: min(980px, calc(100vw - 48px));
   overflow: hidden;
+}
+
+.recording-dialog[data-phase="shared"] .recording-card__body {
+  grid-template-columns: 96px minmax(0, 1fr);
 }
 
 .recording-dialog[data-phase="shared"] .recording-card__index {
@@ -1010,7 +1069,8 @@ dt,
 }
 
 .recording-dialog[data-phase="shared"] .recording-card__content {
-  padding-block: 24px 20px;
+  overflow: hidden;
+  padding: 22px 34px 24px;
 }
 
 .recording-dialog[data-phase="shared"] .recording-card h2 {
@@ -1025,6 +1085,25 @@ dt,
 
 .recording-dialog[data-phase="shared"] .recording-meta {
   margin-top: 10px;
+}
+
+.recording-dialog[data-phase="shared"] .recording-share {
+  grid-template-columns: minmax(280px, .8fr) minmax(0, 1.2fr);
+  align-items: center;
+  justify-items: stretch;
+  gap: 28px;
+  min-height: 0;
+}
+
+.recording-dialog[data-phase="shared"] .recording-share__qr {
+  width: auto;
+  max-width: 100%;
+  height: min(400px, calc(100dvh - 330px));
+  justify-self: center;
+}
+
+.recording-dialog[data-phase="shared"] .recording-share__details {
+  width: 100%;
 }
 
 .recording-actions {
@@ -1042,12 +1121,12 @@ dt,
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 48px;
-  padding: 10px 15px;
+  min-height: 56px;
+  padding: 12px 18px;
   border: 1px solid rgba(16, 32, 37, 0.25);
   background: rgba(245, 249, 244, 0.58);
   color: #253b3e;
-  font: 600 11px/1 var(--ui);
+  font: 600 14px/1 var(--ui);
 }
 
 .recording-action--primary {
@@ -1162,12 +1241,13 @@ dt,
     padding: 32px 24px;
   }
 
-  .recording-share {
+  .recording-dialog[data-phase="shared"] .recording-share {
     grid-template-columns: 1fr;
   }
 
   .recording-share__qr {
-    width: min(320px, 100%);
+    width: min(260px, 100%);
+    height: auto;
   }
 
   .recording-share__details {
@@ -1176,6 +1256,12 @@ dt,
 
   .recording-actions {
     flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .recording-review-status {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .recording-action--quiet {
