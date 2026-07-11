@@ -1,7 +1,8 @@
 const TEMPLATE_URL = '/assets/qr-share-template-bauhaus.webp';
 const loadDefaultQr = () => import('https://esm.sh/qrcode@1.5.4');
 
-export const QR_RECT = Object.freeze({ x: 112, y: 112, size: 430 });
+export const POSTER_SIZE = Object.freeze({ width: 1080, height: 1440 });
+export const QR_RECT = Object.freeze({ x: 96, y: 96, size: 370 });
 
 function loadDefaultTemplate(source = TEMPLATE_URL) {
   return new Promise((resolve, reject) => {
@@ -19,19 +20,19 @@ export async function renderQr(canvas, value, {
   loadQr = loadDefaultQr,
   loadTemplate = loadDefaultTemplate,
   createCanvas = createDefaultCanvas,
+  takeLabel = 'LIVE TAKE',
+  projectName = 'ARPEGGIATOR REMIX',
 } = {}) {
   const [{ toCanvas }, template] = await Promise.all([
     loadQr(),
     loadTemplate(TEMPLATE_URL),
   ]);
-  const width = template.naturalWidth || template.width;
-  const height = template.naturalHeight || template.height;
   const context = canvas.getContext('2d');
   const qrCanvas = createCanvas();
 
-  canvas.width = width;
-  canvas.height = height;
-  context.drawImage(template, 0, 0, width, height);
+  canvas.width = POSTER_SIZE.width;
+  canvas.height = POSTER_SIZE.height;
+  context.drawImage(template, 0, 0, POSTER_SIZE.width, POSTER_SIZE.width);
   await toCanvas(qrCanvas, value, {
     width: QR_RECT.size,
     margin: 2,
@@ -48,11 +49,15 @@ export async function renderQr(canvas, value, {
     QR_RECT.size,
     QR_RECT.size,
   );
+  context.fillStyle = '#f5e2b8';
+  context.fillRect(0, 1080, 1080, 360);
   context.fillStyle = '#11120f';
   context.textAlign = 'left';
   context.textBaseline = 'alphabetic';
-  context.font = '700 36px "Arial Black", "Segoe UI", sans-serif';
-  context.fillText('SCAN TO LISTEN / DOWNLOAD', 72, 1172);
-  context.font = '600 24px "Cascadia Mono", Consolas, monospace';
-  context.fillText('ARPEGGIATOR REMIX · 24H', 72, 1222);
+  context.font = '700 52px "Arial Black", "Segoe UI", sans-serif';
+  context.fillText(projectName, 72, 1200);
+  context.font = '700 34px "Cascadia Mono", Consolas, monospace';
+  context.fillText(takeLabel, 72, 1280);
+  context.font = '600 26px "Cascadia Mono", Consolas, monospace';
+  context.fillText('SCAN TO LISTEN / DOWNLOAD · 24H', 72, 1360);
 }
