@@ -110,6 +110,14 @@ h1 {
   font-size: 14px;
 }
 
+.share-checkin {
+  margin: 16px 0 0;
+  color: #17636a;
+  font-size: clamp(18px, 5vw, 24px);
+  font-weight: 650;
+  line-height: 1.45;
+}
+
 .share-status[data-state="ready"] { color: var(--cyan); }
 .share-status[data-state="error"] { color: #ff8d99; }
 

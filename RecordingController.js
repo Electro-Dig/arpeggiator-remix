@@ -113,6 +113,7 @@ export class RecordingController extends EventTarget {
       qr: byId('recording-qr'),
       shareLink: byId('recording-share-link'),
       shareExpiry: byId('recording-share-expiry'),
+      checkin: byId('recording-checkin'),
       copyLink: byId('recording-copy-link'),
       status: byId('recording-status'),
       stateLabel: byId('recording-state-label'),
@@ -436,6 +437,7 @@ export class RecordingController extends EventTarget {
       this.elements.shareLink.removeAttribute?.('href');
     }
     if (this.elements.shareExpiry) this.elements.shareExpiry.textContent = '';
+    if (this.elements.checkin) this.elements.checkin.textContent = '';
     if (this.elements.copyLink) this.elements.copyLink.textContent = '复制链接';
   }
 
@@ -459,11 +461,13 @@ export class RecordingController extends EventTarget {
     if (this.elements.shareExpiry) {
       this.elements.shareExpiry.textContent = this.formatShareExpiry(result.expiresAt);
     }
+    if (this.elements.checkin) {
+      this.elements.checkin.textContent = `你是本场第 ${String(result.checkinNumber).padStart(3, '0')} 位音乐玩家`;
+    }
     if (!this.elements.qr) return;
     try {
       await this.renderQr(this.elements.qr, result.shareUrl, {
-        takeLabel: `TAKE ${String(this.takeNumber).padStart(3, '0')}`,
-        projectName: 'ARPEGGIATOR REMIX',
+        checkinNumber: result.checkinNumber,
       });
     } catch {
       if (this.elements.message) {

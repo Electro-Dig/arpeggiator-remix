@@ -71,6 +71,7 @@ function createHarness({
     'recording-timer', 'recording-message', 'recording-preview',
     'recording-share', 'recording-qr', 'recording-share-link',
     'recording-share-expiry', 'recording-copy-link',
+    'recording-checkin',
     'recording-take-label', 'recording-duration', 'recording-format',
     'recording-confirm', 'recording-rerecord', 'recording-download', 'recording-cancel',
     'recording-cancel-label',
@@ -239,6 +240,7 @@ test('successful upload renders a share URL, expiry and QR without discarding th
   const shareResult = {
     token: 'a'.repeat(32),
     expiresAt: Date.UTC(2026, 6, 11, 12, 0),
+    checkinNumber: 27,
     shareUrl: `https://app.example.test/r/${'a'.repeat(32)}`,
   };
   const harness = createHarness({
@@ -257,11 +259,11 @@ test('successful upload renders a share URL, expiry and QR without discarding th
   assert.equal(harness.elements['recording-share-link'].href, shareResult.shareUrl);
   assert.equal(harness.elements['recording-share-link'].textContent, shareResult.shareUrl);
   assert.match(harness.elements['recording-share-expiry'].textContent, /有效至/);
+  assert.equal(harness.elements['recording-checkin'].textContent, '你是本场第 027 位音乐玩家');
   assert.equal(harness.qrRenders.length, 1);
   assert.equal(harness.qrRenders[0].canvas, harness.elements['recording-qr']);
   assert.equal(harness.qrRenders[0].value, shareResult.shareUrl);
-  assert.equal(harness.qrRenders[0].options.takeLabel, 'TAKE 001');
-  assert.equal(harness.qrRenders[0].options.projectName, 'ARPEGGIATOR REMIX');
+  assert.equal(harness.qrRenders[0].options.checkinNumber, 27);
   assert.equal(harness.elements['recording-dialog'].open, true);
 });
 

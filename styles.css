@@ -1028,6 +1028,14 @@ dt,
   letter-spacing: 0.13em;
 }
 
+.recording-share__checkin {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #17636a;
+  font: 650 clamp(18px, 2vw, 24px)/1.45 var(--ui);
+  letter-spacing: -0.02em;
+}
+
 .recording-share__link {
   display: block;
   grid-column: 1 / -1;

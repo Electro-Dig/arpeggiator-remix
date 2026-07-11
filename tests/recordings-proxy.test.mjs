@@ -96,6 +96,7 @@ test('maps a valid public token to the signed audio route', async () => {
           'content-length': '2',
           'accept-ranges': 'bytes',
           'x-recording-expires-at': '1234',
+          'x-recording-checkin-number': '27',
         },
       });
     },
@@ -109,6 +110,7 @@ test('maps a valid public token to the signed audio route', async () => {
   assert.equal(response.headers.get('content-length'), '2');
   assert.equal(response.headers.get('accept-ranges'), 'bytes');
   assert.equal(response.headers.get('x-recording-expires-at'), '1234');
+  assert.equal(response.headers.get('x-recording-checkin-number'), '27');
 });
 
 test('rejects malformed public tokens without calling upstream', async () => {

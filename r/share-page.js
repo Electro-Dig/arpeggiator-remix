@@ -19,18 +19,16 @@ export function takeLabelForToken(token) {
 }
 
 export async function downloadPoster({
-  token,
+  checkinNumber,
   url,
   render = renderQr,
   root = document,
 } = {}) {
   const canvas = root.createElement('canvas');
-  await render(canvas, url, {
-    takeLabel: takeLabelForToken(token),
-    projectName: 'ARPEGGIATOR REMIX',
-  });
+  await render(canvas, url, { checkinNumber });
+  const formattedNumber = String(checkinNumber).padStart(3, '0');
   const link = root.createElement('a');
-  link.download = `arpeggiator-remix-${takeLabelForToken(token).replace(' ', '-').toLowerCase()}.png`;
+  link.download = `waic-hand-band-take-${formattedNumber}.png`;
   link.href = canvas.toDataURL('image/png');
   link.hidden = true;
   root.body.appendChild(link);
@@ -54,10 +52,15 @@ export async function probeSharedRecording(token, fetchImpl = fetch) {
 
   if (!response.ok) throw sharedRecordingError(response.status);
   const expiresAt = Number(response.headers.get('x-recording-expires-at'));
+  const checkinNumber = Number(response.headers.get('x-recording-checkin-number'));
+  if (!Number.isSafeInteger(checkinNumber) || checkinNumber <= 0) {
+    throw sharedRecordingError(502);
+  }
   return {
     audioUrl,
     expiresAt: Number.isFinite(expiresAt) && expiresAt > 0 ? expiresAt : null,
     mime: (response.headers.get('content-type') || 'audio/webm').split(';')[0],
+    checkinNumber,
   };
 }
 
@@ -83,6 +86,7 @@ async function initSharePage() {
   const download = document.querySelector('#download-recording');
   const expiry = document.querySelector('#recording-expiry');
   const takeLabel = document.querySelector('#share-take-label');
+  const checkin = document.querySelector('#share-checkin');
   const posterButton = document.querySelector('#download-poster');
   const token = parseShareToken(location.pathname);
 
@@ -93,8 +97,10 @@ async function initSharePage() {
   }
 
   try {
-    takeLabel.textContent = takeLabelForToken(token);
     const result = await probeSharedRecording(token);
+    const formattedNumber = String(result.checkinNumber).padStart(3, '0');
+    takeLabel.textContent = `TAKE ${formattedNumber}`;
+    checkin.textContent = `你是本场第 ${formattedNumber} 位音乐玩家`;
     player.src = result.audioUrl;
     player.hidden = false;
     download.href = result.audioUrl;
@@ -118,7 +124,7 @@ async function initSharePage() {
     posterButton.addEventListener('click', async () => {
       posterButton.disabled = true;
       try {
-        await downloadPoster({ token, url: location.href });
+        await downloadPoster({ checkinNumber: result.checkinNumber, url: location.href });
         posterButton.textContent = '分享海报已下载';
       } catch (error) {
         console.error('分享海报生成失败:', error);

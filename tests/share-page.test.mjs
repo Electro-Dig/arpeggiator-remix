@@ -25,6 +25,7 @@ test('probes one byte and returns a direct streaming URL without reading a Blob'
         'content-type': 'audio/webm',
         'content-range': 'bytes 0-0/1000',
         'x-recording-expires-at': '123456',
+        'x-recording-checkin-number': '27',
       },
     });
     response.blob = () => assert.fail('probe must not read the complete recording Blob');
@@ -37,6 +38,7 @@ test('probes one byte and returns a direct streaming URL without reading a Blob'
     audioUrl: `/r/audio/${token}`,
     expiresAt: 123456,
     mime: 'audio/webm',
+    checkinNumber: 27,
   });
 });
 
@@ -58,12 +60,14 @@ test('public page stays lightweight and includes playback, download and noindex'
   assert.match(html, /id="download-recording"/);
   assert.match(html, /id="download-poster"/);
   assert.match(html, /id="recording-expiry"/);
+  assert.match(html, /id="share-checkin"/);
   assert.match(html, /name="robots" content="noindex,nofollow,noarchive"/);
   assert.doesNotMatch(html, /MediaPipe|Tone\.js|mediapipe|main\.js|camera/i);
   assert.match(css, /\[hidden\]\s*\{\s*display:\s*none\s*!important/);
   const script = await readFile(new URL('../r/share-page.js', import.meta.url), 'utf8');
   assert.doesNotMatch(script, /response\.blob\(|URL\.createObjectURL/);
   assert.match(script, /downloadPoster/);
+  assert.match(script, /checkinNumber/);
   assert.match(script, /addEventListener\('click'[\s\S]*downloadPoster/);
 });
 

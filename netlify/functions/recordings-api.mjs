@@ -66,7 +66,12 @@ export async function handleRecordingProxy(request, env, fetchImpl = fetch) {
     responseHeaders['x-recording-expires-at'] = expiresAt;
   }
   if (!isUpload) {
-    for (const header of ['accept-ranges', 'content-range', 'content-length']) {
+    for (const header of [
+      'accept-ranges',
+      'content-range',
+      'content-length',
+      'x-recording-checkin-number',
+    ]) {
       const value = upstream.headers.get(header);
       if (value) responseHeaders[header] = value;
     }

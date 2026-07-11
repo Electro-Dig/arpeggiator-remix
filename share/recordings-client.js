@@ -36,6 +36,8 @@ export async function uploadRecording(
   if (
     !RECORDING_TOKEN.test(String(result?.token || ''))
     || !Number.isFinite(Number(result?.expiresAt))
+    || !Number.isSafeInteger(result?.checkinNumber)
+    || result.checkinNumber <= 0
   ) {
     throw new Error('分享响应无效，请重试或下载到本机');
   }
@@ -43,6 +45,7 @@ export async function uploadRecording(
   return {
     token: result.token,
     expiresAt: Number(result.expiresAt),
+    checkinNumber: result.checkinNumber,
     shareUrl: new URL(`/r/${result.token}`, origin).toString(),
   };
 }

@@ -111,7 +111,7 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
     'recording-confirm', 'recording-rerecord', 'recording-download',
     'recording-cancel', 'recording-gestures-enabled',
     'recording-status', 'recording-share', 'recording-qr',
-    'recording-share-link', 'recording-share-expiry', 'recording-copy-link',
+    'recording-share-link', 'recording-share-expiry', 'recording-copy-link', 'recording-checkin',
   ]) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }

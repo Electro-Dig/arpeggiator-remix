@@ -13,6 +13,7 @@ test('uploads the native Blob and returns a same-origin share URL', async () => 
       return Response.json({
         token: 'a'.repeat(32),
         expiresAt: 123456,
+        checkinNumber: 27,
       }, { status: 201 });
     },
     'https://app.example.test',
@@ -25,6 +26,7 @@ test('uploads the native Blob and returns a same-origin share URL', async () => 
   assert.deepEqual(result, {
     token: 'a'.repeat(32),
     expiresAt: 123456,
+    checkinNumber: 27,
     shareUrl: `https://app.example.test/r/${'a'.repeat(32)}`,
   });
 });
@@ -52,12 +54,20 @@ test('maps upload failures to actionable Chinese messages without replacing the 
 
 test('rejects malformed successful responses', async () => {
   const blob = new Blob(['audio'], { type: 'audio/ogg' });
-  await assert.rejects(
-    uploadRecording(
-      blob,
-      async () => Response.json({ token: 'short', expiresAt: 'never' }),
-      'https://app.example.test',
-    ),
-    /分享响应无效/,
-  );
+  for (const result of [
+    { token: 'short', expiresAt: 'never', checkinNumber: 1 },
+    { token: 'a'.repeat(32), expiresAt: 123, checkinNumber: 0 },
+    { token: 'a'.repeat(32), expiresAt: 123, checkinNumber: -1 },
+    { token: 'a'.repeat(32), expiresAt: 123, checkinNumber: 1.5 },
+    { token: 'a'.repeat(32), expiresAt: 123 },
+  ]) {
+    await assert.rejects(
+      uploadRecording(
+        blob,
+        async () => Response.json(result),
+        'https://app.example.test',
+      ),
+      /分享响应无效/,
+    );
+  }
 });
