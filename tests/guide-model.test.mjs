@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -7,6 +8,15 @@ import {
   advanceGuide,
   retreatGuide,
 } from '../guide/guide-model.js';
+
+const [dualHandSvg, thumbSvg] = await Promise.all([
+  readFile(new URL('../assets/guide/dual-hand-control.svg', import.meta.url), 'utf8'),
+  readFile(new URL('../assets/guide/record-thumbs.svg', import.meta.url), 'utf8'),
+]);
+
+const fingerCount = (svg, hand) => (
+  svg.match(new RegExp(`data-hand="${hand}" data-finger="`, 'g')) || []
+).length;
 
 test('guide has exactly the three approved cards', () => {
   assert.deepEqual(GUIDE_CARDS.map(({ id }) => id), ['stage', 'hands', 'recording']);
@@ -25,6 +35,15 @@ test('every guide card declares a cacheable local SVG', () => {
     '/assets/guide/dual-hand-control.svg',
     '/assets/guide/record-thumbs.svg',
   ]);
+});
+
+test('control and recording illustrations declare five anatomical fingers per hand', () => {
+  assert.equal(fingerCount(dualHandSvg, 'left'), 5);
+  assert.equal(fingerCount(dualHandSvg, 'right'), 5);
+  assert.equal(fingerCount(thumbSvg, 'confirm'), 5);
+  assert.equal(fingerCount(thumbSvg, 'cancel'), 5);
+  assert.match(thumbSvg, /data-gesture="thumbs-up"/);
+  assert.match(thumbSvg, /data-gesture="thumbs-down"/);
 });
 
 test('guide navigation clamps and marks the last advance as complete', () => {

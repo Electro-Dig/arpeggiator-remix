@@ -1,26 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
   <title id="title">双拇指录音手势</title>
-  <desc id="desc">左侧双拇指向上表示继续或确认，右侧双拇指向下表示取消并返回自由模式。</desc>
+  <desc id="desc">双手拇指向上表示继续或确认，双手拇指向下表示取消并返回自由模式。</desc>
   <rect width="640" height="480" fill="#e7efea"/>
   <g stroke="#80cfd2" stroke-width="1" opacity=".4">
     <path d="M0 96H640M0 192H640M0 288H640M0 384H640"/>
     <path d="M80 0V480M160 0V480M240 0V480M320 0V480M400 0V480M480 0V480M560 0V480"/>
   </g>
+
   <g transform="translate(42 54)">
     <rect width="252" height="330" rx="22" fill="#d7e6e2" stroke="#11717a" stroke-width="4"/>
-    <circle cx="126" cy="78" r="34" fill="#66ccd0"/>
-    <path d="M98 230h80c23 0 39-15 42-37l8-60c2-17-20-23-28-8l-20 40-3-83c-1-19-27-19-29-1l-5 66-9-51c-3-17-26-13-25 4l3 54-12-30c-7-16-30-7-25 10l23 96z" fill="#1b73b8" stroke="#142b30" stroke-width="6" stroke-linejoin="round"/>
-    <text x="62" y="286" fill="#11717a" font-family="Cascadia Mono,Consolas,monospace" font-size="16" font-weight="800" letter-spacing="2">CONFIRM</text>
-    <text x="82" y="318" fill="#142b30" font-family="Segoe UI,PingFang SC,sans-serif" font-size="18" font-weight="700">继续 / 确认</text>
+    <circle cx="126" cy="70" r="32" fill="#66ccd0"/>
+    <g data-gesture="thumbs-up" fill="#1b73b8" stroke="#142b30" stroke-width="6" stroke-linejoin="round">
+      <path d="M82 159h73c26 0 45 20 45 46v38c0 18-14 32-32 32H96c-20 0-36-16-36-36v-56c0-13 10-24 22-24z"/>
+      <rect data-hand="confirm" data-finger="thumb" x="80" y="77" width="31" height="112" rx="15" transform="rotate(-7 95 133)"/>
+      <rect data-hand="confirm" data-finger="index" x="148" y="161" width="66" height="25" rx="12"/>
+      <rect data-hand="confirm" data-finger="middle" x="151" y="188" width="70" height="25" rx="12"/>
+      <rect data-hand="confirm" data-finger="ring" x="149" y="215" width="64" height="25" rx="12"/>
+      <rect data-hand="confirm" data-finger="little" x="143" y="242" width="54" height="24" rx="12"/>
+    </g>
+    <text x="62" y="298" fill="#11717a" font-family="Cascadia Mono,Consolas,monospace" font-size="16" font-weight="800" letter-spacing="2">CONFIRM</text>
+    <text x="82" y="325" fill="#142b30" font-family="Segoe UI,PingFang SC,sans-serif" font-size="18" font-weight="700">继续 / 确认</text>
   </g>
+
   <g transform="translate(346 54)">
     <rect width="252" height="330" rx="22" fill="#f0dfd7" stroke="#e86d4c" stroke-width="4"/>
-    <circle cx="126" cy="78" r="34" fill="#ff9a4a"/>
-    <g transform="translate(0 335) scale(1 -1)">
-      <path d="M98 230h80c23 0 39-15 42-37l8-60c2-17-20-23-28-8l-20 40-3-83c-1-19-27-19-29-1l-5 66-9-51c-3-17-26-13-25 4l3 54-12-30c-7-16-30-7-25 10l23 96z" fill="#e86d4c" stroke="#142b30" stroke-width="6" stroke-linejoin="round"/>
+    <circle cx="126" cy="70" r="32" fill="#ff9a4a"/>
+    <g data-gesture="thumbs-down" transform="translate(0 342) scale(1 -1)" fill="#e86d4c" stroke="#142b30" stroke-width="6" stroke-linejoin="round">
+      <path d="M82 159h73c26 0 45 20 45 46v38c0 18-14 32-32 32H96c-20 0-36-16-36-36v-56c0-13 10-24 22-24z"/>
+      <rect data-hand="cancel" data-finger="thumb" x="80" y="77" width="31" height="112" rx="15" transform="rotate(-7 95 133)"/>
+      <rect data-hand="cancel" data-finger="index" x="148" y="161" width="66" height="25" rx="12"/>
+      <rect data-hand="cancel" data-finger="middle" x="151" y="188" width="70" height="25" rx="12"/>
+      <rect data-hand="cancel" data-finger="ring" x="149" y="215" width="64" height="25" rx="12"/>
+      <rect data-hand="cancel" data-finger="little" x="143" y="242" width="54" height="24" rx="12"/>
     </g>
-    <text x="72" y="286" fill="#c7523b" font-family="Cascadia Mono,Consolas,monospace" font-size="16" font-weight="800" letter-spacing="2">CANCEL</text>
-    <text x="64" y="318" fill="#142b30" font-family="Segoe UI,PingFang SC,sans-serif" font-size="18" font-weight="700">取消 / 自由模式</text>
+    <text x="72" y="298" fill="#c7523b" font-family="Cascadia Mono,Consolas,monospace" font-size="16" font-weight="800" letter-spacing="2">CANCEL</text>
+    <text x="64" y="325" fill="#142b30" font-family="Segoe UI,PingFang SC,sans-serif" font-size="18" font-weight="700">取消 / 自由模式</text>
   </g>
   <text x="244" y="430" fill="#142b30" font-family="Cascadia Mono,Consolas,monospace" font-size="14" font-weight="700" letter-spacing="3">HOLD 0.8 SEC</text>
 </svg>

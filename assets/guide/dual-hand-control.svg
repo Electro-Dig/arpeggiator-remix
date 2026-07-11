@@ -1,18 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
   <title id="title">左右手音乐控制</title>
-  <desc id="desc">左手控制旋律与音量，右手在七乘七节奏网格中移动并用手指开合鼓声。</desc>
+  <desc id="desc">左手五指控制旋律，右手五指在七乘七节奏网格中移动并开合触发鼓声。</desc>
   <rect width="640" height="480" fill="#e7efea"/>
   <path d="M320 36V444" stroke="#80cfd2" stroke-width="2" stroke-dasharray="6 10"/>
+
   <g transform="translate(48 48)">
     <rect width="244" height="356" rx="18" fill="#d8e6e2" stroke="#11717a" stroke-width="3"/>
     <path d="M54 294V72" stroke="#11717a" stroke-width="6"/>
     <path d="M42 90l12-18 12 18M42 276l12 18 12-18" fill="none" stroke="#11717a" stroke-width="5" stroke-linecap="round"/>
     <g fill="#ff9a4a"><circle cx="54" cy="118" r="9"/><circle cx="54" cy="184" r="9"/><circle cx="54" cy="250" r="9"/></g>
-    <path d="M126 278c-22-41-21-102 4-123 11-9 24-5 25 10l-2 35 18-78c3-14 20-12 20 2l-6 76 14-61c3-13 20-10 19 3l-9 73 11-41c4-12 19-7 16 5l-14 72c-7 43-38 72-76 27z" fill="#1b73b8" stroke="#142b30" stroke-width="5"/>
-    <path d="M144 239l31-29" stroke="#a8eadc" stroke-width="5" stroke-linecap="round"/>
-    <circle cx="145" cy="239" r="8" fill="#a8eadc"/><circle cx="175" cy="210" r="8" fill="#a8eadc"/>
+
+    <g fill="#1b73b8" stroke="#142b30" stroke-width="5" stroke-linejoin="round">
+      <rect x="124" y="190" width="82" height="92" rx="34"/>
+      <rect data-hand="left" data-finger="little" x="108" y="150" width="21" height="82" rx="11" transform="rotate(-9 118 191)"/>
+      <rect data-hand="left" data-finger="ring" x="131" y="124" width="22" height="105" rx="11" transform="rotate(-3 142 176)"/>
+      <rect data-hand="left" data-finger="middle" x="156" y="106" width="23" height="122" rx="12"/>
+      <rect data-hand="left" data-finger="index" x="182" y="120" width="22" height="110" rx="11" transform="rotate(4 193 175)"/>
+      <rect data-hand="left" data-finger="thumb" x="93" y="201" width="70" height="23" rx="12" transform="rotate(34 93 201)"/>
+      <path d="M133 263h64v43c-17 16-45 16-64 0z"/>
+    </g>
+    <path d="M145 249l31-29" stroke="#a8eadc" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="145" cy="249" r="8" fill="#a8eadc"/><circle cx="176" cy="220" r="8" fill="#a8eadc"/>
     <text x="24" y="332" fill="#142b30" font-family="Cascadia Mono,Consolas,monospace" font-size="13" font-weight="700">L / MELODY</text>
   </g>
+
   <g transform="translate(348 48)">
     <rect width="244" height="356" rx="18" fill="#d8e6e2" stroke="#11717a" stroke-width="3"/>
     <g stroke="#80cfd2" stroke-width="1.5" opacity=".82">
@@ -20,8 +31,17 @@
       <path d="M30 42V224M56 42V224M82 42V224M108 42V224M134 42V224M160 42V224M186 42V224M214 42V224"/>
     </g>
     <rect x="134" y="94" width="26" height="26" fill="#ff9a4a" stroke="#142b30" stroke-width="2"/>
-    <path d="M70 286c-4-34 11-57 35-56 11 1 21 7 28 17l-5-62c-1-13 16-16 19-3l9 54 2-70c0-14 18-14 19 0l4 70 7-57c2-13 19-11 19 2l-1 69c0 48-29 76-71 69-33-5-62-10-65-33z" fill="#e86d4c" stroke="#142b30" stroke-width="5"/>
-    <g fill="#a8eadc"><circle cx="144" cy="257" r="7"/><circle cx="173" cy="244" r="7"/><circle cx="201" cy="252" r="7"/></g>
+
+    <g fill="#e86d4c" stroke="#142b30" stroke-width="5" stroke-linejoin="round">
+      <rect x="79" y="222" width="94" height="82" rx="34"/>
+      <rect data-hand="right" data-finger="little" x="72" y="180" width="20" height="82" rx="10" transform="rotate(-7 82 221)"/>
+      <rect data-hand="right" data-finger="ring" x="96" y="154" width="21" height="105" rx="11" transform="rotate(-3 106 206)"/>
+      <rect data-hand="right" data-finger="middle" x="122" y="140" width="22" height="120" rx="11"/>
+      <rect data-hand="right" data-finger="index" x="149" y="156" width="21" height="106" rx="11" transform="rotate(4 159 209)"/>
+      <rect data-hand="right" data-finger="thumb" x="155" y="226" width="68" height="22" rx="11" transform="rotate(-31 155 226)"/>
+      <path d="M91 286h70v31H91z"/>
+    </g>
+    <g fill="#a8eadc"><circle cx="91" cy="198" r="6"/><circle cx="107" cy="174" r="6"/><circle cx="133" cy="160" r="6"/><circle cx="159" cy="177" r="6"/><circle cx="190" cy="224" r="6"/></g>
     <text x="24" y="332" fill="#142b30" font-family="Cascadia Mono,Consolas,monospace" font-size="13" font-weight="700">R / RHYTHM</text>
   </g>
 </svg>

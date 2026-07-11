@@ -97,6 +97,11 @@ test('editorial hierarchy remains restrained and semantic', () => {
   assert.match(styles, /Bahnschrift/);
   assert.doesNotMatch(styles, /\.guide-card::after/);
   assert.match(styles, /\.guide-card h2\s*\{[^}]*font-size:\s*clamp\(32px,\s*3vw,\s*44px\)/s);
+  assert.match(styles, /\.guide-card #guide-body\s*\{[^}]*font-size:\s*clamp\(18px,\s*1\.45vw,\s*22px\)/s);
+  assert.match(styles, /\.guide-card__notations span\s*\{[^}]*font:\s*600 15px/s);
+  assert.match(styles, /\.guide-card \.guide-card__crowd\s*\{[^}]*font:\s*600 15px/s);
+  assert.match(styles, /\.guide-action\s*\{[^}]*font:\s*600 16px/s);
+  assert.match(styles, /#guide-progress\s*\{[^}]*font:\s*600 15px/s);
 });
 
 test('recording controls remain visible, optional, and gesture-disableable', () => {

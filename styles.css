@@ -715,7 +715,7 @@ dt,
   max-width: 600px;
   margin: 0;
   color: #33494d;
-  font-size: 16px;
+  font-size: clamp(18px, 1.45vw, 22px);
   font-weight: 400;
   letter-spacing: 0.01em;
   line-height: 1.82;
@@ -734,7 +734,7 @@ dt,
   border-top: 1px solid rgba(16, 32, 37, 0.34);
   border-bottom: 1px solid rgba(16, 32, 37, 0.16);
   color: #17636a;
-  font: 600 10px/1 var(--mono);
+  font: 600 15px/1 var(--mono);
   letter-spacing: 0.13em;
 }
 
@@ -742,7 +742,7 @@ dt,
   margin: auto 0 0;
   padding-top: 26px;
   color: #c7523b;
-  font: 600 10px/1.5 var(--mono);
+  font: 600 15px/1.5 var(--mono);
   letter-spacing: 0.11em;
 }
 
@@ -756,11 +756,11 @@ dt,
 }
 
 .guide-action {
-  min-height: 34px;
-  padding: 8px 10px;
+  min-height: 54px;
+  padding: 0 24px;
   border: 0;
   background: transparent;
-  font: 600 11px/1 var(--ui);
+  font: 600 16px/1 var(--ui);
   transition: color 140ms ease, border-color 140ms ease, opacity 140ms ease;
 }
 
@@ -788,7 +788,7 @@ dt,
 #guide-progress {
   margin-right: auto;
   color: #53696c;
-  font: 600 10px/1 var(--mono);
+  font: 600 15px/1 var(--mono);
   letter-spacing: 0.15em;
 }
 
