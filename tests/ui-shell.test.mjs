@@ -117,3 +117,10 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
   assert.match(html, /id="recording-qr"[^>]+width="1254"[^>]+height="1254"/);
   assert.match(styles, /\.recording-share\s*\{[^}]*grid-template-columns:\s*1fr/s);
 });
+
+test('guide consumes thumbs gestures page by page and requires neutral rearming', () => {
+  assert.match(main, /trigger === 'both-up'[\s\S]*guideController\.advanceFromGesture\(\)/);
+  assert.match(main, /trigger === 'both-down'[\s\S]*guideController\.exitFromGesture\(\)/);
+  assert.match(main, /guideController\.dialog\?\.open[\s\S]*recordingGestureLatch\.requireNeutral\(\)/);
+  assert.doesNotMatch(main, /guideController\.skipFromGesture\(\)/);
+});

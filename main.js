@@ -222,6 +222,9 @@ function initializeApp() {
                 recordingGestureLatch.requireNeutral();
             }
         });
+        guideController.addEventListener('pagechange', () => {
+            recordingGestureLatch.requireNeutral();
+        });
 
         renderDiv.addEventListener('handframe', ({ detail }) => {
             const intent = combineThumbPoses(detail.handsBySide);
@@ -230,7 +233,13 @@ function initializeApp() {
 
             if (guideController.dialog?.open) {
                 game.setInteractionSuppressed(true);
-                if (trigger === 'both-up') guideController.skipFromGesture();
+                if (trigger === 'both-up') {
+                    guideController.advanceFromGesture();
+                    recordingGestureLatch.requireNeutral();
+                } else if (trigger === 'both-down') {
+                    guideController.exitFromGesture();
+                    recordingGestureLatch.requireNeutral();
+                }
                 return;
             }
 
