@@ -61,13 +61,17 @@ test('wide-screen HUD preserves full labels and lifts the rhythm grid above the 
   assert.match(styles, /\.rhythm-space\s*\{[^}]*right:\s*72px[^}]*bottom:\s*190px/s);
 });
 
-test('five standalone music scenes and semantic HUD remain available without tracking', () => {
+test('six standalone music scenes and semantic HUD remain available without tracking', () => {
   for (const id of ['scene-selector', 'current-root-note']) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
-  for (const scene of ['minimal-groove', 'groove-pulse', 'neon-drive', 'midnight-pulse', 'arcade-horizon']) {
+  for (const scene of [
+    'minimal-groove', 'groove-pulse', 'neon-drive', 'arcade-horizon',
+    'afterglow-coast', 'blue-hour-drift',
+  ]) {
     assert.match(html, new RegExp(`data-scene=["']${scene}["']`));
   }
+  assert.doesNotMatch(html, /data-scene=["']midnight-pulse["']/);
   assert.doesNotMatch(html, /classic-pattern-control|classic-pattern-select|data-scene=["']classic["']/);
   assert.match(main, /musicManager\.setScene\(sceneId\)/);
   assert.doesNotMatch(main, /setClassicPreset|classic-pattern/);

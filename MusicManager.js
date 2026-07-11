@@ -23,10 +23,12 @@ const SYNTH_VARIANTS = Object.freeze({
   'DX7 MARIMBA': fm(3, 6, 0.005, 0.4, 0.1, 0.8),
   'NEON PLUCK': fm(7, 8, 0.002, 0.3, 0.15, 0.5),
   'NEON LEAD': fm(1.5, 15, 0.05, 0.1, 0.7, 0.8),
-  'MIDNIGHT BELL': fm(4.5, 12, 0.005, 1.2, 0.05, 2),
-  'MIDNIGHT BRASS': fm(1, 11, 0.08, 0.25, 0.9, 1.2),
   'ARCADE PULSE': fm(2, 9, 0.01, 0.16, 0.55, 0.35),
   'ARCADE CRYSTAL': fm(7, 10, 0.001, 0.22, 0.1, 0.45),
+  'AFTERGLOW PAD': fm(1, 3.2, 0.28, 0.8, 0.72, 2.8),
+  'COASTAL PLUCK': fm(3, 4.8, 0.008, 0.5, 0.18, 1.4),
+  'BLUE HOUR KEYS': fm(6, 2.6, 0.035, 0.7, 0.42, 2.2),
+  'TAPE CHOIR': fm(0.5, 2.1, 0.42, 1.1, 0.78, 3.4),
 });
 
 export class MusicManager extends EventTarget {

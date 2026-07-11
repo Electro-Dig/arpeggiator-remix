@@ -20,3 +20,8 @@ test('rejects unsupported scales and empty note maps', () => {
   assert.throws(() => buildScale('H', 'natural-minor'), /Unsupported scale/);
   assert.throws(() => noteAtPosition([], 0.5), /Scale must contain notes/);
 });
+
+test('builds a major pentatonic palette for the afterglow scene', () => {
+  const scale = buildScale('D', 'major-pentatonic', 3, 4);
+  assert.deepEqual(scale, ['D3', 'E3', 'F#3', 'A3', 'B3', 'D4']);
+});

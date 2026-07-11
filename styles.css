@@ -280,7 +280,7 @@ dt,
   display: grid;
   justify-items: center;
   gap: 8px;
-  width: min(720px, calc(100vw - 420px));
+  width: min(920px, calc(100vw - 420px));
   transform: translateX(-50%);
   pointer-events: auto;
 }

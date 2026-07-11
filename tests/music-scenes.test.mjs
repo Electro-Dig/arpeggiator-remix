@@ -3,15 +3,18 @@ import test from 'node:test';
 
 import { DEFAULT_SCENE_ID, SCENES, getScene } from '../music/scenes.js';
 
-test('ships exactly five approved scenes and defaults to Groove Pulse', () => {
+test('ships exactly six approved scenes and defaults to Groove Pulse', () => {
   assert.equal(DEFAULT_SCENE_ID, 'groove-pulse');
   assert.deepEqual(SCENES.map(({ id }) => id), [
-    'minimal-groove', 'groove-pulse', 'neon-drive', 'midnight-pulse', 'arcade-horizon',
+    'minimal-groove', 'groove-pulse', 'neon-drive', 'arcade-horizon',
+    'afterglow-coast', 'blue-hour-drift',
   ]);
-  assert.deepEqual(SCENES.map(({ bpm }) => bpm), [122, 115, 120, 108, 126]);
+  assert.deepEqual(SCENES.map(({ bpm }) => bpm), [122, 115, 120, 126, 96, 90]);
   assert.deepEqual(SCENES.map(({ tonic, mode }) => `${tonic} ${mode}`), [
-    'E chromatic', 'E chromatic', 'E natural-minor', 'E harmonic-minor', 'A dorian',
+    'E chromatic', 'E chromatic', 'E natural-minor', 'A dorian',
+    'D major-pentatonic', 'A natural-minor',
   ]);
+  assert.ok(!SCENES.some(({ id }) => id === 'midnight-pulse'));
   assert.ok(SCENES.every(Object.isFrozen));
 });
 
