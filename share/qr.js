@@ -1,4 +1,4 @@
-const TEMPLATE_URL = '/assets/qr-share-template-bauhaus.webp';
+const TEMPLATE_URL = '/assets/qr-share-template-waic-mint.webp';
 const loadDefaultQr = () => import('https://esm.sh/qrcode@1.5.4');
 
 export const POSTER_SIZE = Object.freeze({ width: 1080, height: 1440 });
@@ -20,8 +20,7 @@ export async function renderQr(canvas, value, {
   loadQr = loadDefaultQr,
   loadTemplate = loadDefaultTemplate,
   createCanvas = createDefaultCanvas,
-  takeLabel = 'LIVE TAKE',
-  projectName = 'ARPEGGIATOR REMIX',
+  checkinNumber = 1,
 } = {}) {
   const [{ toCanvas }, template] = await Promise.all([
     loadQr(),
@@ -38,8 +37,8 @@ export async function renderQr(canvas, value, {
     margin: 2,
     errorCorrectionLevel: 'M',
     color: {
-      dark: '#11120f',
-      light: '#f5e2b8',
+      dark: '#142b30',
+      light: '#e7efea',
     },
   });
   context.drawImage(
@@ -49,15 +48,27 @@ export async function renderQr(canvas, value, {
     QR_RECT.size,
     QR_RECT.size,
   );
-  context.fillStyle = '#f5e2b8';
+  const number = Number.isSafeInteger(checkinNumber) && checkinNumber > 0
+    ? checkinNumber
+    : 1;
+  const formattedNumber = String(number).padStart(3, '0');
+  context.fillStyle = '#e7efea';
   context.fillRect(0, 1080, 1080, 360);
-  context.fillStyle = '#11120f';
+  context.fillStyle = '#142b30';
   context.textAlign = 'left';
   context.textBaseline = 'alphabetic';
-  context.font = '700 52px "Arial Black", "Segoe UI", sans-serif';
-  context.fillText(projectName, 72, 1200);
-  context.font = '700 34px "Cascadia Mono", Consolas, monospace';
-  context.fillText(takeLabel, 72, 1280);
-  context.font = '600 26px "Cascadia Mono", Consolas, monospace';
-  context.fillText('SCAN TO LISTEN / DOWNLOAD · 24H', 72, 1360);
+  context.font = '700 44px "Microsoft YaHei", "PingFang SC", sans-serif';
+  context.fillText('WAIC 双手乐队', 72, 1168);
+  context.fillStyle = '#17636a';
+  context.font = '700 32px "Microsoft YaHei", "PingFang SC", sans-serif';
+  context.fillText('欢迎打卡', 72, 1230);
+  context.fillStyle = '#142b30';
+  context.font = '650 38px "Microsoft YaHei", "PingFang SC", sans-serif';
+  context.fillText(`你是本场第 ${formattedNumber} 位音乐玩家`, 72, 1294);
+  context.fillStyle = '#e86d4c';
+  context.font = '700 28px "Cascadia Mono", Consolas, monospace';
+  context.fillText(`TAKE ${formattedNumber}`, 72, 1350);
+  context.fillStyle = '#17636a';
+  context.font = '600 23px "Microsoft YaHei", "PingFang SC", sans-serif';
+  context.fillText('扫码试听与下载 · 24H', 538, 1350);
 }

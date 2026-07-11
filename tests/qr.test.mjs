@@ -43,8 +43,7 @@ test('lazy-loads the selected poster and composites an offscreen QR into its saf
   assert.equal(qrLoads, 0);
   await renderQr(canvas, 'https://app.example.test/r/token', {
     ...dependencies,
-    takeLabel: 'TAKE 007',
-    projectName: 'ARPEGGIATOR REMIX',
+    checkinNumber: 27,
   });
 
   assert.equal(templateLoads, 1);
@@ -65,8 +64,10 @@ test('lazy-loads the selected poster and composites an offscreen QR into its saf
   ]);
   assert.deepEqual(fillRects, [[0, 1080, 1080, 360]]);
   assert.deepEqual(textCalls, [
-    ['ARPEGGIATOR REMIX', 72, 1200],
-    ['TAKE 007', 72, 1280],
-    ['SCAN TO LISTEN / DOWNLOAD · 24H', 72, 1360],
+    ['WAIC 双手乐队', 72, 1168],
+    ['欢迎打卡', 72, 1230],
+    ['你是本场第 027 位音乐玩家', 72, 1294],
+    ['TAKE 027', 72, 1350],
+    ['扫码试听与下载 · 24H', 538, 1350],
   ]);
 });

@@ -14,7 +14,7 @@
 
 - `assets/guide/dual-hand-control.svg`: deterministic five-finger left/right control illustration.
 - `assets/guide/record-thumbs.svg`: deterministic thumbs-up/thumbs-down recording illustration.
-- `assets/qr-share-template-waic-mint.png`: generated text-free WAIC poster background.
+- `assets/qr-share-template-waic-mint.webp`: generated and compressed text-free WAIC poster background.
 - `index.html`: recording review status block and shared layout structure.
 - `styles.css`: guide readability, review card, responsive share layout, visible footer actions.
 - `share/qr.js`: Canvas copy, check-in number and new template integration.
@@ -166,7 +166,7 @@ git commit -m "feat: redesign recording review and share layout"
 ### Task 3: Generate and integrate the mint WAIC poster template
 
 **Files:**
-- Create: `assets/qr-share-template-waic-mint.png`
+- Create: `assets/qr-share-template-waic-mint.webp`
 - Modify: `share/qr.js`
 - Modify: `netlify/edge-functions/invite-gate.js`
 - Modify: `tests/qr.test.mjs`
@@ -192,7 +192,7 @@ assert.deepEqual(fillTextCalls.map(([text]) => text), [
 ]);
 ```
 
-Also assert that `/assets/qr-share-template-waic-mint.png` is a public invite-gate bypass.
+Also assert that `/assets/qr-share-template-waic-mint.webp` is a public invite-gate bypass.
 
 - [ ] **Step 2: Run tests and verify failure**
 
@@ -202,7 +202,7 @@ Expected: FAIL because the old Bauhaus asset and project copy are still used.
 
 - [ ] **Step 3: Generate the text-free template**
 
-Inspect the existing reference with `view_image`, then use the explicitly requested `imagegen` skill as an edit. Preserve the square layout, QR safe zone, hand/music composition and paper texture; replace the palette with fog white, pale mint, deep teal, coral orange and limited warm yellow. Require no letters, words, numbers, QR modules or logos in the generated image. Copy the chosen output into `assets/qr-share-template-waic-mint.png`.
+Inspect the existing reference with `view_image`, then use the explicitly requested `imagegen` skill as an edit. Preserve the square layout, QR safe zone, hand/music composition and paper texture; replace the palette with fog white, pale mint, deep teal, coral orange and limited warm yellow. Require no letters, words, numbers, QR modules or logos in the generated image. Compress the chosen output to WebP and store it as `assets/qr-share-template-waic-mint.webp`.
 
 - [ ] **Step 4: Render precise copy in Canvas**
 
@@ -226,7 +226,7 @@ Run: `node --test tests/qr.test.mjs tests/invite-gate.test.mjs`
 Expected: PASS.
 
 ```bash
-git add assets/qr-share-template-waic-mint.png share/qr.js netlify/edge-functions/invite-gate.js tests/qr.test.mjs tests/invite-gate.test.mjs
+git add assets/qr-share-template-waic-mint.webp share/qr.js netlify/edge-functions/invite-gate.js tests/qr.test.mjs tests/invite-gate.test.mjs
 git commit -m "feat: add WAIC check-in poster artwork"
 ```
 
