@@ -1524,46 +1524,34 @@ export var Game = /*#__PURE__*/ function () {
         {
             key: "_showNoCameraModeGuide",
             value: function _showNoCameraModeGuide() {
-                // 创建无摄像头模式指南
+                var _this = this;
+                document.getElementById('no-camera-guide')?.remove();
                 var guideDiv = document.createElement('div');
                 guideDiv.id = 'no-camera-guide';
+                guideDiv.className = 'no-camera-card';
                 guideDiv.innerHTML = `
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <h3 style="color: #7B4394; margin: 0 0 10px 0;">🎵 无摄像头模式</h3>
-                        <p style="margin: 0; font-size: 14px; color: #4ecdc4;">使用下方编辑器创作和测试音乐</p>
-                    </div>
-
-                    <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 15px;">
-                        <button onclick="window.customEditor?.openArpeggioEditor()" style="padding: 8px 16px; background: #7B4394; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">🎼 编辑琶音</button>
-                        <button onclick="window.customEditor?.openDrumEditor()" style="padding: 8px 16px; background: #FF5733; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">🥁 编辑鼓组</button>
-                    </div>
-
-                    <div style="text-align: center;">
-                        <button id="close-guide" style="padding: 6px 12px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; font-size: 11px;">关闭提示</button>
+                    <p class="no-camera-card__kicker">CAMERA / FALLBACK</p>
+                    <h3>摄像头未连接</h3>
+                    <p>已进入手动体验。你可以重试摄像头，或先继续浏览音乐场景。</p>
+                    <div class="no-camera-card__actions">
+                        <button id="retry-camera" type="button">重试摄像头</button>
+                        <button id="continue-manual" type="button">继续手动模式</button>
                     </div>
                 `;
-
-                guideDiv.style.cssText = `
-                    position: absolute; top: 120px; left: 50%; transform: translateX(-50%);
-                    background: rgba(0, 0, 0, 0.9); color: white; z-index: 1500;
-                    padding: 20px; border-radius: 12px; font-family: 'Segoe UI', sans-serif;
-                    border: 1px solid rgba(123, 67, 148, 0.5); backdrop-filter: blur(10px);
-                    max-width: 400px; width: 90%;
-                `;
-
                 this.renderDiv.appendChild(guideDiv);
-
-                // 添加关闭按钮事件
-                guideDiv.querySelector('#close-guide').onclick = function () {
+                guideDiv.querySelector('#retry-camera').onclick = function () {
+                    guideDiv.remove();
+                    _this.noCameraMode = false;
+                    _this._setupHandTracking().then(function () {
+                        _this._startGame();
+                    }).catch(function (error) {
+                        console.error('摄像头重试失败:', error);
+                        _this._showNoCameraModeGuide();
+                    });
+                };
+                guideDiv.querySelector('#continue-manual').onclick = function () {
                     guideDiv.remove();
                 };
-
-                // 5秒后自动隐藏
-                setTimeout(function () {
-                    if (guideDiv.parentNode) {
-                        guideDiv.remove();
-                    }
-                }, 8000);
             }
         },
         {
@@ -1571,23 +1559,27 @@ export var Game = /*#__PURE__*/ function () {
             value: function _showAudioActivationPrompt() {
                 if (this.audioPromptDiv) return; // 避免重复显示
 
-                this.audioPromptDiv = document.createElement('div');
-                this.audioPromptDiv.innerHTML = '<h3>🎵 音频系统启动中...</h3><p>如果音频无法播放，请点击屏幕任意位置激活音频</p>';
-                this.audioPromptDiv.style.cssText = "\n            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);\n            text-align: center; color: #00ffff; z-index: 500;\n            background: rgba(0,0,0,0.8); padding: 20px; border-radius: 8px;\n            font-family: 'Segoe UI', sans-serif; border: 1px solid rgba(0, 255, 255, 0.3);\n            backdrop-filter: blur(10px);\n        ";
+                this.audioPromptDiv = document.createElement('button');
+                this.audioPromptDiv.type = 'button';
+                this.audioPromptDiv.className = 'audio-activation-chip';
+                this.audioPromptDiv.innerHTML = '<span aria-hidden="true"></span><strong>点击画面 · 启动声音</strong>';
 
                 this.renderDiv.appendChild(this.audioPromptDiv);
 
-                // 添加点击激活音频的事件
-                var activateAudio = () => {
-                    if (window.Tone && Tone.context.state !== 'running') {
-                        Tone.start().then(() => {
-                            console.log('✅ 音频上下文已激活');
-                        });
+                var activateAudio = async () => {
+                    try {
+                        if (window.Tone && Tone.context.state !== 'running') await Tone.start();
+                        this._hideAudioActivationPrompt();
+                    } catch (error) {
+                        console.error('音频上下文激活失败:', error);
+                        this.audioPromptDiv?.classList.add('is-error');
+                        var label = this.audioPromptDiv?.querySelector('strong');
+                        if (label) label.textContent = '重试声音';
                     }
                 };
 
-                this.renderDiv.addEventListener('click', activateAudio, { once: true });
-                this.renderDiv.addEventListener('touchstart', activateAudio, { once: true });
+                this.audioPromptDiv.addEventListener('click', activateAudio);
+                this.renderDiv.addEventListener('pointerdown', activateAudio, { once: true });
             }
         },
         {

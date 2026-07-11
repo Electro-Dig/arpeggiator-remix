@@ -29,3 +29,14 @@ test('removed preset editors do not leave compatibility elements that invoke sta
   assert.doesNotMatch(html, /compatibility-status/);
   assert.doesNotMatch(html, /id=["'](?:music-preset|drum-preset|preset-menu)["']/);
 });
+
+test('startup prompts use recoverable non-blocking cards without retired editors', () => {
+  const audioPrompt = methodSection('_showAudioActivationPrompt');
+  const noCameraPrompt = methodSection('_showNoCameraModeGuide');
+  assert.match(audioPrompt, /audio-activation-chip/);
+  assert.match(audioPrompt, /点击画面 · 启动声音/);
+  assert.doesNotMatch(audioPrompt, /rgba\(0,\s*0,\s*0,\s*0\.8\)/);
+  assert.match(noCameraPrompt, /重试摄像头/);
+  assert.match(noCameraPrompt, /继续手动模式/);
+  assert.doesNotMatch(noCameraPrompt, /openArpeggioEditor|openDrumEditor/);
+});
