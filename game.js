@@ -223,6 +223,7 @@ import * as Tone from './audio/tone.js'; // Use the shared pinned Tone module.
 import * as drumManager from './DrumManager.js'; // Import the new drum manager module
 import { WaveformVisualizer } from './WaveformVisualizer.js'; // Import the new waveform visualizer
 import { RhythmSpace } from './rhythm/RhythmSpace.js';
+import { KitSwitchGesture } from './gesture/KitSwitchGesture.js';
 import { EdgeGesture, pinchVelocity } from './music/gesture-controls.js';
 export var Game = /*#__PURE__*/ function () {
     "use strict";
@@ -261,6 +262,7 @@ export var Game = /*#__PURE__*/ function () {
         this.rhythmSpace = new RhythmSpace({ smoothing: 0.25, hysteresis: 0.03 });
         this.leftFistEdge = new EdgeGesture(700);
         this.leftFourFingerEdge = new EdgeGesture(700);
+        this.rightKitGesture = new KitSwitchGesture();
         this.waveformVisualizer = null; // To be initialized
         // this.drumManager = new DrumManager(); // DrumManager is now a static module, no instance needed
         this.lastLandmarkPositions = [
@@ -1112,7 +1114,30 @@ export var Game = /*#__PURE__*/ function () {
                                             }));
                                         }
                                     }
-                                    drumManager.updateActiveDrums(interactionsEnabled ? fingerStates : {});
+                                    var isFist = _this1._isFist(smoothedLandmarks);
+                                    var isOpen = ['index', 'middle', 'ring', 'pinky'].every(function(finger) {
+                                        return fingerStates[finger];
+                                    });
+                                    var kitGesture = { armed: false, triggered: false, suppressDrums: false };
+                                    if (interactionsEnabled) {
+                                        kitGesture = _this1.rightKitGesture.update({
+                                            isFist: isFist,
+                                            isOpen: isOpen,
+                                            now: performance.now()
+                                        });
+                                    } else {
+                                        _this1.rightKitGesture.reset();
+                                    }
+                                    if (kitGesture.armed) _this1._showInfoTransient('KIT READY', 900);
+                                    if (kitGesture.triggered) {
+                                        var kitResult = drumManager.cycleDrumKit({ source: 'gesture' });
+                                        if (kitResult.changed) {
+                                            _this1._showInfoTransient(`DRUM KIT: ${kitResult.kit.name}`, 1600);
+                                        }
+                                    }
+                                    drumManager.updateActiveDrums(
+                                        interactionsEnabled && !kitGesture.suppressDrums ? fingerStates : {}
+                                    );
 
                                     // 更新可视化
                                     _this1._updateHandLines(i, smoothedLandmarks, videoParams, canvasWidth, canvasHeight, {
@@ -1126,6 +1151,7 @@ export var Game = /*#__PURE__*/ function () {
                                         _this1.musicManager.stopArpeggio('Left');
                                     } else if (hand.side === 'Right') {
                                         // Disable all drums when hand is gone
+                                        _this1.rightKitGesture.reset();
                                         drumManager.updateActiveDrums({});
                                     }
 

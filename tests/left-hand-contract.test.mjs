@@ -20,3 +20,13 @@ test('musical branches use stable handedness rather than detection array order',
   assert.match(game, /else if \(hand\.side === ['"]Right['"]\)/);
   assert.match(game, /categoryName/);
 });
+
+test('kit switching is routed only through the stable right-hand branch', () => {
+  const leftStart = game.indexOf("if (hand.side === 'Left')");
+  const rightStart = game.indexOf("else if (hand.side === 'Right')", leftStart);
+  const rightEnd = game.indexOf('categoryName', rightStart);
+  assert.ok(leftStart >= 0 && rightStart > leftStart && rightEnd > rightStart);
+  assert.doesNotMatch(game.slice(leftStart, rightStart), /rightKitGesture/);
+  assert.match(game.slice(rightStart, rightEnd), /rightKitGesture\.update/);
+  assert.match(game.slice(rightStart, rightEnd), /cycleDrumKit/);
+});
