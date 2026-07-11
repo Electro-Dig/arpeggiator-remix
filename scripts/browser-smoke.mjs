@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const target = process.argv[2] ?? 'http://localhost:8000/';
-const outputDirectory = process.argv[3] ?? new URL('../.artifacts/', import.meta.url).pathname;
+const outputDirectory = process.argv[3] ?? fileURLToPath(new URL('../.artifacts/', import.meta.url));
 const playwrightEntry = process.env.PLAYWRIGHT_ENTRY;
 const playwright = playwrightEntry
   ? await import(pathToFileURL(playwrightEntry))
@@ -79,6 +79,16 @@ try {
     const scenes = rect('.performance-controls');
     const hud = rect('.hud--top');
     return {
+      sceneId: window.game.musicManager.getStatus().sceneId,
+      scenes: [...document.querySelectorAll('#scene-selector [data-scene]')].map((button) => ({
+        id: button.dataset.scene,
+        current: button.getAttribute('aria-current') === 'true',
+      })),
+      hudMetrics: [...document.querySelectorAll('.hud-metric dd')].map((node) => ({
+        text: node.textContent,
+        clientWidth: node.clientWidth,
+        scrollWidth: node.scrollWidth,
+      })),
       kit: window.drumManager.getCurrentDrumKit(),
       statuses: window.drumManager.getDrumKitStatuses(),
       kitLabel: document.querySelector('#drum-kit-label')?.textContent,
@@ -94,12 +104,46 @@ try {
   });
 
   assert.equal(initial.kit?.id, 'acoustic');
+  assert.equal(initial.sceneId, 'groove-pulse');
+  assert.deepEqual(initial.scenes.map(({ id }) => id), [
+    'minimal-groove', 'groove-pulse', 'neon-drive', 'midnight-pulse', 'arcade-horizon',
+  ]);
+  assert.deepEqual(initial.scenes.filter(({ current }) => current).map(({ id }) => id), ['groove-pulse']);
+  assert.ok(initial.hudMetrics.every(({ clientWidth, scrollWidth }) => scrollWidth <= clientWidth));
   assert.ok(initial.statuses.every(({ status }) => status === 'ready'));
   assert.equal(initial.kitLabel, 'KIT / ACOUSTIC');
   assert.deepEqual(initial.axes, ['STRAIGHT → BROKEN', 'MINIMAL → ENERGY']);
-  assert.equal(initial.grid?.width, 160);
-  assert.equal(initial.grid?.height, 160);
+  assert.equal(initial.grid?.width, 182);
+  assert.equal(initial.grid?.height, 182);
   assert.deepEqual(initial.overlap, { social: false, scenes: false, hud: false });
+
+  const sceneChecks = [];
+  for (const scene of initial.scenes) {
+    await page.click(`[data-scene="${scene.id}"]`);
+    await page.waitForFunction((sceneId) => window.game.musicManager.getStatus().sceneId === sceneId, scene.id);
+    sceneChecks.push(await page.evaluate(() => ({
+      sceneId: window.game.musicManager.getStatus().sceneId,
+      overflow: [...document.querySelectorAll('.hud-metric dd')]
+        .some((node) => node.scrollWidth > node.clientWidth),
+    })));
+  }
+  assert.deepEqual(sceneChecks.map(({ sceneId }) => sceneId), initial.scenes.map(({ id }) => id));
+  assert.ok(sceneChecks.every(({ overflow }) => !overflow));
+  await page.click('[data-scene="groove-pulse"]');
+
+  const feedback = await page.evaluate(() => {
+    const renderDiv = document.querySelector('#renderDiv');
+    renderDiv.dispatchEvent(new CustomEvent('rhythmpointer', { detail: { x: 0.5, y: 0.25 } }));
+    renderDiv.dispatchEvent(new CustomEvent('rhythmposition', { detail: { x: 4, y: 2 } }));
+    return {
+      pointer: document.querySelector('#rhythm-pointer')?.style.transform,
+      cursor: document.querySelector('#rhythm-cursor')?.style.transform,
+    };
+  });
+  assert.deepEqual(feedback, {
+    pointer: 'translate3d(50%, 25%, 0px)',
+    cursor: 'translate3d(400%, 400%, 0px)',
+  });
 
   await page.click('#control-deck-toggle');
   await page.waitForSelector('#drum-kit-select', { state: 'visible' });
@@ -122,6 +166,8 @@ try {
   console.log(JSON.stringify({
     target,
     initial,
+    sceneChecks,
+    feedback,
     drumResponses: drumResponses.length,
     screenshots: [
       `${outputDirectory}/rhythm-kits-desktop.png`,

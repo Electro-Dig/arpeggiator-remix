@@ -35,13 +35,14 @@ test('visual shell supports control deck, simple mode, and reduced motion', () =
 });
 
 test('rhythm space uses a transform-only overlay and event-driven confirmed status', () => {
-  for (const id of ['rhythm-space', 'rhythm-cursor', 'rhythm-cell-label', 'drum-kit-label', 'drum-kit-select']) {
+  for (const id of ['rhythm-space', 'rhythm-cursor', 'rhythm-pointer', 'rhythm-cell-label', 'drum-kit-label', 'drum-kit-select']) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
   assert.match(styles, /\.rhythm-space/);
-  assert.match(styles, /\.rhythm-space__grid[\s\S]*?width:\s*160px/);
+  assert.match(styles, /\.rhythm-space__grid[\s\S]*?width:\s*182px/);
   assert.match(styles, /\.simple-mode\s+\.rhythm-space/);
   assert.match(main, /new RhythmGridOverlay/);
+  assert.match(main, /addEventListener\('rhythmpointer'/);
   assert.match(main, /onRhythmCellChange/);
   assert.match(main, /onDrumKitChange/);
   assert.match(main, /setDrumKit\(drumKitSelect\.value/);
@@ -52,21 +53,30 @@ test('rhythm space uses a transform-only overlay and event-driven confirmed stat
   assert.doesNotMatch(main, /\n\s{4}observeDrumManager\(drumMgr\)[\s\S]{0,500}setInterval/);
 });
 
-test('manual Synthwave scenes and semantic HUD remain available without tracking', () => {
-  for (const id of ['scene-selector', 'classic-pattern-control', 'classic-pattern-select', 'current-root-note']) {
+test('wide-screen HUD preserves full labels and lifts the rhythm grid above the sequencer', () => {
+  assert.match(styles, /\.performance-status\s*\{[\s\S]*?display:\s*grid/);
+  assert.match(styles, /grid-template-columns:\s*minmax\(145px,\s*1\.2fr\)/);
+  assert.doesNotMatch(styles, /\.hud-metric dd\s*\{[^}]*text-overflow:\s*ellipsis/s);
+  assert.doesNotMatch(styles, /\.hud-metric dd\s*\{[^}]*max-width:\s*150px/s);
+  assert.match(styles, /\.rhythm-space\s*\{[^}]*right:\s*72px[^}]*bottom:\s*190px/s);
+});
+
+test('five standalone music scenes and semantic HUD remain available without tracking', () => {
+  for (const id of ['scene-selector', 'current-root-note']) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
-  for (const scene of ['classic', 'neon-drive', 'midnight-pulse', 'arcade-horizon']) {
+  for (const scene of ['minimal-groove', 'groove-pulse', 'neon-drive', 'midnight-pulse', 'arcade-horizon']) {
     assert.match(html, new RegExp(`data-scene=["']${scene}["']`));
   }
+  assert.doesNotMatch(html, /classic-pattern-control|classic-pattern-select|data-scene=["']classic["']/);
   assert.match(main, /musicManager\.setScene\(sceneId\)/);
-  assert.match(main, /musicManager\.setClassicPreset/);
+  assert.doesNotMatch(main, /setClassicPreset|classic-pattern/);
   assert.match(main, /onStatusChange/);
   assert.doesNotMatch(main, /setInterval\(/);
 });
 
 test('narrow screens stack scene fallback controls above the lower corner utilities', () => {
-  assert.match(styles, /@media \(max-width: 620px\)[\s\S]*?\.performance-controls\s*\{[\s\S]*?bottom:\s*168px/);
+  assert.match(styles, /@media \(max-width: 620px\)[\s\S]*?\.performance-controls\s*\{[\s\S]*?bottom:\s*248px/);
   assert.match(styles, /@media \(max-width: 620px\)[\s\S]*?\.performance-controls\s*\{[\s\S]*?width:\s*calc\(100vw - 24px\)/);
   assert.match(styles, /@media \(max-width: 620px\)[\s\S]*?\.scene-selector\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2/);
 });

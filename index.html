@@ -40,10 +40,10 @@
       </section>
 
       <dl class="performance-status">
-        <div class="hud-metric" data-index="01"><dt>SCENE</dt><dd id="current-music-preset">NEON DRIVE</dd></div>
-        <div class="hud-metric" data-index="02"><dt>SYNTH</dt><dd id="current-synth">NEON PLUCK</dd></div>
+        <div class="hud-metric" data-index="01"><dt>SCENE</dt><dd id="current-music-preset">GROOVE PULSE</dd></div>
+        <div class="hud-metric" data-index="02"><dt>SYNTH</dt><dd id="current-synth">DX7 E.PIANO</dd></div>
         <div class="hud-metric" data-index="03"><dt>RHYTHM</dt><dd id="current-drum-preset">STEADY / FULL</dd></div>
-        <div class="hud-metric" data-index="04"><dt>BPM</dt><dd id="current-tempo">120</dd></div>
+        <div class="hud-metric" data-index="04"><dt>BPM</dt><dd id="current-tempo">115</dd></div>
         <div class="hud-metric" data-index="05"><dt>ROOT</dt><dd id="current-root-note">E3</dd></div>
       </dl>
 
@@ -107,22 +107,12 @@
 
     <section class="performance-controls" aria-label="音乐场景后备控制">
       <nav id="scene-selector" class="scene-selector" aria-label="音乐场景">
-        <button type="button" data-scene="classic">CLASSIC</button>
-        <button type="button" data-scene="neon-drive" aria-current="true">NEON DRIVE</button>
+        <button type="button" data-scene="minimal-groove">MINIMAL GROOVE</button>
+        <button type="button" data-scene="groove-pulse" aria-current="true">GROOVE PULSE</button>
+        <button type="button" data-scene="neon-drive">NEON DRIVE</button>
         <button type="button" data-scene="midnight-pulse">MIDNIGHT PULSE</button>
         <button type="button" data-scene="arcade-horizon">ARCADE HORIZON</button>
       </nav>
-      <label id="classic-pattern-control" class="classic-pattern-control" hidden>CLASSIC PATTERN
-        <select id="classic-pattern-select">
-          <option value="0">Minimal Groove</option>
-          <option value="1">Rhythmic Drive</option>
-          <option value="2">Melodic Flow</option>
-          <option value="3">Groove Pulse</option>
-          <option value="4">Dark Current</option>
-          <option value="5">Light Flow</option>
-          <option value="6">Deep Space</option>
-        </select>
-      </label>
     </section>
 
     <section id="rhythm-space" class="rhythm-space" aria-label="二维节奏空间">
@@ -130,6 +120,7 @@
       <span class="rhythm-space__axis rhythm-space__axis--y">MINIMAL → ENERGY</span>
       <div class="rhythm-space__grid" aria-hidden="true">
         <div id="rhythm-cursor" class="rhythm-space__cursor"></div>
+        <div id="rhythm-pointer" class="rhythm-space__pointer"></div>
       </div>
       <output id="rhythm-cell-label">STEADY / FULL</output>
       <output id="drum-kit-label">KIT / ACOUSTIC</output>

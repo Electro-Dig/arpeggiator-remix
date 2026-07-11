@@ -1,4 +1,4 @@
-export const DEFAULT_SCENE_ID = 'neon-drive';
+export const DEFAULT_SCENE_ID = 'groove-pulse';
 
 const scene = (definition) => Object.freeze({
   ...definition,
@@ -9,10 +9,16 @@ const scene = (definition) => Object.freeze({
 
 export const SCENES = Object.freeze([
   scene({
-    id: 'classic', name: 'Classic', tonic: 'E', mode: 'chromatic', bpm: 122,
+    id: 'minimal-groove', name: 'Minimal Groove', tonic: 'E', mode: 'chromatic', bpm: 122,
     sequence: [0, 3, null, 7, 8, null, 7, null],
     bass: [0, null, 0, null, 7, null, 0, null],
-    variants: ['DX7 E.PIANO', 'DX7 BRASS', 'DX7 MARIMBA'], legacy: true,
+    variants: ['DX7 MARIMBA', 'DX7 E.PIANO', 'DX7 BRASS'],
+  }),
+  scene({
+    id: 'groove-pulse', name: 'Groove Pulse', tonic: 'E', mode: 'chromatic', bpm: 115,
+    sequence: [0, 7, 2, 7, 0, 3, 7, 0, 8, 7, 0, 5, 7, 0, 7, 7],
+    bass: [0, null, 0, null, 7, null, 0, null],
+    variants: ['DX7 E.PIANO', 'DX7 BRASS', 'DX7 MARIMBA'],
   }),
   scene({
     id: 'neon-drive', name: 'Neon Drive', tonic: 'E', mode: 'natural-minor', bpm: 120,

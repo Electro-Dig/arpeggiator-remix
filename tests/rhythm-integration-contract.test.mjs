@@ -9,6 +9,8 @@ test('right hand selects rhythm cells without legacy preset or note-length gestu
   assert.match(gameSource, /import \{ RhythmSpace \} from ['"]\.\/rhythm\/RhythmSpace\.js['"]/);
   assert.match(gameSource, /queueRhythmCell\(cell\.x, cell\.y\)/);
   assert.match(gameSource, /new CustomEvent\(['"]rhythmposition['"]/);
+  assert.match(gameSource, /new CustomEvent\(['"]rhythmpointer['"]/);
+  assert.match(gameSource, /detail:\s*zonePoint/);
   assert.doesNotMatch(gameSource, /_updateGlobalNoteLengthByRightHandY/);
   assert.doesNotMatch(gameSource, /drumManager\.cycleDrumPreset\(/);
   assert.doesNotMatch(gameSource, /noteLenCtrl/);

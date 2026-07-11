@@ -3,21 +3,6 @@ import { audioBus } from './audio/AudioBus.js';
 import { DEFAULT_SCENE_ID, SCENES, getScene } from './music/scenes.js';
 import { buildScale, noteAtPosition } from './music/scale-utils.js';
 
-const classicPreset = (definition) => Object.freeze({
-  ...definition,
-  sequence: Object.freeze([...definition.sequence]),
-});
-
-export const CLASSIC_PRESETS = Object.freeze([
-  classicPreset({ name: 'Minimal Groove', sequence: [0, 3, null, 7, 8, null, 7, null], tempo: 122, variant: 2 }),
-  classicPreset({ name: 'Rhythmic Drive', sequence: [null, 0, null, 0, null, 0, null, null, 0, null, 0, null, 0, null, null, 0], tempo: 128, variant: 1 }),
-  classicPreset({ name: 'Melodic Flow', sequence: [0, 7, 10, 12, 3, 2, 10, 12], tempo: 105, variant: 2 }),
-  classicPreset({ name: 'Groove Pulse', sequence: [0, 7, 2, 7, 0, 3, 7, 0, 8, 7, 0, 5, 7, 0, 7, 7], tempo: 115, variant: 0 }),
-  classicPreset({ name: 'Dark Current', sequence: [0, 7, 12, 0, 7, 14, 0, 7, 15, 0, 7, 14, 0, 7, 12, 0], tempo: 118, variant: 1 }),
-  classicPreset({ name: 'Light Flow', sequence: [-2, 0, 3, 10, -2, 0, 3, 7, -2, 0, 3, 10, -2, 0, 3, 0], tempo: 118, variant: 0 }),
-  classicPreset({ name: 'Deep Space', sequence: [0, 5, null, 7, 10, null, 7, null], tempo: 110, variant: 2 }),
-]);
-
 const fm = (harmonicity, modulationIndex, attack, decay, sustain, release) => Object.freeze({
   harmonicity,
   modulationIndex,
@@ -56,7 +41,6 @@ export class MusicManager extends EventTarget {
     this.variantIndex = 0;
     this.currentRoot = this.scale[0];
     this.bassRoot = null;
-    this.classicPresetIndex = 0;
     this.delayManualOverride = false;
     this.delayBeats = 0;
     this.delayWetManual = 0.18;
@@ -212,18 +196,6 @@ export class MusicManager extends EventTarget {
     const frequency = 250 * Math.pow(8000 / 250, value);
     this.sceneFilter?.frequency.rampTo(frequency, 0.04);
     return frequency;
-  }
-
-  setClassicPreset(index) {
-    if (this.scene.id !== 'classic' || !Number.isInteger(index) || !CLASSIC_PRESETS[index]) return null;
-    const preset = CLASSIC_PRESETS[index];
-    this.stopAllArpeggios();
-    this.classicPresetIndex = index;
-    this.scene = { ...getScene('classic'), sequence: preset.sequence, bpm: preset.tempo };
-    if (this.isStarted) Tone.Transport.bpm.rampTo(preset.tempo, 0.15);
-    this.setToneVariant(preset.variant, { emit: false });
-    this.emitStatus();
-    return preset;
   }
 
   setDelayTimeBeats(beats, options) {

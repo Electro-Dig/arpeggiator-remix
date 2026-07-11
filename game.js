@@ -1109,6 +1109,9 @@ export var Game = /*#__PURE__*/ function () {
                                     var fingerStates = _this1._getFingerStates(smoothedLandmarks);
                                     if (interactionsEnabled) {
                                         var zonePoint = _this1.rhythmZone.map(1 - normX_visible, normY_visible);
+                                        _this1.renderDiv.dispatchEvent(new CustomEvent('rhythmpointer', {
+                                            detail: zonePoint
+                                        }));
                                         var cell = _this1.rhythmSpace.update(zonePoint.x, zonePoint.y);
                                         if (cell.changed) {
                                             var pendingCell = drumManager.queueRhythmCell(cell.x, cell.y);

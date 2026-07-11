@@ -8,9 +8,10 @@ test('synthwave manager imports scene and scale contracts and exposes semantic s
   assert.match(source, /DEFAULT_SCENE_ID, SCENES, getScene/);
   assert.match(source, /buildScale, noteAtPosition/);
   assert.match(source, /audioBus/);
-  for (const method of ['setScene', 'setToneVariant', 'setBrightness', 'setRootFromPosition', 'cycleScene', 'setClassicPreset']) {
+  for (const method of ['setScene', 'setToneVariant', 'setBrightness', 'setRootFromPosition', 'cycleScene']) {
     assert.match(source, new RegExp(`${method}\\(`));
   }
+  assert.doesNotMatch(source, /setClassicPreset\(/);
 });
 
 test('audio nodes are constructed once in start and never routed around the recorder bus', () => {
@@ -24,8 +25,8 @@ test('audio nodes are constructed once in start and never routed around the reco
   assert.match(source, /if \(!this\.startPromise\)/);
 });
 
-test('legacy Classic material remains available without editor-era note length state', () => {
-  assert.match(source, /export const CLASSIC_PRESETS/);
+test('obsolete Classic selector state and editor-era note length state are absent', () => {
+  assert.doesNotMatch(source, /CLASSIC_PRESETS|classicPresetIndex/);
   assert.doesNotMatch(source, /noteLengthLevels|setNoteLengthLevel/);
   assert.doesNotMatch(source, /cycleSynth\(|cycleMusicPreset\(/);
 });

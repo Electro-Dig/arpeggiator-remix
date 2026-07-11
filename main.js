@@ -151,14 +151,11 @@ function initializeApp() {
 
         const musicManager = game.musicManager;
         const sceneButtons = [...document.querySelectorAll('#scene-selector [data-scene]')];
-        const classicControl = document.getElementById('classic-pattern-control');
-        const classicSelect = document.getElementById('classic-pattern-select');
         const updateSceneControls = ({ sceneId }) => {
             for (const button of sceneButtons) {
                 if (button.dataset.scene === sceneId) button.setAttribute('aria-current', 'true');
                 else button.removeAttribute('aria-current');
             }
-            if (classicControl) classicControl.hidden = sceneId !== 'classic';
         };
         musicManager.onStatusChange(updateSceneControls);
         updateSceneControls(musicManager.getStatus());
@@ -173,10 +170,9 @@ function initializeApp() {
                 }
             });
         }
-        classicSelect?.addEventListener('change', () => {
-            musicManager.setClassicPreset(Number(classicSelect.value));
+        renderDiv.addEventListener('rhythmpointer', ({ detail }) => {
+            rhythmOverlay.updatePointer(detail);
         });
-
         renderDiv.addEventListener('rhythmposition', ({ detail }) => {
             rhythmOverlay.updatePosition(detail);
         });
