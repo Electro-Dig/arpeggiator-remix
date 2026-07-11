@@ -3,22 +3,32 @@
 ## Scope
 
 - Branch: `feature/exhibition-v2`
-- Preview commit: `0560f1e`
-- Netlify Draft: `https://6a51609309a90ea46c7f3b5b--arpeggiator-remix-2.netlify.app`
+- Preview commit: `4bac9cd`
+- Netlify Draft: `https://6a51cbf1592e27d6ea1a7fab--arpeggiator-remix-2.netlify.app`
 - Production branch remained at `59f9ef3c6b9af1ab77ab4d02693830959a93771a` during the preview push.
 - The Duo Mix branch was not merged.
 
 ## Automated verification
 
-- `npm.cmd test`: 104/104 passing.
+- `npm.cmd test`: 124/124 passing.
 - JavaScript syntax check: all project `.js` files passing.
 - `git diff --check`: clean.
-- Rhythm map: 49 immutable 16-step cells; boundary smoothing and next-bar scheduling covered by tests.
+- Rhythm map: 49 unique immutable 16-step cells across `STRAIGHT → BROKEN` and `MINIMAL → ENERGY`; four anchors, center hybrid, boundary smoothing and next-bar scheduling covered by tests.
+- Right-hand zone: the approved `left 0.56 / right 0.94 / top 0.18 / bottom 0.84` region maps to the full 7×7 grid and clamps outside positions to the nearest edge.
+- Drum kits: Acoustic, Electronic and Synthwave each ship five local WAV assets; all 15 files total 1,174,104 bytes and load independently.
+- Kit gesture: 500 ms fist hold, 1,200 ms open window, 800 ms cooldown, right-hand-only routing and drum suppression covered by tests.
 - Audio graph: one reusable PolySynth, MonoSynth, Filter, Delay, Reverb, and bass sequence; routing to the internal recording bus covered by tests.
 - Gesture contracts: stable handedness, left-hand scene/tone/root controls, right-hand rhythm XY and five independent drum gates covered by tests.
 - Recording contracts: 3-second countdown, 60-second cap, early stop, cancel, re-record, upload retry, MIME selection, signed proxy and expiry states covered by tests.
 
 ## Browser and service smoke
+
+- Local Chrome smoke at 1920×1080 loaded all 15 drum samples with HTTP 200, no failed requests, no page errors and no console errors.
+- Manual Control Deck switching reached Acoustic, Electronic and Synthwave and updated the event-driven kit label each time.
+- The enlarged rhythm grid measured exactly 160×160 px and did not overlap the top HUD, scene controls or social links.
+- A 390×844 responsive capture kept the lower controls, grid and social links separated.
+- The new Draft returned the expected `303` invite boundary with `X-Robots-Tag: noindex`.
+- The following recording and public-share checks were completed on the preceding Draft of the same branch before this rhythm/kit batch:
 
 - Invite boundary: a fresh browser was redirected to the invite screen; valid entry opened the Draft.
 - Manual fallback: all four scenes switched correctly; Classic exposed its seven-pattern selector.
@@ -43,6 +53,9 @@ The second segment's negative heap delta indicates collection after warm-up; no 
 
 ## Still requires physical exhibition rehearsal
 
+- Enter the invite on the new Draft and confirm real-camera tracking plus audible Acoustic/Electronic/Synthwave switching.
+- Rehearse the 500 ms fist-to-open gesture against ordinary one-to-five-finger drumming.
+- Record a new take containing two kit changes, then verify preview, upload, QR scan, public seeking and download on a phone.
 - Same-camera five-minute `origin/main` versus V2 hand-tracking FPS comparison.
 - Five-minute full-grid audible audition and a 30-minute camera/audio soak.
 - Two-background-observer crowd-interference rehearsal.
@@ -52,5 +65,5 @@ These items are deliberately not marked as passed by headless automation. Produc
 
 ## Rollback references
 
-- Before rhythm/Synthwave batches: `11cb4fe`.
+- Before the right-hand rhythm-zone and drum-kit batch: `83085d1`.
 - Current protected production branch: `59f9ef3c6b9af1ab77ab4d02693830959a93771a`.
