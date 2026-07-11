@@ -9,12 +9,13 @@ import { createRecordingServer } from './server.mjs';
 import { MAX_BYTES, RecordingStore } from './storage.mjs';
 
 const secret = 'server-test-secret-with-at-least-32-bytes';
+const adminSecret = 'admin-test-secret-with-at-least-32-bytes';
 
 async function withServer(run) {
   const root = await mkdtemp(join(tmpdir(), 'arpeggiator-server-'));
   const store = new RecordingStore(root);
   await store.init();
-  const server = createRecordingServer({ store, secret });
+  const server = createRecordingServer({ store, secret, adminSecret });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
   try {
@@ -59,6 +60,7 @@ test('signed upload and download round-trip audio bytes', async () => {
     assert.equal(upload.status, 201);
     const result = await upload.json();
     assert.match(result.token, /^[A-Za-z0-9_-]{32}$/);
+    assert.equal(result.checkinNumber, 1);
 
     const downloadPath = `/v1/recordings/${result.token}`;
     const download = await fetch(`${origin}${downloadPath}`, {
@@ -67,7 +69,40 @@ test('signed upload and download round-trip audio bytes', async () => {
     assert.equal(download.status, 200);
     assert.equal(download.headers.get('content-type'), 'audio/webm');
     assert.equal(download.headers.get('x-recording-expires-at'), String(result.expiresAt));
+    assert.equal(download.headers.get('x-recording-checkin-number'), '1');
     assert.deepEqual(new Uint8Array(await download.arrayBuffer()), body);
+  });
+});
+
+test('admin reset is authenticated and controls the next successful check-in', async () => {
+  await withServer(async ({ origin }) => {
+    const denied = await fetch(`${origin}/v1/admin/counter/reset`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ value: 10 }),
+    });
+    assert.equal(denied.status, 401);
+
+    const reset = await fetch(`${origin}/v1/admin/counter/reset`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-recordings-admin-key': adminSecret,
+      },
+      body: JSON.stringify({ value: 10 }),
+    });
+    assert.equal(reset.status, 200);
+    assert.deepEqual(await reset.json(), { value: 10 });
+
+    const body = new Uint8Array([9]);
+    const path = '/v1/recordings';
+    const upload = await fetch(`${origin}${path}`, {
+      method: 'POST',
+      headers: await signedHeaders({ method: 'POST', path, body, mime: 'audio/webm' }),
+      body,
+    });
+    assert.equal(upload.status, 201);
+    assert.equal((await upload.json()).checkinNumber, 11);
   });
 });
 

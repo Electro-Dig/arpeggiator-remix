@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -96,7 +97,20 @@ function sendError(response, error) {
   sendJson(response, status, { error: messages[status] }, headers);
 }
 
-export function createRecordingServer({ store, secret, nowSeconds = () => Math.floor(Date.now() / 1000) }) {
+function matchesAdminSecret(value, expected) {
+  const actualBuffer = Buffer.from(String(value || ''));
+  const expectedBuffer = Buffer.from(String(expected || ''));
+  return expectedBuffer.length >= 32
+    && actualBuffer.length === expectedBuffer.length
+    && timingSafeEqual(actualBuffer, expectedBuffer);
+}
+
+export function createRecordingServer({
+  store,
+  secret,
+  adminSecret = '',
+  nowSeconds = () => Math.floor(Date.now() / 1000),
+}) {
   return createServer(async (request, response) => {
     const url = new URL(request.url, 'http://127.0.0.1');
     const path = url.pathname;
@@ -106,14 +120,34 @@ export function createRecordingServer({ store, secret, nowSeconds = () => Math.f
       return;
     }
 
+    const isCounterReset = request.method === 'POST'
+      && path === '/v1/admin/counter/reset';
     const tokenMatch = request.method === 'GET' ? path.match(TOKEN_ROUTE) : null;
     const isUpload = request.method === 'POST' && path === '/v1/recordings';
-    if (!isUpload && !tokenMatch) {
+    if (!isUpload && !tokenMatch && !isCounterReset) {
       sendJson(response, 404, { error: 'Not found' });
       return;
     }
 
     try {
+      if (isCounterReset) {
+        if (!matchesAdminSecret(request.headers['x-recordings-admin-key'], adminSecret)) {
+          throw httpError('Unauthorized', 401);
+        }
+        const body = await readBody(request, 1024);
+        let payload;
+        try {
+          payload = JSON.parse(Buffer.from(body).toString('utf8'));
+        } catch {
+          throw httpError('Bad request', 400);
+        }
+        if (!Number.isSafeInteger(payload?.value) || payload.value < 0) {
+          throw httpError('Bad request', 400);
+        }
+        sendJson(response, 200, await store.resetCounter(payload.value));
+        return;
+      }
+
       const body = isUpload
         ? await readBody(request, MAX_BYTES)
         : new Uint8Array();
@@ -148,6 +182,9 @@ export function createRecordingServer({ store, secret, nowSeconds = () => Math.f
         'cache-control': 'private, max-age=300',
         'x-content-type-options': 'nosniff',
         'x-recording-expires-at': String(recording.expiresAt),
+        ...(Number.isSafeInteger(recording.checkinNumber) ? {
+          'x-recording-checkin-number': String(recording.checkinNumber),
+        } : {}),
         'accept-ranges': 'bytes',
         ...(range ? {
           'content-range': `bytes ${range.start}-${range.end}/${recording.body.length}`,
@@ -173,7 +210,9 @@ async function main() {
 
   const secret = process.env.RECORDINGS_PROXY_SECRET || '';
   if (secret.length < 32) throw new Error('RECORDINGS_PROXY_SECRET must contain at least 32 characters');
-  const server = createRecordingServer({ store, secret });
+  const adminSecret = process.env.RECORDINGS_ADMIN_SECRET || '';
+  if (adminSecret.length < 32) throw new Error('RECORDINGS_ADMIN_SECRET must contain at least 32 characters');
+  const server = createRecordingServer({ store, secret, adminSecret });
   server.listen(8787, '127.0.0.1', () => {
     console.log('Recording API listening on http://127.0.0.1:8787');
   });

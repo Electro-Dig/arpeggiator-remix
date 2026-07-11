@@ -26,9 +26,11 @@ test('writes accepted audio and metadata with a 192-bit token', async () => {
     const result = await store.put(new Uint8Array([1, 2, 3]), 'audio/webm');
     assert.match(result.token, /^[A-Za-z0-9_-]{32}$/);
     assert.equal(result.expiresAt, 1_000 + TTL_MS);
+    assert.equal(result.checkinNumber, 1);
 
     const meta = JSON.parse(await readFile(join(root, `${result.token}.json`), 'utf8'));
     assert.equal(meta.mime, 'audio/webm');
+    assert.equal(meta.checkinNumber, 1);
     assert.deepEqual(
       new Uint8Array(await readFile(join(root, `${result.token}.webm`))),
       new Uint8Array([1, 2, 3]),
@@ -51,6 +53,48 @@ test('rejects empty files, invalid MIME and files over five megabytes', async ()
     await assert.rejects(
       store.put(new Uint8Array(MAX_BYTES + 1), 'audio/mp4'),
       (error) => error.status === 413,
+    );
+    assert.equal(
+      (await store.put(new Uint8Array([2]), 'audio/webm')).checkinNumber,
+      1,
+    );
+  });
+});
+
+test('serializes concurrent check-ins and preserves the number in recording metadata', async () => {
+  await withStore(async (root) => {
+    const store = new RecordingStore(root, () => 30_000);
+    await store.init();
+    const results = await Promise.all([
+      store.put(new Uint8Array([1]), 'audio/webm'),
+      store.put(new Uint8Array([2]), 'audio/webm'),
+      store.put(new Uint8Array([3]), 'audio/webm'),
+    ]);
+
+    assert.deepEqual(
+      results.map(({ checkinNumber }) => checkinNumber).sort((a, b) => a - b),
+      [1, 2, 3],
+    );
+    for (const result of results) {
+      assert.equal((await store.get(result.token)).checkinNumber, result.checkinNumber);
+    }
+  });
+});
+
+test('persists and resets the activity counter', async () => {
+  await withStore(async (root) => {
+    const firstStore = new RecordingStore(root, () => 40_000);
+    await firstStore.init();
+    assert.equal((await firstStore.put(new Uint8Array([1]), 'audio/webm')).checkinNumber, 1);
+
+    const restartedStore = new RecordingStore(root, () => 41_000);
+    await restartedStore.init();
+    assert.equal((await restartedStore.put(new Uint8Array([2]), 'audio/webm')).checkinNumber, 2);
+    assert.deepEqual(await restartedStore.resetCounter(40), { value: 40 });
+    assert.equal((await restartedStore.put(new Uint8Array([3]), 'audio/webm')).checkinNumber, 41);
+    await assert.rejects(
+      restartedStore.resetCounter(-1),
+      (error) => error.status === 400,
     );
   });
 });
