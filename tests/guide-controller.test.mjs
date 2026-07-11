@@ -7,6 +7,8 @@ class FakeElement extends EventTarget {
     this.textContent = '';
     this.disabled = false;
     this.open = false;
+    this.src = '';
+    this.alt = '';
   }
 
   click() {
@@ -26,7 +28,7 @@ function createRoot() {
   const ids = [
     'guide-dialog', 'open-guide', 'guide-previous', 'guide-next', 'guide-skip',
     'guide-kicker', 'guide-title', 'guide-body', 'guide-progress', 'guide-step',
-    'guide-notation-primary', 'guide-notation-secondary',
+    'guide-notation-primary', 'guide-notation-secondary', 'guide-illustration',
   ];
   const elements = Object.fromEntries(ids.map((id) => [id, new FakeElement()]));
   return {
@@ -61,6 +63,23 @@ test('guide opens only on demand and navigates all three cards', async () => {
   root.elements['guide-next'].click();
   assert.equal(root.elements['guide-dialog'].open, false);
   assert.equal(guide.index, 2);
+});
+
+test('gesture advance moves one page and completes only on the last page', async () => {
+  const root = createRoot();
+  globalThis.document = root;
+  const { GuideController } = await import('../GuideController.js');
+  const guide = new GuideController(root);
+  guide.open();
+
+  assert.equal(root.elements['guide-illustration'].src, '/assets/guide/stage-frame.svg');
+  assert.equal(guide.advanceFromGesture(), 'advanced');
+  assert.equal(guide.index, 1);
+  assert.equal(root.elements['guide-illustration'].src, '/assets/guide/dual-hand-control.svg');
+  assert.equal(guide.advanceFromGesture(), 'advanced');
+  assert.equal(guide.index, 2);
+  assert.equal(guide.advanceFromGesture(), 'complete');
+  assert.equal(root.elements['guide-dialog'].open, false);
 });
 
 test('recording busy blocks opening and skip emits a neutral lock', async () => {

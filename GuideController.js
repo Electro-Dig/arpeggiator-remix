@@ -21,6 +21,7 @@ export class GuideController extends EventTarget {
     this.root.getElementById('guide-previous')?.addEventListener('click', () => {
       this.index = retreatGuide(this.index).index;
       this.render();
+      this.emitPageChange('manual');
     });
     this.root.getElementById('guide-next')?.addEventListener('click', () => {
       const next = advanceGuide(this.index);
@@ -30,6 +31,7 @@ export class GuideController extends EventTarget {
       }
       this.index = next.index;
       this.render();
+      this.emitPageChange('manual');
     });
     this.root.getElementById('guide-skip')?.addEventListener('click', () => this.close('skip'));
   }
@@ -59,6 +61,31 @@ export class GuideController extends EventTarget {
     if (this.dialog?.open) this.close('gesture-skip');
   }
 
+  advanceFromGesture() {
+    if (!this.dialog?.open) return 'ignored';
+    const next = advanceGuide(this.index);
+    if (next.complete) {
+      this.close('gesture-complete');
+      return 'complete';
+    }
+    this.index = next.index;
+    this.render();
+    this.emitPageChange('gesture');
+    return 'advanced';
+  }
+
+  exitFromGesture() {
+    if (!this.dialog?.open) return false;
+    this.close('gesture-exit');
+    return true;
+  }
+
+  emitPageChange(source) {
+    this.dispatchEvent(new CustomEvent('pagechange', {
+      detail: { index: this.index, source },
+    }));
+  }
+
   setRecordingBusy(busy) {
     this.recordingBusy = Boolean(busy);
     const button = this.root.getElementById('open-guide');
@@ -72,6 +99,11 @@ export class GuideController extends EventTarget {
     this.root.getElementById('guide-step').textContent = String(this.index + 1).padStart(2, '0');
     this.root.getElementById('guide-title').textContent = card.title;
     this.root.getElementById('guide-body').textContent = card.body;
+    const illustration = this.root.getElementById('guide-illustration');
+    if (illustration) {
+      illustration.src = card.illustration;
+      illustration.alt = card.illustrationAlt;
+    }
     this.root.getElementById('guide-notation-primary').textContent = card.notations[0];
     this.root.getElementById('guide-notation-secondary').textContent = card.notations[1];
     this.root.getElementById('guide-progress').textContent = `${this.index + 1} / ${GUIDE_CARDS.length}`;

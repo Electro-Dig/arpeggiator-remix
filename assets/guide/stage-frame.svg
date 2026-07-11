@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" role="img" aria-labelledby="title desc">
+  <title id="title">中央参与者站位</title>
+  <desc id="desc">一名参与者站在青色镜头框中央，双手进入有效区域，旁观者的手留在框外。</desc>
+  <rect width="640" height="480" fill="#e7efea"/>
+  <g stroke="#80cfd2" stroke-width="1" opacity=".42">
+    <path d="M0 80H640M0 160H640M0 240H640M0 320H640M0 400H640"/>
+    <path d="M80 0V480M160 0V480M240 0V480M320 0V480M400 0V480M480 0V480M560 0V480"/>
+  </g>
+  <rect x="116" y="48" width="408" height="364" rx="18" fill="#d5e4e1" fill-opacity=".7" stroke="#11717a" stroke-width="5"/>
+  <path d="M116 90V48h42M482 48h42v42M116 370v42h42M482 412h42v-42" fill="none" stroke="#55c6ce" stroke-width="10"/>
+  <circle cx="320" cy="158" r="46" fill="#f5eee2" stroke="#142b30" stroke-width="5"/>
+  <path d="M253 363c7-91 28-139 67-139s60 48 67 139" fill="#adc8c4" stroke="#142b30" stroke-width="6"/>
+  <g fill="none" stroke="#e86d4c" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M280 252l-55-50-31-54"/>
+    <path d="M360 252l55-50 31-54"/>
+  </g>
+  <g fill="#f5eee2" stroke="#142b30" stroke-width="4">
+    <circle cx="190" cy="139" r="22"/><circle cx="450" cy="139" r="22"/>
+  </g>
+  <g fill="none" stroke="#ff9a4a" stroke-width="6" stroke-linecap="round" opacity=".86">
+    <path d="M55 330c18-36 42-48 65-18M585 330c-18-36-42-48-65-18"/>
+    <path d="M40 288l-23-38M600 288l23-38"/>
+  </g>
+  <g fill="#142b30" font-family="Cascadia Mono,Consolas,monospace" font-size="14" font-weight="700" letter-spacing="2">
+    <text x="132" y="76">ACTIVE FRAME</text>
+    <text x="238" y="447">ONE PLAYER</text>
+  </g>
+</svg>

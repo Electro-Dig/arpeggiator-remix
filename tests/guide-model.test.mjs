@@ -19,6 +19,14 @@ test('guide has exactly the three approved cards', () => {
   assert.deepEqual(GUIDE_CARDS[2].notations, ['↑↑ / CONFIRM', '↓↓ / CANCEL']);
 });
 
+test('every guide card declares a cacheable local SVG', () => {
+  assert.deepEqual(GUIDE_CARDS.map(({ illustration }) => illustration), [
+    '/assets/guide/stage-frame.svg',
+    '/assets/guide/dual-hand-control.svg',
+    '/assets/guide/record-thumbs.svg',
+  ]);
+});
+
 test('guide navigation clamps and marks the last advance as complete', () => {
   assert.deepEqual(retreatGuide(0), { index: 0, complete: false });
   assert.deepEqual(advanceGuide(1, 3), { index: 2, complete: false });
