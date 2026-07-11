@@ -71,6 +71,9 @@ function createHarness({
     'recording-timer', 'recording-message', 'recording-preview',
     'recording-share', 'recording-qr', 'recording-share-link',
     'recording-share-expiry', 'recording-copy-link',
+    'recording-take-label', 'recording-duration', 'recording-format',
+    'recording-confirm', 'recording-rerecord', 'recording-download', 'recording-cancel',
+    'recording-cancel-label',
   ];
   const elements = withView
     ? Object.fromEntries(viewIds.map((id) => [id, new FakeElement()]))
@@ -123,9 +126,9 @@ function createHarness({
     revokeObjectURL: (url) => revokedUrls.push(url),
     triggerDownload: (download) => downloads.push(download),
     onUploadRequest,
-    renderQr: async (canvas, value) => {
-      qrRenders.push({ canvas, value });
-      return renderQr(canvas, value);
+    renderQr: async (canvas, value, options) => {
+      qrRenders.push({ canvas, value, options });
+      return renderQr(canvas, value, options);
     },
     copyText: async (value) => {
       copiedTexts.push(value);
@@ -257,7 +260,27 @@ test('successful upload renders a share URL, expiry and QR without discarding th
   assert.equal(harness.qrRenders.length, 1);
   assert.equal(harness.qrRenders[0].canvas, harness.elements['recording-qr']);
   assert.equal(harness.qrRenders[0].value, shareResult.shareUrl);
+  assert.equal(harness.qrRenders[0].options.takeLabel, 'TAKE 001');
+  assert.equal(harness.qrRenders[0].options.projectName, 'ARPEGGIATOR REMIX');
   assert.equal(harness.elements['recording-dialog'].open, true);
+});
+
+test('completed takes expose incrementing review metadata', () => {
+  const harness = createHarness({ withView: true });
+  beginTake(harness);
+  harness.advance(12_000);
+  harness.controller.dispatch({ type: 'STOP_REQUEST' });
+
+  assert.equal(harness.controller.takeNumber, 1);
+  assert.equal(harness.elements['recording-take-label'].textContent, 'TAKE 001');
+  assert.equal(harness.elements['recording-duration'].textContent, '00:12');
+  assert.equal(harness.elements['recording-format'].textContent, 'WEBM');
+
+  harness.controller.dispatch({ type: 'RERECORD_REQUEST' });
+  harness.advance(3000);
+  harness.controller.dispatch({ type: 'STOP_REQUEST' });
+  assert.equal(harness.controller.takeNumber, 2);
+  assert.equal(harness.elements['recording-take-label'].textContent, 'TAKE 002');
 });
 
 test('download filename matches MIME and temporary object URLs are revoked', () => {

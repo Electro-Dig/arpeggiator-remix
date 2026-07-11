@@ -82,6 +82,8 @@ export class RecordingController extends EventTarget {
     this.countdownRemaining = 0;
     this.elapsedMs = 0;
     this.cancelOnStop = false;
+    this.takeNumber = 0;
+    this.takeDurationMs = 0;
 
     this.elements = this.collectElements();
     this.bind();
@@ -96,11 +98,16 @@ export class RecordingController extends EventTarget {
       dialog: byId('recording-dialog'),
       title: byId('recording-dialog-title'),
       message: byId('recording-message'),
+      takeLabel: byId('recording-take-label'),
+      takeMeta: byId('recording-take-meta'),
+      duration: byId('recording-duration'),
+      format: byId('recording-format'),
       progress: byId('recording-hold-progress'),
       preview: byId('recording-preview'),
       confirm: byId('recording-confirm'),
       rerecord: byId('recording-rerecord'),
       cancel: byId('recording-cancel'),
+      cancelLabel: byId('recording-cancel-label'),
       download: byId('recording-download'),
       share: byId('recording-share'),
       qr: byId('recording-qr'),
@@ -318,6 +325,11 @@ export class RecordingController extends EventTarget {
       this.destroyPreviewUrl();
       this.previousTake = this.currentTake;
       this.currentTake = stoppedBlob;
+      this.takeNumber += 1;
+      this.takeDurationMs = Math.min(
+        RECORDING_MAX_MS,
+        Math.max(0, this.now() - this.recordingStartedAt),
+      );
       this.currentFilename = this.buildFilename(this.currentFormat?.extension || 'webm');
     }
 
@@ -342,6 +354,11 @@ export class RecordingController extends EventTarget {
   buildFilename(extension) {
     const timestamp = new Date(this.now()).toISOString().replace(/[:.]/g, '-');
     return `arpeggiator-remix-${timestamp}.${extension}`;
+  }
+
+  formatDuration(milliseconds) {
+    const seconds = Math.max(0, Math.round(milliseconds / 1000));
+    return `00:${String(seconds).padStart(2, '0')}`;
   }
 
   showReview() {
@@ -444,7 +461,10 @@ export class RecordingController extends EventTarget {
     }
     if (!this.elements.qr) return;
     try {
-      await this.renderQr(this.elements.qr, result.shareUrl);
+      await this.renderQr(this.elements.qr, result.shareUrl, {
+        takeLabel: `TAKE ${String(this.takeNumber).padStart(3, '0')}`,
+        projectName: 'ARPEGGIATOR REMIX',
+      });
     } catch {
       if (this.elements.message) {
         this.elements.message.textContent = '分享链接已生成；二维码暂时无法显示，请直接复制链接。';
@@ -496,6 +516,18 @@ export class RecordingController extends EventTarget {
           : '内部混音录制';
     }
     if (this.elements.message) this.elements.message.textContent = messages[phase] || '';
+    if (this.elements.takeLabel) {
+      this.elements.takeLabel.textContent = `TAKE ${String(Math.max(1, this.takeNumber)).padStart(3, '0')}`;
+    }
+    if (this.elements.takeMeta) {
+      this.elements.takeMeta.textContent = String(Math.max(1, this.takeNumber)).padStart(3, '0');
+    }
+    if (this.elements.duration) {
+      this.elements.duration.textContent = this.formatDuration(this.takeDurationMs);
+    }
+    if (this.elements.format) {
+      this.elements.format.textContent = (this.currentFormat?.extension || 'WEBM').toUpperCase();
+    }
     if (this.elements.timer) {
       const seconds = phase === 'countdown'
         ? this.countdownRemaining || 3
@@ -511,11 +543,13 @@ export class RecordingController extends EventTarget {
     if (this.elements.download) this.elements.download.hidden = !hasTake || !['review', 'shared'].includes(phase);
     if (this.elements.cancel) {
       this.elements.cancel.hidden = !['countdown', 'recording', 'review', 'shared'].includes(phase);
-      this.elements.cancel.textContent = phase === 'countdown'
+      const label = phase === 'countdown'
         ? '取消'
         : phase === 'recording'
           ? '结束并试听'
           : '放弃这段';
+      if (this.elements.cancelLabel) this.elements.cancelLabel.textContent = label;
+      else this.elements.cancel.textContent = label;
     }
     if (this.elements.preview) this.elements.preview.hidden = !hasTake || phase !== 'review';
     if (this.elements.share) this.elements.share.hidden = phase !== 'shared' || !this.shareResult;

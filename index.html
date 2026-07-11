@@ -157,7 +157,7 @@
     <dialog id="recording-dialog" class="recording-dialog" aria-labelledby="recording-dialog-title">
       <article class="recording-card">
         <header class="recording-card__header">
-          <p>INTERNAL MASTER / TAKE 01</p>
+          <p>INTERNAL MASTER / <span id="recording-take-label">TAKE 001</span></p>
           <span>MAX 60 SEC</span>
         </header>
         <section class="recording-card__body">
@@ -166,6 +166,11 @@
             <p class="recording-card__kicker">ARPEGGIATOR REMIX</p>
             <h2 id="recording-dialog-title">内部混音录制</h2>
             <p id="recording-message" class="recording-card__message" role="status" aria-live="polite"></p>
+            <dl class="recording-meta" aria-label="录音信息">
+              <div><dt>TAKE</dt><dd id="recording-take-meta">001</dd></div>
+              <div><dt>DURATION</dt><dd id="recording-duration">00:00</dd></div>
+              <div><dt>FORMAT</dt><dd id="recording-format">WEBM</dd></div>
+            </dl>
             <div id="recording-hold-progress" class="hold-progress" hidden aria-hidden="true">
               <span></span>
             </div>
@@ -181,10 +186,10 @@
           </div>
         </section>
         <footer class="recording-actions">
-          <button id="recording-confirm" class="recording-action recording-action--primary" type="button" hidden>确认并生成二维码</button>
+          <button id="recording-confirm" class="recording-action recording-action--primary" type="button" hidden><span aria-hidden="true">👍👍</span>确认并生成二维码</button>
           <button id="recording-rerecord" class="recording-action" type="button" hidden>重新录制</button>
           <button id="recording-download" class="recording-action" type="button" hidden>下载到这台电脑</button>
-          <button id="recording-cancel" class="recording-action recording-action--quiet" type="button">取消</button>
+          <button id="recording-cancel" class="recording-action recording-action--danger" type="button"><span aria-hidden="true">👎👎</span><span id="recording-cancel-label">取消</span></button>
         </footer>
       </article>
     </dialog>
