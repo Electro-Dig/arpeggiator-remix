@@ -9,11 +9,19 @@ test('starts with semantic exhibition status fields', () => {
     sceneName: 'Neon Drive',
     synthName: 'NEON PLUCK',
     rhythmName: 'STEADY / FULL',
+    drumKitName: 'ACOUSTIC',
     tempo: 120,
     rootNote: 'E3',
     isPlaying: false,
     handPosition: { left: null, right: null },
   });
+});
+
+test('stores the active drum kit as semantic state', () => {
+  const manager = new StateManager();
+  assert.equal(manager.getState().drumKitName, 'ACOUSTIC');
+  manager.setState({ drumKitName: 'SYNTHWAVE' });
+  assert.equal(manager.getState().drumKitName, 'SYNTHWAVE');
 });
 
 test('binds scene, rhythm, tempo and root changes to the HUD', () => {

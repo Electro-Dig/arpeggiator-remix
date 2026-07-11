@@ -9,6 +9,7 @@ export class StateManager extends EventTarget {
             sceneName: 'Neon Drive',
             synthName: 'NEON PLUCK',
             rhythmName: 'STEADY / FULL',
+            drumKitName: 'ACOUSTIC',
             tempo: 120,
             rootNote: 'E3',
             isPlaying: false,

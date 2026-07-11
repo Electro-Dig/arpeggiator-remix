@@ -183,6 +183,30 @@ function initializeApp() {
         drumManager.onRhythmCellChange((cell) => rhythmOverlay.confirm(cell));
         rhythmOverlay.confirm(drumManager.getCurrentGridCell());
 
+        const drumKitSelect = document.getElementById('drum-kit-select');
+        const syncDrumKitUi = () => {
+            const kit = drumManager.getCurrentDrumKit();
+            if (kit) {
+                rhythmOverlay.updateKit(kit);
+                stateManager.setState({ drumKitName: kit.name });
+                if (drumKitSelect) drumKitSelect.value = kit.id;
+            }
+            const statuses = new Map(
+                drumManager.getDrumKitStatuses().map((item) => [item.id, item.status])
+            );
+            for (const option of drumKitSelect?.options ?? []) {
+                option.disabled = statuses.get(option.value) !== 'ready';
+            }
+        };
+        drumManager.onDrumKitChange(syncDrumKitUi);
+        drumKitSelect?.addEventListener('change', () => {
+            const result = drumManager.setDrumKit(drumKitSelect.value, { source: 'manual' });
+            if (!result.changed && result.reason === 'unavailable') {
+                drumKitSelect.value = drumManager.getCurrentDrumKit()?.id ?? '';
+            }
+        });
+        drumManager.loadSamples().then(syncDrumKitUi);
+
         document.getElementById('recording-primary')?.addEventListener('pointerdown', () => {
             audioBus.start().catch((error) => console.error('无法启动内部音频总线', error));
         });

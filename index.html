@@ -80,6 +80,13 @@
         </dl>
       </section>
       <section id="drum-volume-panel" class="control-section">
+        <label>DRUM KIT
+          <select id="drum-kit-select" aria-label="鼓组音色">
+            <option value="acoustic">ACOUSTIC</option>
+            <option value="electronic">ELECTRONIC</option>
+            <option value="synthwave">SYNTHWAVE</option>
+          </select>
+        </label>
         <button id="drum-volume-toggle" type="button" aria-expanded="true">DRUM MIX</button>
         <div id="drum-volume-sliders">
           <label>KICK <input id="vol-kick" type="range" min="-36" max="0" step="1" value="-9"></label>
@@ -118,12 +125,13 @@
     </section>
 
     <section id="rhythm-space" class="rhythm-space" aria-label="二维节奏空间">
-      <span class="rhythm-space__axis rhythm-space__axis--x">REGULAR → BROKEN</span>
-      <span class="rhythm-space__axis rhythm-space__axis--y">SPARSE → DENSE</span>
+      <span class="rhythm-space__axis rhythm-space__axis--x">STRAIGHT → BROKEN</span>
+      <span class="rhythm-space__axis rhythm-space__axis--y">MINIMAL → ENERGY</span>
       <div class="rhythm-space__grid" aria-hidden="true">
         <div id="rhythm-cursor" class="rhythm-space__cursor"></div>
       </div>
       <output id="rhythm-cell-label">STEADY / FULL</output>
+      <output id="drum-kit-label">KIT / ACOUSTIC</output>
     </section>
 
     <dialog id="guide-dialog" class="guide-dialog" aria-labelledby="guide-title">

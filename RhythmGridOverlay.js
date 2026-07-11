@@ -2,6 +2,7 @@ export class RhythmGridOverlay {
   constructor(root = document) {
     this.cursor = root.getElementById('rhythm-cursor');
     this.label = root.getElementById('rhythm-cell-label');
+    this.kitLabel = root.getElementById('drum-kit-label');
   }
 
   updatePosition({ x, y }) {
@@ -13,5 +14,9 @@ export class RhythmGridOverlay {
 
   confirm({ label }) {
     if (this.label && label) this.label.textContent = label;
+  }
+
+  updateKit({ name } = {}) {
+    if (this.kitLabel && name) this.kitLabel.textContent = `KIT / ${name}`;
   }
 }

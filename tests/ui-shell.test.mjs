@@ -35,13 +35,20 @@ test('visual shell supports control deck, simple mode, and reduced motion', () =
 });
 
 test('rhythm space uses a transform-only overlay and event-driven confirmed status', () => {
-  for (const id of ['rhythm-space', 'rhythm-cursor', 'rhythm-cell-label']) {
+  for (const id of ['rhythm-space', 'rhythm-cursor', 'rhythm-cell-label', 'drum-kit-label', 'drum-kit-select']) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
   assert.match(styles, /\.rhythm-space/);
+  assert.match(styles, /\.rhythm-space__grid[\s\S]*?width:\s*160px/);
   assert.match(styles, /\.simple-mode\s+\.rhythm-space/);
   assert.match(main, /new RhythmGridOverlay/);
   assert.match(main, /onRhythmCellChange/);
+  assert.match(main, /onDrumKitChange/);
+  assert.match(main, /setDrumKit\(drumKitSelect\.value/);
+  assert.match(game, /new RhythmZone\(\)/);
+  assert.match(game, /rhythmZone\.map\(1 - normX_visible, normY_visible\)/);
+  assert.match(html, /STRAIGHT → BROKEN/);
+  assert.match(html, /MINIMAL → ENERGY/);
   assert.doesNotMatch(main, /\n\s{4}observeDrumManager\(drumMgr\)[\s\S]{0,500}setInterval/);
 });
 

@@ -223,6 +223,7 @@ import * as Tone from './audio/tone.js'; // Use the shared pinned Tone module.
 import * as drumManager from './DrumManager.js'; // Import the new drum manager module
 import { WaveformVisualizer } from './WaveformVisualizer.js'; // Import the new waveform visualizer
 import { RhythmSpace } from './rhythm/RhythmSpace.js';
+import { RhythmZone } from './rhythm/RhythmZone.js';
 import { KitSwitchGesture } from './gesture/KitSwitchGesture.js';
 import { EdgeGesture, pinchVelocity } from './music/gesture-controls.js';
 export var Game = /*#__PURE__*/ function () {
@@ -260,6 +261,7 @@ export var Game = /*#__PURE__*/ function () {
         this.clock = new THREE.Clock();
         this.musicManager = new MusicManager(); // Create an instance of MusicManager
         this.rhythmSpace = new RhythmSpace({ smoothing: 0.25, hysteresis: 0.03 });
+        this.rhythmZone = new RhythmZone();
         this.leftFistEdge = new EdgeGesture(700);
         this.leftFourFingerEdge = new EdgeGesture(700);
         this.rightKitGesture = new KitSwitchGesture();
@@ -1106,7 +1108,8 @@ export var Game = /*#__PURE__*/ function () {
                                     // Right hand: position selects a stable rhythm cell while fingers gate tracks.
                                     var fingerStates = _this1._getFingerStates(smoothedLandmarks);
                                     if (interactionsEnabled) {
-                                        var cell = _this1.rhythmSpace.update(1 - normX_visible, normY_visible);
+                                        var zonePoint = _this1.rhythmZone.map(1 - normX_visible, normY_visible);
+                                        var cell = _this1.rhythmSpace.update(zonePoint.x, zonePoint.y);
                                         if (cell.changed) {
                                             var pendingCell = drumManager.queueRhythmCell(cell.x, cell.y);
                                             _this1.renderDiv.dispatchEvent(new CustomEvent('rhythmposition', {
