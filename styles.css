@@ -705,7 +705,7 @@ dt,
   max-width: 590px;
   margin: 28px 0 22px;
   color: #102025;
-  font-size: clamp(32px, 4vw, 52px);
+  font-size: clamp(32px, 3vw, 44px);
   font-weight: 540;
   letter-spacing: -0.045em;
   line-height: 1.05;
@@ -986,12 +986,12 @@ dt,
 }
 
 .recording-share__copy {
+  min-height: 40px;
   margin: 0;
-  padding: 8px 0;
-  border: 0;
-  border-bottom: 1px solid var(--cyan);
-  background: transparent;
-  color: var(--text);
+  padding: 8px 12px;
+  border: 1px solid rgba(16, 32, 37, 0.28);
+  background: rgba(245, 249, 244, 0.62);
+  color: #102025;
   font: 600 11px/1 var(--ui);
 }
 

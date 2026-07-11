@@ -106,7 +106,8 @@ try {
   assert.equal(initial.kit?.id, 'acoustic');
   assert.equal(initial.sceneId, 'groove-pulse');
   assert.deepEqual(initial.scenes.map(({ id }) => id), [
-    'minimal-groove', 'groove-pulse', 'neon-drive', 'midnight-pulse', 'arcade-horizon',
+    'minimal-groove', 'groove-pulse', 'neon-drive', 'arcade-horizon',
+    'afterglow-coast', 'blue-hour-drift',
   ]);
   assert.deepEqual(initial.scenes.filter(({ current }) => current).map(({ id }) => id), ['groove-pulse']);
   assert.ok(initial.hudMetrics.every(({ clientWidth, scrollWidth }) => scrollWidth <= clientWidth));
@@ -130,6 +131,23 @@ try {
   assert.deepEqual(sceneChecks.map(({ sceneId }) => sceneId), initial.scenes.map(({ id }) => id));
   assert.ok(sceneChecks.every(({ overflow }) => !overflow));
   await page.click('[data-scene="groove-pulse"]');
+
+  await page.click('#open-guide');
+  assert.equal(await page.locator('#guide-dialog').getAttribute('open'), '');
+  assert.match(await page.locator('#guide-illustration').getAttribute('src'), /stage-frame\.svg/);
+  const guideFits = await page.evaluate(() => {
+    const dialog = document.querySelector('#guide-dialog');
+    const bounds = dialog.getBoundingClientRect();
+    return bounds.top >= 0
+      && bounds.bottom <= window.innerHeight
+      && dialog.scrollHeight <= dialog.clientHeight;
+  });
+  assert.equal(guideFits, true);
+  await page.click('#guide-next');
+  assert.equal(await page.locator('#guide-step').textContent(), '02');
+  assert.match(await page.locator('#guide-illustration').getAttribute('src'), /dual-hand-control\.svg/);
+  await page.click('#guide-skip');
+  assert.equal(await page.locator('#guide-dialog').getAttribute('open'), null);
 
   const feedback = await page.evaluate(() => {
     const renderDiv = document.querySelector('#renderDiv');

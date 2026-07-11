@@ -96,6 +96,7 @@ test('editorial hierarchy remains restrained and semantic', () => {
   assert.match(styles, /--signal:\s*#ff9a4a/i);
   assert.match(styles, /Bahnschrift/);
   assert.doesNotMatch(styles, /\.guide-card::after/);
+  assert.match(styles, /\.guide-card h2\s*\{[^}]*font-size:\s*clamp\(32px,\s*3vw,\s*44px\)/s);
 });
 
 test('recording controls remain visible, optional, and gesture-disableable', () => {
@@ -121,6 +122,7 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
   assert.match(html, /id="recording-qr"[^>]+width="1080"[^>]+height="1440"/);
   assert.match(styles, /\.recording-share\s*\{[^}]*grid-template-columns:\s*1fr/s);
   assert.doesNotMatch(styles, /\.recording-dialog\[data-phase="shared"\]\s*\{[^}]*overflow:\s*auto/s);
+  assert.match(styles, /\.recording-share__copy\s*\{[^}]*color:\s*#102025/s);
 });
 
 test('guide consumes thumbs gestures page by page and requires neutral rearming', () => {
