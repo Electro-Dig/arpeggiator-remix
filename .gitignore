@@ -13,6 +13,7 @@ build/
 # Local tooling state
 .netlify/
 .vscode/
+.artifacts/
 
 # Local server certificates
 server.crt
