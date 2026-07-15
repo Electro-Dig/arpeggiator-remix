@@ -9,7 +9,7 @@ import {
 
 const step = (state, type, extra = {}) => reduceRecording(state, { type, ...extra });
 
-test('happy path reaches review and upload', () => {
+test('happy path reaches photo review before upload', () => {
   let state = initialRecordingState();
   state = step(state, 'START_REQUEST');
   assert.equal(state.phase, 'countdown');
@@ -19,10 +19,31 @@ test('happy path reaches review and upload', () => {
   assert.equal(state.phase, 'stopping');
   state = step(state, 'RECORDER_STOPPED');
   assert.equal(state.phase, 'review');
-  state = step(state, 'UPLOAD_REQUEST');
+  state = step(state, 'PHOTO_REQUEST');
+  assert.equal(state.phase, 'photo-countdown');
+  state = step(state, 'PHOTO_CAPTURED');
+  assert.equal(state.phase, 'photo-review');
+  state = step(state, 'PHOTO_ACCEPTED');
   assert.equal(state.phase, 'uploading');
   state = step(state, 'UPLOAD_SUCCEEDED');
   assert.equal(state.phase, 'shared');
+});
+
+test('photo review supports retake, no-photo fallback, and upload recovery', () => {
+  const review = { phase: 'review', error: '', pendingRerecord: false };
+  const photoCountdown = step(review, 'PHOTO_REQUEST');
+  assert.equal(photoCountdown.phase, 'photo-countdown');
+
+  const photoReview = step(photoCountdown, 'PHOTO_CAPTURED');
+  assert.equal(photoReview.phase, 'photo-review');
+  assert.equal(step(photoReview, 'PHOTO_RETAKE').phase, 'photo-countdown');
+  assert.equal(step(photoReview, 'PHOTO_SKIPPED').phase, 'uploading');
+
+  const uploading = step(photoReview, 'PHOTO_ACCEPTED');
+  assert.equal(uploading.phase, 'uploading');
+  const recovered = step(uploading, 'UPLOAD_FAILED', { error: '海报上传失败' });
+  assert.equal(recovered.phase, 'photo-review');
+  assert.equal(recovered.error, '海报上传失败');
 });
 
 test('cancel and rerecord return to a safe idle or countdown path', () => {
@@ -48,14 +69,14 @@ test('cancel and rerecord return to a safe idle or countdown path', () => {
   assert.equal(step(canceling, 'RECORDER_CANCELLED').phase, 'idle');
 });
 
-test('upload failure returns to review with an actionable error', () => {
+test('upload failure returns to photo review with an actionable error', () => {
   const state = step(
     { phase: 'uploading', error: '', pendingRerecord: false },
     'UPLOAD_FAILED',
     { error: '网络暂时不可用' },
   );
   assert.deepEqual(state, {
-    phase: 'review',
+    phase: 'photo-review',
     error: '网络暂时不可用',
     pendingRerecord: false,
   });
@@ -81,8 +102,9 @@ test('approved two-thumb intents map only in actionable phases', () => {
   assert.equal(actionForThumbIntent('countdown', 'both-down'), 'CANCEL_REQUEST');
   assert.equal(actionForThumbIntent('recording', 'both-up'), 'STOP_REQUEST');
   assert.equal(actionForThumbIntent('recording', 'both-down'), 'CANCEL_REQUEST');
-  assert.equal(actionForThumbIntent('review', 'both-up'), 'UPLOAD_REQUEST');
+  assert.equal(actionForThumbIntent('review', 'both-up'), 'PHOTO_REQUEST');
   assert.equal(actionForThumbIntent('review', 'both-down'), 'DISCARD_REQUEST');
+  assert.equal(actionForThumbIntent('photo-review', 'both-up'), null);
   assert.equal(actionForThumbIntent('uploading', 'both-up'), null);
   assert.equal(actionForThumbIntent('shared', 'both-down'), null);
   assert.equal(actionForThumbIntent('idle', 'neutral'), null);
