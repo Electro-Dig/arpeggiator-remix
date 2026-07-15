@@ -121,6 +121,31 @@ h1 {
 .share-status[data-state="ready"] { color: var(--cyan); }
 .share-status[data-state="error"] { color: #ff8d99; }
 
+.share-poster-frame {
+  margin: 0 0 24px;
+  padding: 10px;
+  border: 1px solid rgba(23, 99, 106, 0.22);
+  background: rgba(245, 249, 244, 0.72);
+  box-shadow: 0 16px 38px rgba(16, 32, 37, 0.14);
+}
+
+.share-poster {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: #dce9e5;
+}
+
+.share-poster-frame figcaption {
+  margin: 9px 2px 1px;
+  color: #5e7477;
+  font: 600 10px/1.4 var(--mono);
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
 audio {
   display: block;
   width: 100%;

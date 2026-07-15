@@ -4,7 +4,12 @@ import test from 'node:test';
 
 import * as sharePage from '../r/share-page.js';
 
-const { probeSharedRecording, parseShareToken, takeLabelForToken } = sharePage;
+const {
+  probeSharedRecording,
+  parseShareToken,
+  posterUrlForToken,
+  takeLabelForToken,
+} = sharePage;
 
 test('extracts only valid unguessable tokens from share paths', () => {
   const token = 'Abc_123-'.repeat(4);
@@ -59,6 +64,7 @@ test('public page stays lightweight and includes playback, download and noindex'
   assert.match(html, /<audio[^>]+controls/);
   assert.match(html, /id="download-recording"/);
   assert.match(html, /id="download-poster"/);
+  assert.match(html, /id="share-poster"/);
   assert.match(html, /id="recording-expiry"/);
   assert.match(html, /id="share-checkin"/);
   assert.match(html, /name="robots" content="noindex,nofollow,noarchive"/);
@@ -69,8 +75,16 @@ test('public page stays lightweight and includes playback, download and noindex'
   assert.match(script, /downloadPoster/);
   assert.match(script, /checkinNumber/);
   assert.match(script, /addEventListener\('click'[\s\S]*downloadPoster/);
+  assert.match(script, /posterUrlForToken/);
+  assert.match(script, /\/r\/poster\//);
 });
 
 test('derives a stable public take label without exposing the full token', () => {
   assert.equal(takeLabelForToken('AbCd1234'.repeat(4)), 'TAKE CD12');
+});
+
+test('maps a valid token to its stored personalized poster', () => {
+  const token = 'Poster_1'.repeat(4);
+  assert.equal(posterUrlForToken(token), `/r/poster/${token}`);
+  assert.throws(() => posterUrlForToken('short'), /invalid/i);
 });

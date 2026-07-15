@@ -18,6 +18,11 @@ export function takeLabelForToken(token) {
   return `TAKE ${String(token || '').slice(2, 6).toUpperCase()}`;
 }
 
+export function posterUrlForToken(token) {
+  if (!TOKEN.test(String(token))) throw new Error('invalid share token');
+  return `/r/poster/${token}`;
+}
+
 export async function downloadPoster({
   checkinNumber,
   url,
@@ -88,6 +93,8 @@ async function initSharePage() {
   const takeLabel = document.querySelector('#share-take-label');
   const checkin = document.querySelector('#share-checkin');
   const posterButton = document.querySelector('#download-poster');
+  const posterFrame = document.querySelector('#share-poster-frame');
+  const posterImage = document.querySelector('#share-poster');
   const token = parseShareToken(location.pathname);
 
   if (!token) {
@@ -99,6 +106,8 @@ async function initSharePage() {
   try {
     const result = await probeSharedRecording(token);
     const formattedNumber = String(result.checkinNumber).padStart(3, '0');
+    const storedPosterUrl = posterUrlForToken(token);
+    let hasStoredPoster = false;
     takeLabel.textContent = `TAKE ${formattedNumber}`;
     checkin.textContent = `你是本场第 ${formattedNumber} 位音乐玩家`;
     player.src = result.audioUrl;
@@ -107,6 +116,15 @@ async function initSharePage() {
     download.download = `arpeggiator-remix.${extensionFor(result.mime)}`;
     download.hidden = false;
     posterButton.hidden = false;
+    posterImage.addEventListener('load', () => {
+      hasStoredPoster = true;
+      posterFrame.hidden = false;
+    }, { once: true });
+    posterImage.addEventListener('error', () => {
+      hasStoredPoster = false;
+      posterFrame.hidden = true;
+    }, { once: true });
+    posterImage.src = storedPosterUrl;
     expiry.textContent = formatExpiry(result.expiresAt);
     status.textContent = '正在准备播放…';
     status.dataset.state = 'loading';
@@ -124,7 +142,17 @@ async function initSharePage() {
     posterButton.addEventListener('click', async () => {
       posterButton.disabled = true;
       try {
-        await downloadPoster({ checkinNumber: result.checkinNumber, url: location.href });
+        if (hasStoredPoster) {
+          const link = document.createElement('a');
+          link.download = `waic-hand-band-take-${formattedNumber}.webp`;
+          link.href = storedPosterUrl;
+          link.hidden = true;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        } else {
+          await downloadPoster({ checkinNumber: result.checkinNumber, url: location.href });
+        }
         posterButton.textContent = '分享海报已下载';
       } catch (error) {
         console.error('分享海报生成失败:', error);
