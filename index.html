@@ -184,6 +184,15 @@
                 <span>请选择生成二维码、重录或放弃</span>
               </div>
             </section>
+            <section id="recording-photo" class="recording-photo" hidden aria-label="现场封面拍照">
+              <div class="recording-photo__viewport">
+                <video id="recording-photo-video" autoplay muted playsinline hidden></video>
+                <canvas id="recording-photo-preview" width="900" height="1125" hidden></canvas>
+                <span class="recording-photo__frame" aria-hidden="true"></span>
+                <strong id="recording-photo-countdown" class="recording-photo__countdown" hidden>3</strong>
+              </div>
+              <p class="recording-photo__privacy">原始照片仅在当前浏览器内处理，不会上传。</p>
+            </section>
             <audio id="recording-preview" preload="metadata" hidden></audio>
             <section id="recording-share" class="recording-share" hidden aria-label="录音分享">
               <canvas id="recording-qr" class="recording-share__qr" width="1080" height="1440"></canvas>
@@ -197,8 +206,9 @@
           </div>
         </section>
         <footer class="recording-actions">
-          <button id="recording-confirm" class="recording-action recording-action--primary" type="button" hidden><span aria-hidden="true">👍👍</span>确认并生成二维码</button>
+          <button id="recording-confirm" class="recording-action recording-action--primary" type="button" hidden>确认并拍照</button>
           <button id="recording-rerecord" class="recording-action" type="button" hidden>重新录制</button>
+          <button id="recording-photo-skip" class="recording-action recording-action--quiet" type="button" hidden>无照片继续</button>
           <button id="recording-download" class="recording-action" type="button" hidden>下载到这台电脑</button>
           <button id="recording-cancel" class="recording-action recording-action--danger" type="button"><span aria-hidden="true">👎👎</span><span id="recording-cancel-label">取消</span></button>
         </footer>

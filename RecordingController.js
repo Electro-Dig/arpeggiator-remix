@@ -1,9 +1,11 @@
 import { chooseRecordingFormat } from './recording/mime.js';
+import { capturePhotoFrame } from './recording/photo-capture.js';
 import { initialRecordingState, reduceRecording } from './recording/recording-state.js';
 import { renderQr as defaultRenderQr } from './share/qr.js';
 
 export const RECORDING_COUNTDOWN_MS = 3_000;
 export const RECORDING_MAX_MS = 60_000;
+export const PHOTO_COUNTDOWN_MS = 3_000;
 
 function defaultRecorderFactory(stream, options) {
   return new MediaRecorder(stream, options);
@@ -44,6 +46,8 @@ export class RecordingController extends EventTarget {
     triggerDownload = defaultTriggerDownload,
     renderQr = defaultRenderQr,
     copyText = defaultCopyText,
+    getVideoSource = () => null,
+    capturePhoto = capturePhotoFrame,
     onUploadRequest = async () => {
       throw new Error('云端分享将在下一阶段接入，当前录音仍可试听或下载');
     },
@@ -63,6 +67,8 @@ export class RecordingController extends EventTarget {
     this.triggerDownload = triggerDownload;
     this.renderQr = renderQr;
     this.copyText = copyText;
+    this.getVideoSource = getVideoSource;
+    this.capturePhoto = capturePhoto;
     this.onUploadRequest = onUploadRequest;
 
     this.state = initialRecordingState();
@@ -77,13 +83,18 @@ export class RecordingController extends EventTarget {
     this.countdownTimer = null;
     this.stopTimer = null;
     this.elapsedTimer = null;
+    this.photoCountdownTimer = null;
     this.countdownEndsAt = 0;
+    this.photoCountdownEndsAt = 0;
     this.recordingStartedAt = 0;
     this.countdownRemaining = 0;
+    this.photoCountdownRemaining = 0;
     this.elapsedMs = 0;
     this.cancelOnStop = false;
     this.takeNumber = 0;
     this.takeDurationMs = 0;
+    this.hasPhoto = false;
+    this.photoSkipped = false;
 
     this.elements = this.collectElements();
     this.bind();
@@ -118,6 +129,11 @@ export class RecordingController extends EventTarget {
       status: byId('recording-status'),
       stateLabel: byId('recording-state-label'),
       timer: byId('recording-timer'),
+      photo: byId('recording-photo'),
+      photoVideo: byId('recording-photo-video'),
+      photoPreview: byId('recording-photo-preview'),
+      photoCountdown: byId('recording-photo-countdown'),
+      photoSkip: byId('recording-photo-skip'),
     };
   }
 
@@ -132,19 +148,25 @@ export class RecordingController extends EventTarget {
       }
     });
     this.elements.confirm?.addEventListener('click', () => {
-      this.dispatch({ type: 'UPLOAD_REQUEST' });
+      if (this.state.phase === 'review') this.dispatch({ type: 'PHOTO_REQUEST' });
+      else if (this.state.phase === 'photo-review') this.dispatch({ type: 'PHOTO_ACCEPTED' });
     });
     this.elements.rerecord?.addEventListener('click', () => {
-      this.dispatch({ type: 'RERECORD_REQUEST' });
+      this.dispatch({
+        type: this.state.phase === 'photo-review' ? 'PHOTO_RETAKE' : 'RERECORD_REQUEST',
+      });
     });
     this.elements.cancel?.addEventListener('click', () => {
       if (this.state.phase === 'countdown') {
         this.dispatch({ type: 'CANCEL_REQUEST' });
       } else if (this.state.phase === 'recording') {
         this.dispatch({ type: 'STOP_REQUEST' });
-      } else if (this.state.phase === 'review' || this.state.phase === 'shared') {
+      } else if (['review', 'photo-countdown', 'photo-review', 'shared'].includes(this.state.phase)) {
         this.dispatch({ type: 'DISCARD_REQUEST' });
       }
+    });
+    this.elements.photoSkip?.addEventListener('click', () => {
+      this.dispatch({ type: 'PHOTO_SKIPPED' });
     });
     this.elements.download?.addEventListener('click', () => this.downloadCurrentTake());
     this.elements.copyLink?.addEventListener('click', async () => {
@@ -172,6 +194,11 @@ export class RecordingController extends EventTarget {
     if (normalizedEvent.type === 'START_REQUEST' || normalizedEvent.type === 'DISCARD_REQUEST') {
       this.clearShareResult();
     }
+    if (normalizedEvent.type === 'START_REQUEST') this.clearPhoto();
+    if (normalizedEvent.type === 'DISCARD_REQUEST') {
+      this.clearPhotoCountdownTimer();
+      this.clearPhoto();
+    }
     this.render();
     this.dispatchEvent(stateChangeEvent({ state: nextState, event: normalizedEvent }));
 
@@ -193,7 +220,18 @@ export class RecordingController extends EventTarget {
       if (previousState.phase === 'recording') this.requestRecorderStop();
       if (previousState.phase === 'review') this.startCountdown();
     }
-    if (normalizedEvent.type === 'UPLOAD_REQUEST') return this.uploadCurrentTake();
+    if (normalizedEvent.type === 'PHOTO_REQUEST' || normalizedEvent.type === 'PHOTO_RETAKE') {
+      this.startPhotoCountdown();
+    }
+    if (normalizedEvent.type === 'PHOTO_ACCEPTED') {
+      this.photoSkipped = false;
+      return this.uploadCurrentTake();
+    }
+    if (normalizedEvent.type === 'PHOTO_SKIPPED') {
+      this.hasPhoto = false;
+      this.photoSkipped = true;
+      return this.uploadCurrentTake();
+    }
     if (normalizedEvent.type === 'DISCARD_REQUEST') this.discardCurrentTake();
     return true;
   }
@@ -373,6 +411,71 @@ export class RecordingController extends EventTarget {
     this.render();
   }
 
+  startPhotoCountdown() {
+    this.clearPhotoCountdownTimer();
+    this.openDialog();
+    this.hasPhoto = false;
+    this.photoSkipped = false;
+    const source = this.getVideoSource?.();
+    if (!source) {
+      this.photoCountdownRemaining = 0;
+      this.dispatch({ type: 'PHOTO_CAPTURE_FAILED', error: '摄像头暂不可用，可选择无照片继续' });
+      return;
+    }
+
+    if (this.elements.photoVideo && source.srcObject) {
+      this.elements.photoVideo.srcObject = source.srcObject;
+      this.elements.photoVideo.play?.().catch?.(() => undefined);
+    }
+    this.photoCountdownEndsAt = this.now() + PHOTO_COUNTDOWN_MS;
+    this.photoCountdownRemaining = 3;
+    this.render();
+
+    const tick = () => {
+      if (this.state.phase !== 'photo-countdown') return;
+      const remainingMs = Math.max(0, this.photoCountdownEndsAt - this.now());
+      this.photoCountdownRemaining = Math.ceil(remainingMs / 1000);
+      this.render();
+      if (remainingMs === 0) {
+        this.photoCountdownTimer = null;
+        this.captureCurrentPhoto();
+        return;
+      }
+      this.photoCountdownTimer = this.setTimer(tick, Math.min(1000, remainingMs));
+    };
+    this.photoCountdownTimer = this.setTimer(tick, 1000);
+  }
+
+  captureCurrentPhoto() {
+    try {
+      const source = this.getVideoSource?.();
+      this.capturePhoto(source, this.elements.photoPreview);
+      this.hasPhoto = true;
+      this.photoSkipped = false;
+      this.dispatch({ type: 'PHOTO_CAPTURED' });
+    } catch (error) {
+      this.hasPhoto = false;
+      this.dispatch({
+        type: 'PHOTO_CAPTURE_FAILED',
+        error: error?.message || '照片生成失败，可重新拍摄或无照片继续',
+      });
+    }
+  }
+
+  clearPhotoCountdownTimer() {
+    if (this.photoCountdownTimer !== null) this.clearTimer(this.photoCountdownTimer);
+    this.photoCountdownTimer = null;
+    this.photoCountdownRemaining = 0;
+  }
+
+  clearPhoto() {
+    this.hasPhoto = false;
+    this.photoSkipped = false;
+    const canvas = this.elements.photoPreview;
+    const context = canvas?.getContext?.('2d');
+    if (context && canvas.width && canvas.height) context.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
   async uploadCurrentTake() {
     const take = this.currentTake;
     if (!take) {
@@ -425,6 +528,7 @@ export class RecordingController extends EventTarget {
     this.currentTake = null;
     this.previousTake = null;
     this.currentFilename = '';
+    this.clearPhoto();
     this.closeDialog();
     this.render();
   }
@@ -487,11 +591,13 @@ export class RecordingController extends EventTarget {
     const phase = this.state.phase;
     const stateLabels = {
       idle: 'READY', countdown: 'COUNTDOWN', recording: 'REC', stopping: 'SAVING',
-      review: 'REVIEW', uploading: 'UPLOADING', shared: 'SHARED', error: 'ERROR',
+      review: 'REVIEW', 'photo-countdown': 'PHOTO', 'photo-review': 'PHOTO READY',
+      uploading: 'UPLOADING', shared: 'SHARED', error: 'ERROR',
     };
     const primaryLabels = {
       idle: '开始录音', countdown: '取消倒计时', recording: '结束录音', stopping: '正在保存',
-      review: '录音待确认', uploading: '正在上传', shared: '再录一段', error: '录音错误',
+      review: '录音待确认', 'photo-countdown': '正在拍照', 'photo-review': '照片待确认',
+      uploading: '正在上传', shared: '再录一段', error: '录音错误',
     };
     const messages = {
       idle: '录制项目内部声音，不包含麦克风。',
@@ -499,7 +605,9 @@ export class RecordingController extends EventTarget {
       recording: '正在录制内部混音，最长 01:00。',
       stopping: '正在生成试听文件…',
       review: this.state.error || '试听后确认、重录，或下载到当前电脑。',
-      uploading: '正在生成分享链接…',
+      'photo-countdown': '请看镜头，保持在取景框中央。',
+      'photo-review': this.state.error || '确认照片后，将制作你的现场单曲封面。',
+      uploading: '正在制作你的现场单曲封面…',
       shared: '分享链接已生成。',
       error: this.state.error || '录音失败，请重试。',
     };
@@ -508,13 +616,19 @@ export class RecordingController extends EventTarget {
     if (this.elements.status) this.elements.status.dataset.phase = phase;
     if (this.elements.primaryLabel) this.elements.primaryLabel.textContent = primaryLabels[phase];
     if (this.elements.primary) {
-      this.elements.primary.disabled = ['stopping', 'review', 'uploading', 'error'].includes(phase);
+      this.elements.primary.disabled = [
+        'stopping', 'review', 'photo-countdown', 'photo-review', 'uploading', 'error',
+      ].includes(phase);
       this.elements.primary.dataset.phase = phase;
     }
     if (this.elements.dialog) this.elements.dialog.dataset.phase = phase;
     if (this.elements.title) {
       this.elements.title.textContent = phase === 'shared'
         ? '扫码带走这段录音'
+        : phase === 'photo-countdown'
+          ? '准备拍摄你的单曲封面'
+          : phase === 'photo-review'
+            ? '这张作为你的单曲封面吗？'
         : phase === 'review'
           ? '确认这段录音'
           : '内部混音录制';
@@ -542,11 +656,22 @@ export class RecordingController extends EventTarget {
     }
 
     const hasTake = Boolean(this.currentTake);
-    if (this.elements.confirm) this.elements.confirm.hidden = phase !== 'review' || !hasTake;
-    if (this.elements.rerecord) this.elements.rerecord.hidden = phase !== 'review';
-    if (this.elements.download) this.elements.download.hidden = !hasTake || !['review', 'shared'].includes(phase);
+    if (this.elements.confirm) {
+      this.elements.confirm.hidden = !hasTake || !['review', 'photo-review'].includes(phase);
+      this.elements.confirm.textContent = phase === 'photo-review' ? '使用这张照片' : '确认并拍照';
+    }
+    if (this.elements.rerecord) {
+      this.elements.rerecord.hidden = !['review', 'photo-review'].includes(phase);
+      this.elements.rerecord.textContent = phase === 'photo-review' ? '重新拍摄' : '重新录制';
+    }
+    if (this.elements.download) {
+      this.elements.download.hidden = !hasTake || !['review', 'photo-review', 'shared'].includes(phase);
+    }
+    if (this.elements.photoSkip) this.elements.photoSkip.hidden = phase !== 'photo-review';
     if (this.elements.cancel) {
-      this.elements.cancel.hidden = !['countdown', 'recording', 'review', 'shared'].includes(phase);
+      this.elements.cancel.hidden = ![
+        'countdown', 'recording', 'review', 'photo-countdown', 'photo-review', 'shared',
+      ].includes(phase);
       const label = phase === 'countdown'
         ? '取消'
         : phase === 'recording'
@@ -556,6 +681,17 @@ export class RecordingController extends EventTarget {
       else this.elements.cancel.textContent = label;
     }
     if (this.elements.preview) this.elements.preview.hidden = !hasTake || phase !== 'review';
+    if (this.elements.photo) {
+      this.elements.photo.hidden = !['photo-countdown', 'photo-review'].includes(phase);
+    }
+    if (this.elements.photoVideo) this.elements.photoVideo.hidden = phase !== 'photo-countdown';
+    if (this.elements.photoPreview) {
+      this.elements.photoPreview.hidden = phase !== 'photo-review' || !this.hasPhoto;
+    }
+    if (this.elements.photoCountdown) {
+      this.elements.photoCountdown.hidden = phase !== 'photo-countdown';
+      this.elements.photoCountdown.textContent = String(this.photoCountdownRemaining || 3);
+    }
     if (this.elements.share) this.elements.share.hidden = phase !== 'shared' || !this.shareResult;
   }
 
@@ -563,7 +699,9 @@ export class RecordingController extends EventTarget {
     this.clearCountdownTimer();
     this.clearStopTimer();
     this.clearElapsedTimer();
+    this.clearPhotoCountdownTimer();
     if (this.recorder?.state === 'recording') this.recorder.stop();
     this.destroyPreviewUrl();
+    this.clearPhoto();
   }
 }

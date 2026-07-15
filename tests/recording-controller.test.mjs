@@ -12,11 +12,14 @@ class FakeElement extends EventTarget {
     this.textContent = '';
     this.dataset = {};
     this.style = { setProperty() {} };
+    this.srcObject = null;
+    this.paused = true;
   }
 
   showModal() { this.open = true; }
   close() { this.open = false; }
   removeAttribute(name) { delete this[name]; }
+  play() { this.paused = false; return Promise.resolve(); }
 }
 
 class FakeRecorder extends EventTarget {
@@ -54,6 +57,8 @@ function createHarness({
   copyText = async () => {},
   empty = false,
   withView = false,
+  getVideoSource = () => null,
+  capturePhoto = () => {},
 } = {}) {
   let now = 0;
   let timerId = 0;
@@ -75,6 +80,8 @@ function createHarness({
     'recording-take-label', 'recording-duration', 'recording-format',
     'recording-confirm', 'recording-rerecord', 'recording-download', 'recording-cancel',
     'recording-cancel-label',
+    'recording-photo', 'recording-photo-video', 'recording-photo-preview',
+    'recording-photo-countdown', 'recording-photo-skip',
   ];
   const elements = withView
     ? Object.fromEntries(viewIds.map((id) => [id, new FakeElement()]))
@@ -135,6 +142,8 @@ function createHarness({
       copiedTexts.push(value);
       return copyText(value);
     },
+    getVideoSource,
+    capturePhoto,
   });
 
   return {
@@ -229,8 +238,9 @@ test('failed upload preserves the approved Blob for retry or download', async ()
   harness.controller.dispatch({ type: 'STOP_REQUEST' });
   const approvedTake = harness.controller.currentTake;
 
-  await harness.controller.dispatch({ type: 'UPLOAD_REQUEST' });
-  assert.equal(harness.controller.state.phase, 'review');
+  harness.controller.dispatch({ type: 'PHOTO_REQUEST' });
+  await harness.controller.dispatch({ type: 'PHOTO_SKIPPED' });
+  assert.equal(harness.controller.state.phase, 'photo-review');
   assert.match(harness.controller.state.error, /network unavailable/);
   assert.equal(harness.controller.currentTake, approvedTake);
   assert.equal(harness.qrRenders.length, 0);
@@ -251,7 +261,8 @@ test('successful upload renders a share URL, expiry and QR without discarding th
   harness.controller.dispatch({ type: 'STOP_REQUEST' });
   const approvedTake = harness.controller.currentTake;
 
-  await harness.controller.dispatch({ type: 'UPLOAD_REQUEST' });
+  harness.controller.dispatch({ type: 'PHOTO_REQUEST' });
+  await harness.controller.dispatch({ type: 'PHOTO_SKIPPED' });
 
   assert.equal(harness.controller.state.phase, 'shared');
   assert.equal(harness.controller.currentTake, approvedTake);
@@ -337,4 +348,57 @@ test('cancel during recording discards the take and returns to free mode', () =>
   assert.equal(harness.controller.previousTake, null);
   assert.equal(harness.elements['recording-dialog'].open, false);
   assert.equal(harness.createdUrls.length, 0);
+});
+
+test('recording approval runs a three-second photo countdown before photo review', () => {
+  const captureCalls = [];
+  const source = {
+    videoWidth: 1280,
+    videoHeight: 720,
+    readyState: 4,
+    srcObject: { id: 'existing-camera-stream' },
+  };
+  const harness = createHarness({
+    withView: true,
+    getVideoSource: () => source,
+    capturePhoto: (video, canvas) => {
+      captureCalls.push({ video, canvas });
+      return canvas;
+    },
+  });
+  beginTake(harness);
+  harness.controller.dispatch({ type: 'STOP_REQUEST' });
+
+  harness.controller.dispatch({ type: 'PHOTO_REQUEST' });
+  assert.equal(harness.controller.state.phase, 'photo-countdown');
+  assert.equal(
+    harness.elements['recording-photo-video'].srcObject,
+    source.srcObject,
+  );
+  harness.advance(2999);
+  assert.equal(harness.controller.state.phase, 'photo-countdown');
+  harness.advance(1);
+
+  assert.equal(harness.controller.state.phase, 'photo-review');
+  assert.equal(captureCalls.length, 1);
+  assert.equal(captureCalls[0].video, source);
+  assert.equal(captureCalls[0].canvas, harness.elements['recording-photo-preview']);
+  assert.equal(harness.elements['recording-photo-preview'].hidden, false);
+
+  harness.controller.dispatch({ type: 'PHOTO_RETAKE' });
+  assert.equal(harness.controller.state.phase, 'photo-countdown');
+});
+
+test('missing camera keeps the recording and offers the no-photo fallback', () => {
+  const harness = createHarness({ withView: true, getVideoSource: () => null });
+  beginTake(harness);
+  harness.controller.dispatch({ type: 'STOP_REQUEST' });
+  const take = harness.controller.currentTake;
+
+  harness.controller.dispatch({ type: 'PHOTO_REQUEST' });
+
+  assert.equal(harness.controller.state.phase, 'photo-review');
+  assert.match(harness.controller.state.error, /摄像头/);
+  assert.equal(harness.controller.currentTake, take);
+  assert.equal(harness.elements['recording-photo-skip'].hidden, false);
 });

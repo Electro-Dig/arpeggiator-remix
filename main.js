@@ -131,6 +131,7 @@ function initializeApp() {
         const guideController = new GuideController(document);
         const recordingController = new RecordingController({
             stream: audioBus.recordingStream,
+            getVideoSource: () => game.videoElement,
             onUploadRequest: (blob) => uploadRecording(blob),
         });
         const recordingGestureLatch = new GestureLatch({ holdMs: 800, neutralMs: 1000 });

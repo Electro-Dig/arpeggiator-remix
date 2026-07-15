@@ -112,11 +112,14 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
     'recording-cancel', 'recording-gestures-enabled',
     'recording-status', 'recording-share', 'recording-qr',
     'recording-share-link', 'recording-share-expiry', 'recording-copy-link', 'recording-checkin',
+    'recording-photo', 'recording-photo-video', 'recording-photo-preview',
+    'recording-photo-countdown', 'recording-photo-skip',
   ]) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
   assert.match(main, /new RecordingController/);
   assert.match(main, /onUploadRequest:\s*\(blob\)\s*=>\s*uploadRecording\(blob\)/);
+  assert.match(main, /getVideoSource:\s*\(\)\s*=>\s*game\.videoElement/);
   assert.match(main, /actionForThumbIntent/);
   assert.match(main, /guideController\.dialog\?\.open/);
   assert.match(recordingController, /结束并试听/);
