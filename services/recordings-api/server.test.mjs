@@ -6,7 +6,7 @@ import test from 'node:test';
 
 import { signRecordingRequest } from '../../netlify/recording-signature.js';
 import { createRecordingServer } from './server.mjs';
-import { MAX_BYTES, RecordingStore } from './storage.mjs';
+import { MAX_BYTES, MAX_POSTER_BYTES, RecordingStore } from './storage.mjs';
 
 const secret = 'server-test-secret-with-at-least-32-bytes';
 const adminSecret = 'admin-test-secret-with-at-least-32-bytes';
@@ -71,6 +71,51 @@ test('signed upload and download round-trip audio bytes', async () => {
     assert.equal(download.headers.get('x-recording-expires-at'), String(result.expiresAt));
     assert.equal(download.headers.get('x-recording-checkin-number'), '1');
     assert.deepEqual(new Uint8Array(await download.arrayBuffer()), body);
+  });
+});
+
+test('signed poster upload and download round-trip the composed image', async () => {
+  await withServer(async ({ origin }) => {
+    const audioBody = new Uint8Array([1]);
+    const audioPath = '/v1/recordings';
+    const audioUpload = await fetch(`${origin}${audioPath}`, {
+      method: 'POST',
+      headers: await signedHeaders({
+        method: 'POST', path: audioPath, body: audioBody, mime: 'audio/webm',
+      }),
+      body: audioBody,
+    });
+    const { token, expiresAt } = await audioUpload.json();
+    const posterBody = new Uint8Array([9, 7, 5, 3]);
+    const posterPath = `/v1/recordings/${token}/poster`;
+
+    const posterUpload = await fetch(`${origin}${posterPath}`, {
+      method: 'POST',
+      headers: await signedHeaders({
+        method: 'POST', path: posterPath, body: posterBody, mime: 'image/webp',
+      }),
+      body: posterBody,
+    });
+    assert.equal(posterUpload.status, 201);
+    assert.deepEqual(await posterUpload.json(), { token, expiresAt, mime: 'image/webp' });
+
+    const posterDownload = await fetch(`${origin}${posterPath}`, {
+      headers: await signedHeaders({ method: 'GET', path: posterPath }),
+    });
+    assert.equal(posterDownload.status, 200);
+    assert.equal(posterDownload.headers.get('content-type'), 'image/webp');
+    assert.equal(posterDownload.headers.get('x-recording-expires-at'), String(expiresAt));
+    assert.deepEqual(new Uint8Array(await posterDownload.arrayBuffer()), posterBody);
+
+    const oversized = new Uint8Array(MAX_POSTER_BYTES + 1);
+    const rejected = await fetch(`${origin}${posterPath}`, {
+      method: 'POST',
+      headers: await signedHeaders({
+        method: 'POST', path: posterPath, body: oversized, mime: 'image/jpeg',
+      }),
+      body: oversized,
+    });
+    assert.equal(rejected.status, 413);
   });
 });
 

@@ -10,6 +10,7 @@ import {
 import { join } from 'node:path';
 
 export const MAX_BYTES = 5 * 1024 * 1024;
+export const MAX_POSTER_BYTES = 2 * 1024 * 1024;
 export const TTL_MS = 24 * 60 * 60 * 1000;
 
 const COUNTER_FILE = '_activity-counter.json';
@@ -17,6 +18,10 @@ const EXTENSIONS = new Map([
   ['audio/mp4', 'm4a'],
   ['audio/webm', 'webm'],
   ['audio/ogg', 'ogg'],
+]);
+const POSTER_EXTENSIONS = new Map([
+  ['image/webp', 'webp'],
+  ['image/jpeg', 'jpg'],
 ]);
 const TOKEN = /^[A-Za-z0-9_-]{32,128}$/;
 
@@ -127,9 +132,8 @@ export class RecordingStore {
     }
   }
 
-  async get(token) {
+  async #readLiveMetadata(token) {
     if (!TOKEN.test(token)) throw httpError('Bad token', 400);
-
     const metadataPath = join(this.root, `${token}.json`);
     let metadata;
     try {
@@ -140,14 +144,79 @@ export class RecordingStore {
 
     const extension = EXTENSIONS.get(metadata.mime);
     if (!extension || metadata.extension !== extension) throw httpError('Not found', 404);
-    const audioPath = join(this.root, `${token}.${extension}`);
     if (metadata.expiresAt <= this.now()) {
-      await Promise.allSettled([
-        rm(audioPath, { force: true }),
-        rm(metadataPath, { force: true }),
-      ]);
+      await this.#removeEntry(metadata);
       throw httpError('Expired', 410);
     }
+    return metadata;
+  }
+
+  async #removeEntry(metadata) {
+    const audioPath = join(this.root, `${metadata.token}.${metadata.extension}`);
+    const metadataPath = join(this.root, `${metadata.token}.json`);
+    const posterPath = metadata.posterExtension
+      ? join(this.root, `${metadata.token}.poster.${metadata.posterExtension}`)
+      : null;
+    await Promise.allSettled([
+      rm(audioPath, { force: true }),
+      rm(metadataPath, { force: true }),
+      ...(posterPath ? [rm(posterPath, { force: true })] : []),
+    ]);
+  }
+
+  async putPoster(token, body, mime) {
+    const extension = POSTER_EXTENSIONS.get(mime);
+    if (!extension) throw httpError('Unsupported type', 415);
+    if (body.byteLength === 0) throw httpError('Empty poster', 400);
+    if (body.byteLength > MAX_POSTER_BYTES) throw httpError('Too large', 413);
+    const metadata = await this.#readLiveMetadata(token);
+    const posterPath = join(this.root, `${token}.poster.${extension}`);
+    const posterTempPath = `${posterPath}.${randomBytes(6).toString('hex')}.tmp`;
+    const metadataPath = join(this.root, `${token}.json`);
+    const metadataTempPath = `${metadataPath}.${randomBytes(6).toString('hex')}.tmp`;
+    try {
+      await writeFile(posterTempPath, body, { mode: 0o640 });
+      await rename(posterTempPath, posterPath);
+      const nextMetadata = {
+        ...metadata,
+        posterMime: mime,
+        posterExtension: extension,
+      };
+      await writeFile(metadataTempPath, JSON.stringify(nextMetadata), { mode: 0o640 });
+      await rename(metadataTempPath, metadataPath);
+      if (metadata.posterExtension && metadata.posterExtension !== extension) {
+        await rm(join(this.root, `${token}.poster.${metadata.posterExtension}`), { force: true });
+      }
+      return { token, expiresAt: metadata.expiresAt, mime };
+    } catch (error) {
+      await Promise.allSettled([
+        rm(posterTempPath, { force: true }),
+        rm(metadataTempPath, { force: true }),
+      ]);
+      throw error;
+    }
+  }
+
+  async getPoster(token) {
+    const metadata = await this.#readLiveMetadata(token);
+    const extension = POSTER_EXTENSIONS.get(metadata.posterMime);
+    if (!extension || metadata.posterExtension !== extension) throw httpError('Not found', 404);
+    try {
+      return {
+        token,
+        mime: metadata.posterMime,
+        expiresAt: metadata.expiresAt,
+        body: await readFile(join(this.root, `${token}.poster.${extension}`)),
+      };
+    } catch {
+      throw httpError('Not found', 404);
+    }
+  }
+
+  async get(token) {
+    const metadata = await this.#readLiveMetadata(token);
+    const extension = EXTENSIONS.get(metadata.mime);
+    const audioPath = join(this.root, `${token}.${extension}`);
 
     try {
       return { ...metadata, body: await readFile(audioPath) };

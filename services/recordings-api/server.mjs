@@ -4,9 +4,10 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { verifyRecordingRequest } from '../../netlify/recording-signature.js';
-import { MAX_BYTES, RecordingStore } from './storage.mjs';
+import { MAX_BYTES, MAX_POSTER_BYTES, RecordingStore } from './storage.mjs';
 
 const TOKEN_ROUTE = /^\/v1\/recordings\/([A-Za-z0-9_-]{32,128})$/;
+const TOKEN_POSTER_ROUTE = /^\/v1\/recordings\/([A-Za-z0-9_-]{32,128})\/poster$/;
 
 function httpError(message, status) {
   return Object.assign(new Error(message), { status });
@@ -123,8 +124,11 @@ export function createRecordingServer({
     const isCounterReset = request.method === 'POST'
       && path === '/v1/admin/counter/reset';
     const tokenMatch = request.method === 'GET' ? path.match(TOKEN_ROUTE) : null;
+    const posterMatch = path.match(TOKEN_POSTER_ROUTE);
+    const isPosterUpload = request.method === 'POST' && Boolean(posterMatch);
+    const isPosterDownload = request.method === 'GET' && Boolean(posterMatch);
     const isUpload = request.method === 'POST' && path === '/v1/recordings';
-    if (!isUpload && !tokenMatch && !isCounterReset) {
+    if (!isUpload && !tokenMatch && !isPosterUpload && !isPosterDownload && !isCounterReset) {
       sendJson(response, 404, { error: 'Not found' });
       return;
     }
@@ -148,8 +152,8 @@ export function createRecordingServer({
         return;
       }
 
-      const body = isUpload
-        ? await readBody(request, MAX_BYTES)
+      const body = isUpload || isPosterUpload
+        ? await readBody(request, isPosterUpload ? MAX_POSTER_BYTES : MAX_BYTES)
         : new Uint8Array();
       const authorized = await verifyRecordingRequest({
         secret,
@@ -168,6 +172,28 @@ export function createRecordingServer({
           .toLowerCase();
         const result = await store.put(body, mime);
         sendJson(response, 201, result);
+        return;
+      }
+
+      if (isPosterUpload) {
+        const mime = String(request.headers['content-type'] || '')
+          .split(';')[0]
+          .toLowerCase();
+        const result = await store.putPoster(posterMatch[1], body, mime);
+        sendJson(response, 201, result);
+        return;
+      }
+
+      if (isPosterDownload) {
+        const poster = await store.getPoster(posterMatch[1]);
+        response.writeHead(200, {
+          'content-type': poster.mime,
+          'content-length': String(poster.body.length),
+          'cache-control': 'private, max-age=300',
+          'x-content-type-options': 'nosniff',
+          'x-recording-expires-at': String(poster.expiresAt),
+        });
+        response.end(poster.body);
         return;
       }
 

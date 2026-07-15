@@ -18,6 +18,12 @@
   force = true
 
 [[redirects]]
+  from = "/r/poster/*"
+  to = "/.netlify/functions/recordings-api"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/r/*"
   to = "/r/index.html"
   status = 200

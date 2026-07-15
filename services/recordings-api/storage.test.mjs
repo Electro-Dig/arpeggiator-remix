@@ -6,6 +6,7 @@ import test from 'node:test';
 
 import {
   MAX_BYTES,
+  MAX_POSTER_BYTES,
   RecordingStore,
   TTL_MS,
 } from './storage.mjs';
@@ -57,6 +58,42 @@ test('rejects empty files, invalid MIME and files over five megabytes', async ()
     assert.equal(
       (await store.put(new Uint8Array([2]), 'audio/webm')).checkinNumber,
       1,
+    );
+  });
+});
+
+test('stores one expiring final poster beside an existing recording', async () => {
+  await withStore(async (root) => {
+    const store = new RecordingStore(root, () => 5_000);
+    await store.init();
+    const { token, expiresAt } = await store.put(new Uint8Array([1]), 'audio/webm');
+    const posterBody = new Uint8Array([9, 8, 7]);
+
+    assert.deepEqual(await store.putPoster(token, posterBody, 'image/webp'), {
+      token,
+      expiresAt,
+      mime: 'image/webp',
+    });
+    const poster = await store.getPoster(token);
+    assert.equal(poster.mime, 'image/webp');
+    assert.equal(poster.expiresAt, expiresAt);
+    assert.deepEqual(new Uint8Array(poster.body), posterBody);
+    assert.deepEqual(
+      new Uint8Array(await readFile(join(root, `${token}.poster.webp`))),
+      posterBody,
+    );
+
+    await assert.rejects(
+      store.putPoster(token, new Uint8Array([1]), 'image/png'),
+      (error) => error.status === 415,
+    );
+    await assert.rejects(
+      store.putPoster(token, new Uint8Array(MAX_POSTER_BYTES + 1), 'image/jpeg'),
+      (error) => error.status === 413,
+    );
+    await assert.rejects(
+      store.putPoster('x'.repeat(32), posterBody, 'image/webp'),
+      (error) => error.status === 404,
     );
   });
 });
@@ -120,11 +157,13 @@ test('expired reads delete both audio and metadata before returning 410', async 
     const store = new RecordingStore(root, () => now);
     await store.init();
     const { token } = await store.put(new Uint8Array([4, 5]), 'audio/ogg');
+    await store.putPoster(token, new Uint8Array([7, 8]), 'image/webp');
     now += TTL_MS + 1;
 
     await assert.rejects(store.get(token), (error) => error.status === 410);
     await assert.rejects(access(join(root, `${token}.ogg`)));
     await assert.rejects(access(join(root, `${token}.json`)));
+    await assert.rejects(access(join(root, `${token}.poster.webp`)));
   });
 });
 
