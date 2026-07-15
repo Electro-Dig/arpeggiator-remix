@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { uploadRecording } from '../share/recordings-client.js';
+import { uploadRecording, uploadRecordingPoster } from '../share/recordings-client.js';
 
 test('uploads the native Blob and returns a same-origin share URL', async () => {
   const blob = new Blob(['audio'], { type: 'audio/webm;codecs=opus' });
@@ -70,4 +70,35 @@ test('rejects malformed successful responses', async () => {
       /分享响应无效/,
     );
   }
+});
+
+test('uploads the composed poster to the existing recording token', async () => {
+  const token = 'p'.repeat(32);
+  const poster = new Blob(['poster'], { type: 'image/webp' });
+  let captured;
+
+  const result = await uploadRecordingPoster(token, poster, async (url, init) => {
+    captured = { url, init };
+    return Response.json({ ok: true }, { status: 201 });
+  });
+
+  assert.equal(captured.url, `/recordings-api/poster/${token}`);
+  assert.equal(captured.init.method, 'POST');
+  assert.equal(captured.init.headers['content-type'], 'image/webp');
+  assert.equal(captured.init.body, poster);
+  assert.deepEqual(result, { ok: true });
+});
+
+test('rejects malformed poster uploads before calling the network', async () => {
+  let calls = 0;
+  const fetchImpl = async () => { calls += 1; return new Response(); };
+  await assert.rejects(
+    uploadRecordingPoster('short', new Blob(['x'], { type: 'image/webp' }), fetchImpl),
+    /分享令牌无效/,
+  );
+  await assert.rejects(
+    uploadRecordingPoster('p'.repeat(32), new Blob(['x'], { type: 'image/png' }), fetchImpl),
+    /海报格式/,
+  );
+  assert.equal(calls, 0);
 });

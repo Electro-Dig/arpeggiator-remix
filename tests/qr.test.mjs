@@ -1,73 +1,116 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import * as qrModule from '../share/qr.js';
+import {
+  POSTER_SIZE,
+  QR_RECT,
+  canvasToPosterBlob,
+  renderQr,
+} from '../share/qr.js';
 
-const { POSTER_SIZE, QR_RECT, renderQr } = qrModule;
-
-test('lazy-loads the selected poster and composites an offscreen QR into its safe zone', async () => {
+function createHarness() {
   const drawCalls = [];
   const textCalls = [];
   const fillRects = [];
+  const lineCalls = [];
   const context = {
+    save() {},
+    restore() {},
+    translate() {},
+    scale() {},
+    beginPath() {},
+    moveTo: (...args) => lineCalls.push(['moveTo', ...args]),
+    lineTo: (...args) => lineCalls.push(['lineTo', ...args]),
+    stroke() {},
+    arc() {},
+    fill() {},
     drawImage: (...args) => drawCalls.push(args),
     fillText: (...args) => textCalls.push(args),
     fillRect: (...args) => fillRects.push(args),
   };
-  const canvas = {
-    width: 0,
-    height: 0,
-    getContext: () => context,
-  };
-  const template = { naturalWidth: 1254, naturalHeight: 1254 };
+  const canvas = { width: 0, height: 0, getContext: () => context };
   const qrCanvas = { id: 'offscreen-qr' };
-  let templateLoads = 0;
-  let qrLoads = 0;
   let qrRender;
-
   const dependencies = {
-    loadTemplate: async () => {
-      templateLoads += 1;
-      return template;
-    },
     createCanvas: () => qrCanvas,
-    loadQr: async () => {
-      qrLoads += 1;
-      return {
-        toCanvas: async (...args) => { qrRender = args; },
-      };
-    },
+    loadQr: async () => ({
+      toCanvas: async (...args) => { qrRender = args; },
+    }),
   };
+  return {
+    canvas,
+    qrCanvas,
+    dependencies,
+    drawCalls,
+    textCalls,
+    fillRects,
+    lineCalls,
+    getQrRender: () => qrRender,
+  };
+}
 
-  assert.equal(templateLoads, 0);
-  assert.equal(qrLoads, 0);
-  await renderQr(canvas, 'https://app.example.test/r/token', {
-    ...dependencies,
+test('renders a participant photo as a live single cover with a ticket QR', async () => {
+  const harness = createHarness();
+  const photo = { width: 900, height: 1125 };
+
+  await renderQr(harness.canvas, 'https://app.example.test/r/token', {
+    ...harness.dependencies,
+    photo,
     checkinNumber: 27,
+    durationMs: 36_000,
   });
 
-  assert.equal(templateLoads, 1);
-  assert.equal(qrLoads, 1);
   assert.deepEqual(POSTER_SIZE, { width: 1080, height: 1440 });
-  assert.equal(canvas.width, POSTER_SIZE.width);
-  assert.equal(canvas.height, POSTER_SIZE.height);
-  assert.equal(qrRender[0], qrCanvas);
-  assert.equal(qrRender[1], 'https://app.example.test/r/token');
-  assert.equal(qrRender[2].width, QR_RECT.size);
-  assert.deepEqual(drawCalls[0], [template, 0, 0, 1080, 1080]);
-  assert.deepEqual(drawCalls[1], [
-    qrCanvas,
+  assert.equal(harness.canvas.width, 1080);
+  assert.equal(harness.canvas.height, 1440);
+  assert.ok(harness.drawCalls.some((call) => call[0] === photo));
+  assert.deepEqual(harness.drawCalls.at(-1), [
+    harness.qrCanvas,
     QR_RECT.x,
     QR_RECT.y,
     QR_RECT.size,
     QR_RECT.size,
   ]);
-  assert.deepEqual(fillRects, [[0, 1080, 1080, 360]]);
-  assert.deepEqual(textCalls, [
-    ['WAIC 双手乐队', 72, 1168],
-    ['欢迎打卡', 72, 1230],
-    ['你是本场第 027 位音乐玩家', 72, 1294],
-    ['TAKE 027', 72, 1350],
-    ['扫码试听与下载 · 24H', 538, 1350],
+  assert.equal(harness.getQrRender()[2].width, QR_RECT.size);
+  assert.deepEqual(harness.textCalls.map(([text]) => text), [
+    'WAIC 双手乐队 / LIVE TAKE',
+    'PLAYER 027',
+    '这是我的现场单曲',
+    '你是本场第 027 位音乐玩家',
+    'TAKE 027 · 36 SEC',
+    '扫码试听与下载 · 24H',
+  ]);
+  assert.ok(harness.lineCalls.length > 4);
+});
+
+test('renders the same information hierarchy with an abstract no-photo cover', async () => {
+  const harness = createHarness();
+  await renderQr(harness.canvas, 'https://app.example.test/r/token', {
+    ...harness.dependencies,
+    photo: null,
+    checkinNumber: 3,
+    durationMs: 5_000,
+  });
+
+  assert.ok(harness.fillRects.some((call) => call[2] === 1080 && call[3] === 1040));
+  assert.ok(harness.textCalls.some(([text]) => text === 'PLAYER 003'));
+  assert.ok(harness.textCalls.some(([text]) => text === 'TAKE 003 · 05 SEC'));
+});
+
+test('reduces WebP quality when the first poster serialization exceeds two megabytes', async () => {
+  const qualities = [];
+  const canvas = {
+    toBlob(callback, type, quality) {
+      qualities.push({ type, quality });
+      const size = qualities.length === 1 ? (2 * 1024 * 1024) + 1 : 1024;
+      callback(new Blob([new Uint8Array(size)], { type }));
+    },
+  };
+
+  const blob = await canvasToPosterBlob(canvas);
+  assert.equal(blob.size, 1024);
+  assert.deepEqual(qualities, [
+    { type: 'image/webp', quality: 0.86 },
+    { type: 'image/webp', quality: 0.78 },
   ]);
 });

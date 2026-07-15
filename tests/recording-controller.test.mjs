@@ -59,6 +59,8 @@ function createHarness({
   withView = false,
   getVideoSource = () => null,
   capturePhoto = () => {},
+  onPosterUploadRequest = async () => ({ ok: true }),
+  posterSerializer = async () => new Blob(['poster'], { type: 'image/webp' }),
 } = {}) {
   let now = 0;
   let timerId = 0;
@@ -71,6 +73,7 @@ function createHarness({
   const downloads = [];
   const qrRenders = [];
   const copiedTexts = [];
+  const posterUploads = [];
   const viewIds = [
     'recording-dialog', 'recording-status', 'recording-state-label',
     'recording-timer', 'recording-message', 'recording-preview',
@@ -144,6 +147,11 @@ function createHarness({
     },
     getVideoSource,
     capturePhoto,
+    posterSerializer,
+    onPosterUploadRequest: async (token, blob) => {
+      posterUploads.push({ token, blob });
+      return onPosterUploadRequest(token, blob);
+    },
   });
 
   return {
@@ -156,6 +164,7 @@ function createHarness({
     qrRenders,
     copiedTexts,
     elements,
+    posterUploads,
   };
 }
 
@@ -275,7 +284,46 @@ test('successful upload renders a share URL, expiry and QR without discarding th
   assert.equal(harness.qrRenders[0].canvas, harness.elements['recording-qr']);
   assert.equal(harness.qrRenders[0].value, shareResult.shareUrl);
   assert.equal(harness.qrRenders[0].options.checkinNumber, 27);
+  assert.equal(harness.qrRenders[0].options.photo, null);
+  assert.equal(harness.qrRenders[0].options.durationMs, harness.controller.takeDurationMs);
+  assert.equal(harness.posterUploads.length, 1);
+  assert.equal(harness.posterUploads[0].token, shareResult.token);
+  assert.equal(harness.posterUploads[0].blob.type, 'image/webp');
   assert.equal(harness.elements['recording-dialog'].open, true);
+});
+
+test('poster upload retries once and never creates a second audio check-in', async () => {
+  let audioUploads = 0;
+  let posterShouldFail = true;
+  const shareResult = {
+    token: 'b'.repeat(32),
+    expiresAt: Date.UTC(2026, 6, 11, 12, 0),
+    checkinNumber: 31,
+    shareUrl: `https://app.example.test/r/${'b'.repeat(32)}`,
+  };
+  const harness = createHarness({
+    withView: true,
+    onUploadRequest: async () => { audioUploads += 1; return shareResult; },
+    onPosterUploadRequest: async () => {
+      if (posterShouldFail) throw new Error('poster unavailable');
+      return { ok: true };
+    },
+  });
+  beginTake(harness);
+  harness.controller.dispatch({ type: 'STOP_REQUEST' });
+  harness.controller.dispatch({ type: 'PHOTO_REQUEST' });
+
+  await harness.controller.dispatch({ type: 'PHOTO_SKIPPED' });
+  assert.equal(harness.controller.state.phase, 'photo-review');
+  assert.equal(audioUploads, 1);
+  assert.equal(harness.posterUploads.length, 2);
+  assert.equal(harness.controller.shareResult, shareResult);
+
+  posterShouldFail = false;
+  await harness.controller.dispatch({ type: 'PHOTO_SKIPPED' });
+  assert.equal(harness.controller.state.phase, 'shared');
+  assert.equal(audioUploads, 1);
+  assert.equal(harness.posterUploads.length, 3);
 });
 
 test('completed takes expose incrementing review metadata', () => {

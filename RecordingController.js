@@ -1,7 +1,10 @@
 import { chooseRecordingFormat } from './recording/mime.js';
 import { capturePhotoFrame } from './recording/photo-capture.js';
 import { initialRecordingState, reduceRecording } from './recording/recording-state.js';
-import { renderQr as defaultRenderQr } from './share/qr.js';
+import {
+  canvasToPosterBlob,
+  renderQr as defaultRenderQr,
+} from './share/qr.js';
 
 export const RECORDING_COUNTDOWN_MS = 3_000;
 export const RECORDING_MAX_MS = 60_000;
@@ -45,12 +48,14 @@ export class RecordingController extends EventTarget {
     revokeObjectURL = (url) => URL.revokeObjectURL(url),
     triggerDownload = defaultTriggerDownload,
     renderQr = defaultRenderQr,
+    posterSerializer = canvasToPosterBlob,
     copyText = defaultCopyText,
     getVideoSource = () => null,
     capturePhoto = capturePhotoFrame,
     onUploadRequest = async () => {
       throw new Error('云端分享将在下一阶段接入，当前录音仍可试听或下载');
     },
+    onPosterUploadRequest = async () => ({ ok: true }),
   } = {}) {
     super();
     if (!stream) throw new Error('RecordingController requires an internal audio stream');
@@ -66,10 +71,12 @@ export class RecordingController extends EventTarget {
     this.revokeObjectURL = revokeObjectURL;
     this.triggerDownload = triggerDownload;
     this.renderQr = renderQr;
+    this.posterSerializer = posterSerializer;
     this.copyText = copyText;
     this.getVideoSource = getVideoSource;
     this.capturePhoto = capturePhoto;
     this.onUploadRequest = onUploadRequest;
+    this.onPosterUploadRequest = onPosterUploadRequest;
 
     this.state = initialRecordingState();
     this.recorder = null;
@@ -80,6 +87,8 @@ export class RecordingController extends EventTarget {
     this.currentFilename = '';
     this.previewUrl = '';
     this.shareResult = null;
+    this.currentPosterBlob = null;
+    this.posterReady = false;
     this.countdownTimer = null;
     this.stopTimer = null;
     this.elapsedTimer = null;
@@ -483,14 +492,36 @@ export class RecordingController extends EventTarget {
       return null;
     }
     try {
-      const result = await this.onUploadRequest(take, {
-        filename: this.currentFilename,
-        mimeType: take.type,
+      const result = this.shareResult?.token
+        ? this.shareResult
+        : await this.onUploadRequest(take, {
+          filename: this.currentFilename,
+          mimeType: take.type,
+        });
+      this.shareResult = result;
+      if (!this.elements.qr) throw new Error('分享海报画布不可用');
+      await this.renderQr(this.elements.qr, result.shareUrl, {
+        photo: this.hasPhoto ? this.elements.photoPreview : null,
+        checkinNumber: result.checkinNumber,
+        durationMs: this.takeDurationMs,
       });
+      this.currentPosterBlob = await this.posterSerializer(this.elements.qr);
+      let posterError = null;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        try {
+          await this.onPosterUploadRequest(result.token, this.currentPosterBlob);
+          posterError = null;
+          break;
+        } catch (error) {
+          posterError = error;
+        }
+      }
+      if (posterError) throw posterError;
+      this.posterReady = true;
       if (this.state.phase === 'uploading') {
-        this.shareResult = result;
         this.dispatch({ type: 'UPLOAD_SUCCEEDED', result });
         await this.showShareResult();
+        this.clearPhoto();
       }
       return result;
     } catch (error) {
@@ -535,6 +566,8 @@ export class RecordingController extends EventTarget {
 
   clearShareResult() {
     this.shareResult = null;
+    this.currentPosterBlob = null;
+    this.posterReady = false;
     if (this.elements.share) this.elements.share.hidden = true;
     if (this.elements.shareLink) {
       this.elements.shareLink.textContent = '';
@@ -567,16 +600,6 @@ export class RecordingController extends EventTarget {
     }
     if (this.elements.checkin) {
       this.elements.checkin.textContent = `你是本场第 ${String(result.checkinNumber).padStart(3, '0')} 位音乐玩家`;
-    }
-    if (!this.elements.qr) return;
-    try {
-      await this.renderQr(this.elements.qr, result.shareUrl, {
-        checkinNumber: result.checkinNumber,
-      });
-    } catch {
-      if (this.elements.message) {
-        this.elements.message.textContent = '分享链接已生成；二维码暂时无法显示，请直接复制链接。';
-      }
     }
   }
 

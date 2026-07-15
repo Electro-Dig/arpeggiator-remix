@@ -1,7 +1,7 @@
 import { Game } from './game.js';
 import { GuideController } from './GuideController.js';
 import { RecordingController } from './RecordingController.js';
-import { uploadRecording } from './share/recordings-client.js';
+import { uploadRecording, uploadRecordingPoster } from './share/recordings-client.js';
 import { audioBus } from './audio/AudioBus.js';
 import * as drumManager from './DrumManager.js';
 import { actionForThumbIntent } from './recording/recording-state.js';
@@ -133,6 +133,7 @@ function initializeApp() {
             stream: audioBus.recordingStream,
             getVideoSource: () => game.videoElement,
             onUploadRequest: (blob) => uploadRecording(blob),
+            onPosterUploadRequest: (token, blob) => uploadRecordingPoster(token, blob),
         });
         const recordingGestureLatch = new GestureLatch({ holdMs: 800, neutralMs: 1000 });
 

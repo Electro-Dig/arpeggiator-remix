@@ -134,7 +134,8 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
   assert.match(styles, /\.recording-review-status\s*\{/);
   assert.match(styles, /\.recording-review-wave\s*\{/);
   assert.match(styles, /\.recording-action\s*\{[^}]*min-height:\s*56px[^}]*font:\s*600 14px/s);
-  assert.match(qr, /qr-share-template-waic-mint\.webp/);
+  assert.match(qr, /这是我的现场单曲/);
+  assert.match(qr, /PLAYER/);
   assert.match(html, /id="recording-qr"[^>]+width="1080"[^>]+height="1440"/);
   assert.doesNotMatch(styles, /\.recording-dialog\[data-phase="shared"\]\s*\{[^}]*overflow:\s*auto/s);
   assert.match(styles, /\.recording-share__copy\s*\{[^}]*color:\s*#102025/s);
