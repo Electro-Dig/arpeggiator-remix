@@ -17,22 +17,11 @@ const TRANSITIONS = Object.freeze({
     STOP_FAILED: 'error',
   }),
   review: Object.freeze({
-    PHOTO_REQUEST: 'photo-countdown',
+    UPLOAD_REQUEST: 'uploading',
     RERECORD_REQUEST: 'countdown',
     DISCARD_REQUEST: 'idle',
   }),
-  'photo-countdown': Object.freeze({
-    PHOTO_CAPTURED: 'photo-review',
-    PHOTO_CAPTURE_FAILED: 'photo-review',
-    DISCARD_REQUEST: 'idle',
-  }),
-  'photo-review': Object.freeze({
-    PHOTO_ACCEPTED: 'uploading',
-    PHOTO_RETAKE: 'photo-countdown',
-    PHOTO_SKIPPED: 'uploading',
-    DISCARD_REQUEST: 'idle',
-  }),
-  uploading: Object.freeze({ UPLOAD_SUCCEEDED: 'shared', UPLOAD_FAILED: 'photo-review' }),
+  uploading: Object.freeze({ UPLOAD_SUCCEEDED: 'shared', UPLOAD_FAILED: 'review' }),
   shared: Object.freeze({ START_REQUEST: 'countdown', DISCARD_REQUEST: 'idle' }),
   error: Object.freeze({ RESET: 'idle' }),
 });
@@ -62,7 +51,7 @@ export function actionForThumbIntent(phase, intent) {
     return ({
       idle: 'START_REQUEST',
       recording: 'STOP_REQUEST',
-      review: 'PHOTO_REQUEST',
+      review: 'UPLOAD_REQUEST',
     })[phase] || null;
   }
   if (intent === 'both-down') {

@@ -2,34 +2,7 @@ import * as Tone from './audio/tone.js';
 import { audioBus } from './audio/AudioBus.js';
 import { DEFAULT_SCENE_ID, SCENES, getScene } from './music/scenes.js';
 import { buildScale, noteAtPosition } from './music/scale-utils.js';
-
-const fm = (harmonicity, modulationIndex, attack, decay, sustain, release) => Object.freeze({
-  harmonicity,
-  modulationIndex,
-  oscillator: { type: 'sine' },
-  modulation: { type: 'sine' },
-  envelope: { attack, decay, sustain, release },
-  modulationEnvelope: {
-    attack: Math.max(0.001, attack / 2),
-    decay,
-    sustain: Math.max(0.05, sustain * 0.7),
-    release,
-  },
-});
-
-const SYNTH_VARIANTS = Object.freeze({
-  'DX7 E.PIANO': fm(14, 4.5, 0.01, 0.3, 0.4, 1.2),
-  'DX7 BRASS': fm(2, 12, 0.1, 0.2, 0.8, 0.6),
-  'DX7 MARIMBA': fm(3, 6, 0.005, 0.4, 0.1, 0.8),
-  'NEON PLUCK': fm(7, 8, 0.002, 0.3, 0.15, 0.5),
-  'NEON LEAD': fm(1.5, 15, 0.05, 0.1, 0.7, 0.8),
-  'ARCADE PULSE': fm(2, 9, 0.01, 0.16, 0.55, 0.35),
-  'ARCADE CRYSTAL': fm(7, 10, 0.001, 0.22, 0.1, 0.45),
-  'AFTERGLOW PAD': fm(1, 3.2, 0.28, 0.8, 0.72, 2.8),
-  'COASTAL PLUCK': fm(3, 4.8, 0.008, 0.5, 0.18, 1.4),
-  'BLUE HOUR KEYS': fm(6, 2.6, 0.035, 0.7, 0.42, 2.2),
-  'TAPE CHOIR': fm(0.5, 2.1, 0.42, 1.1, 0.78, 3.4),
-});
+import { MELODY_TIMBRES, resolveTimbreIndex } from './music/timbres.js';
 
 export class MusicManager extends EventTarget {
   constructor() {
@@ -40,12 +13,13 @@ export class MusicManager extends EventTarget {
     this.handVolumes = new Map();
     this.scene = getScene(DEFAULT_SCENE_ID);
     this.scale = buildScale(this.scene.tonic, this.scene.mode, 3, 5);
-    this.variantIndex = 0;
+    this.currentTimbreIndex = 0;
     this.currentRoot = this.scale[0];
     this.bassRoot = null;
     this.delayManualOverride = false;
     this.delayBeats = 0;
     this.delayWetManual = 0.18;
+    this.melodyVolumeDb = -14;
     this.analyser = audioBus.analyser;
     this.sceneFilter = null;
     this.sceneDelay = null;
@@ -53,6 +27,7 @@ export class MusicManager extends EventTarget {
     this.arpSynth = null;
     this.bassSynth = null;
     this.bassSequence = null;
+    this.unsubscribeEffects = audioBus.onEffectChange(() => this.emitStatus());
   }
 
   start() {
@@ -71,7 +46,7 @@ export class MusicManager extends EventTarget {
     this.sceneFilter = new Tone.Filter({ type: 'lowpass', frequency: 2600, Q: 1.2 });
     this.sceneDelay = new Tone.FeedbackDelay('8n.', 0.32);
     this.sceneReverb = new Tone.Reverb({ decay: 4.2, preDelay: 0.02, wet: 0.24 });
-    this.arpSynth = new Tone.PolySynth(Tone.FMSynth, SYNTH_VARIANTS['NEON PLUCK']);
+    this.arpSynth = new Tone.PolySynth(Tone.FMSynth, MELODY_TIMBRES[this.currentTimbreIndex].options);
     this.bassSynth = new Tone.MonoSynth({
       oscillator: { type: 'sawtooth' },
       filter: { type: 'lowpass', Q: 1 },
@@ -86,7 +61,7 @@ export class MusicManager extends EventTarget {
     this.sceneFilter.connect(this.sceneDelay);
     this.sceneDelay.connect(this.sceneReverb);
     this.sceneReverb.connect(audioBus.input);
-    this.arpSynth.volume.value = -14;
+    this.arpSynth.volume.value = this.melodyVolumeDb;
     this.bassSynth.volume.value = -22;
     this.sceneDelay.wet.value = this.delayWetManual;
     this.bassSequence = new Tone.Sequence((time, step) => {
@@ -161,9 +136,7 @@ export class MusicManager extends EventTarget {
     this.scene = selected;
     this.scale = buildScale(selected.tonic, selected.mode, 3, 5);
     this.currentRoot = this.scale[0];
-    this.variantIndex = 0;
     if (this.isStarted) Tone.Transport.bpm.rampTo(selected.bpm, 0.15);
-    this.setToneVariant(0, { emit: false });
     this.emitStatus();
     return selected;
   }
@@ -173,13 +146,16 @@ export class MusicManager extends EventTarget {
     return this.setScene(SCENES[(index + 1) % SCENES.length].id);
   }
 
-  setToneVariant(index = this.variantIndex + 1, { emit = true } = {}) {
-    const length = this.scene.variants.length;
-    this.variantIndex = ((Number(index) % length) + length) % length;
-    const name = this.scene.variants[this.variantIndex];
-    if (this.arpSynth) this.arpSynth.set(SYNTH_VARIANTS[name]);
+  setTimbre(value = this.currentTimbreIndex, { emit = true } = {}) {
+    this.currentTimbreIndex = resolveTimbreIndex(value, this.currentTimbreIndex);
+    const selected = MELODY_TIMBRES[this.currentTimbreIndex];
+    if (this.arpSynth) this.arpSynth.set(selected.options);
     if (emit) this.emitStatus();
-    return name;
+    return selected.name;
+  }
+
+  cycleTimbre() {
+    return this.setTimbre(this.currentTimbreIndex + 1);
   }
 
   setRootFromPosition(normalizedY) {
@@ -215,6 +191,45 @@ export class MusicManager extends EventTarget {
     this.sceneDelay?.wet.rampTo(this.delayWetManual, 0.04);
   }
 
+  setPerformanceEffects(effects) {
+    return audioBus.setPerformanceEffects(effects);
+  }
+
+  setLowPassAmount(amount) {
+    return audioBus.setLowPassAmount(amount);
+  }
+
+  setDelayAmount(amount) {
+    return audioBus.setDelayAmount(amount);
+  }
+
+  setGlitchAmount(amount) {
+    return audioBus.setGlitchAmount(amount);
+  }
+
+  setBroadcastBuild(amount) {
+    return audioBus.setBroadcastBuild(amount);
+  }
+
+  triggerBroadcastImpact(amount) {
+    return audioBus.triggerBroadcastImpact(amount);
+  }
+
+  resetBroadcastEffects() {
+    return audioBus.resetBroadcastEffects();
+  }
+
+  setMelodyVolume(dB) {
+    const number = Number(dB);
+    if (!Number.isFinite(number)) return this.melodyVolumeDb;
+    const next = Math.max(-36, Math.min(0, number));
+    if (next === this.melodyVolumeDb) return next;
+    this.melodyVolumeDb = next;
+    this.arpSynth?.volume.rampTo(next, 0.04);
+    this.emitStatus();
+    return next;
+  }
+
   getAnalyser() {
     return this.analyser;
   }
@@ -224,7 +239,7 @@ export class MusicManager extends EventTarget {
   }
 
   getSynthName() {
-    return this.scene.variants[this.variantIndex];
+    return MELODY_TIMBRES[this.currentTimbreIndex].name;
   }
 
   getStatus() {
@@ -232,8 +247,13 @@ export class MusicManager extends EventTarget {
       sceneId: this.scene.id,
       sceneName: this.scene.name,
       synthName: this.getSynthName(),
+      timbreId: MELODY_TIMBRES[this.currentTimbreIndex].id,
+      timbreIndex: this.currentTimbreIndex,
       tempo: this.scene.bpm,
       rootNote: this.currentRoot,
+      melodyVolumeDb: this.melodyVolumeDb,
+      effects: audioBus.getEffectState(),
+      effectsLabel: audioBus.getEffectState().label,
     };
   }
 

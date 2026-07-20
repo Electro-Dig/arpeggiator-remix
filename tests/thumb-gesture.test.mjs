@@ -87,6 +87,19 @@ test('guide close can require a full neutral re-arm', () => {
   assert.equal(latch.update('neutral', 2100), null);
   assert.equal(latch.update('both-up', 2101), null);
   assert.equal(latch.update('both-up', 2901), 'both-up');
+test('exposes re-arm state for review feedback with a 500ms neutral window', () => {
+  const latch = new GestureLatch({ holdMs: 800, neutralMs: 500 });
+  latch.requireNeutral();
+  assert.equal(latch.isArmed, false);
+  assert.equal(latch.rearmProgress, 0);
+  latch.update('neutral', 1000);
+  latch.update('neutral', 1250);
+  assert.equal(latch.rearmProgress, 0.5);
+  latch.update('neutral', 1500);
+  assert.equal(latch.isArmed, true);
+  assert.equal(latch.rearmProgress, 1);
+});
+
 });
 
 test('game frames are normalized by handedness and emitted once per result', async () => {

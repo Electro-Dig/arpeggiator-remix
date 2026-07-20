@@ -12,12 +12,16 @@ test('face-obscuring Three.js diagnostics are removed', () => {
   assert.doesNotMatch(game, /Dx:.*NoteLen/);
 });
 
-test('diagnostics are exposed only inside Control Deck', () => {
-  assert.match(game, /_updateDelayDiagnostics/);
-  for (const id of ['delay-distance-value', 'delay-level-value']) {
+test('continuous effect status replaces obsolete calibrated-delay diagnostics', () => {
+  for (const id of ['current-mix-effects', 'gesture-fx-panel']) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
-    assert.match(game, new RegExp(id));
   }
-  assert.doesNotMatch(html, /note-length-value/);
-  assert.doesNotMatch(game, /note-length-value/);
+  for (const id of ['delay-distance-value', 'delay-level-value', 'note-length-value']) {
+    assert.doesNotMatch(html, new RegExp(`id=["']${id}["']`));
+  }
+  assert.doesNotMatch(game, /delayCtrl|_initDelayControlUI|_sampleDelayDistanceIfDue|_updateDelayDiagnostics|_updateDelayLevelIfDue/);
+  const animateStart = game.indexOf('key: "_animate"');
+  const animateEnd = game.indexOf('key: "_updateBeatIndicator"', animateStart);
+  assert.ok(animateStart >= 0 && animateEnd > animateStart);
+  assert.doesNotMatch(game.slice(animateStart, animateEnd), /_sampleDelayDistanceIfDue|_updateDelayLevelIfDue/);
 });

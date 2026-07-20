@@ -1,9 +1,17 @@
+import {
+  POSTER_SIZE,
+  QR_RECT,
+  STAGE_RECT,
+  drawTechnicalTicket,
+  fitSourceWithinRect,
+  performanceTracePoints,
+} from './poster-ticket.js';
+
 const loadDefaultQr = () => import('https://esm.sh/qrcode@1.5.4');
 const createDefaultCanvas = () => document.createElement('canvas');
 
-export const POSTER_SIZE = Object.freeze({ width: 1080, height: 1440 });
+export { POSTER_SIZE, QR_RECT, STAGE_RECT, fitSourceWithinRect, performanceTracePoints };
 export const COVER_HEIGHT = 1040;
-export const QR_RECT = Object.freeze({ x: 760, y: 1110, size: 248 });
 export const MAX_POSTER_BYTES = 2 * 1024 * 1024;
 
 function sourceDimensions(source) {
@@ -134,13 +142,15 @@ function drawTicket(context, formattedNumber, durationMs) {
 export async function renderQr(canvas, value, {
   loadQr = loadDefaultQr,
   createCanvas = createDefaultCanvas,
+  qrPreview = null,
   photo = null,
   checkinNumber = 1,
   durationMs = 0,
+  metadata = {},
 } = {}) {
   const { toCanvas } = await loadQr();
   const context = canvas.getContext('2d');
-  const qrCanvas = createCanvas();
+  const qrCanvas = qrPreview || createCanvas();
   const number = Number.isSafeInteger(checkinNumber) && checkinNumber > 0
     ? checkinNumber
     : 1;
@@ -148,8 +158,21 @@ export async function renderQr(canvas, value, {
 
   canvas.width = POSTER_SIZE.width;
   canvas.height = POSTER_SIZE.height;
-  drawCover(context, photo, formattedNumber);
-  drawTicket(context, formattedNumber, durationMs);
+  const posterMetadata = {
+    scene: String(metadata.scene || 'LIVE SCENE'),
+    synth: String(metadata.synth || 'MELODY'),
+    rhythm: String(metadata.rhythm || 'FREE'),
+    bpm: Number(metadata.bpm) || 120,
+    root: String(metadata.root || '--'),
+    fx: String(metadata.fx || 'LP 100% · DLY 0% · GLT 0% · RVB 0%'),
+  };
+  drawTechnicalTicket(context, {
+    photo,
+    formattedNumber,
+    durationMs,
+    metadata: posterMetadata,
+    seed: [value, formattedNumber, durationMs, ...Object.values(posterMetadata)].join('|'),
+  });
 
   await toCanvas(qrCanvas, value, {
     width: QR_RECT.size,

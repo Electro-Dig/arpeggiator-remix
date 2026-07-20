@@ -26,6 +26,61 @@ test('exhibition controls and social links remain discoverable', () => {
   assert.match(html, /https:\/\/www\.xiaohongshu\.com\/user\/profile\/6070457c000000000101efac/);
 });
 
+test('mix status, global timbre, melody volume, and Bilibili stay available to the operator', () => {
+  for (const id of [
+    'performance-hud', 'effects-strip', 'current-mix-effects',
+    'melody-timbre-panel', 'melody-timbre-select',
+    'melody-volume-panel', 'melody-volume-slider', 'melody-volume-value',
+  ]) {
+    assert.match(html, new RegExp(`id=["']${id}["']`));
+  }
+  assert.match(html, /id=["']effects-strip["'][\s\S]*?<span>MIX FX<\/span>/);
+  assert.doesNotMatch(html, /class=["'][^"']*hud-metric[^"']*["'][^>]*data-index=["']06["']/);
+  assert.match(html, /id=["']current-mix-effects["'][^>]*aria-live=["']polite["']/);
+  assert.match(html, /id=["']current-mix-effects["'][^>]*>[\s\S]*RVB 0%<\/output>/);
+  assert.equal((html.match(/<option value=["'](?:dx7|neon|arcade|afterglow|coastal|blue-hour|tape)/g) || []).length, 11);
+  assert.match(main, /musicManager\.setTimbre\(melodyTimbreSelect\.value\)/);
+  assert.match(html, /<label[^>]*for=["']melody-volume-slider["']/);
+  assert.match(html, /id=["']melody-volume-slider["'][^>]*type=["']range["'][^>]*min=["']-36["'][^>]*max=["']0["']/);
+  assert.match(html, /id=["']melody-volume-value["'][^>]*for=["']melody-volume-slider["']/);
+  assert.match(html, /https:\/\/space\.bilibili\.com\/52370877\?spm_id_from=333\.1007\.0\.0/);
+});
+
+test('mix controls use a dark high-contrast surface instead of native white fields', () => {
+  assert.match(styles, /\.performance-hud\s*\{[^}]*display:\s*grid/s);
+  assert.match(styles, /\.effects-strip\s*\{[^}]*display:\s*flex/s);
+  assert.match(styles, /\.control-section select\s*\{[^}]*color-scheme:\s*dark[^}]*background:\s*#0c1518[^}]*color:\s*var\(--text\)/s);
+  assert.match(styles, /\.control-section option\s*\{[^}]*background:\s*#0c1518[^}]*color:\s*var\(--text\)/s);
+  assert.match(styles, /\.control-section input\[type=["']range["']\]\s*\{[^}]*appearance:\s*none[^}]*background:/s);
+  assert.match(styles, /\.control-section input\[type=["']range["']\]::-webkit-slider-thumb\s*\{/);
+});
+
+test('control deck documents continuous gesture effects without legacy delay controls', () => {
+  for (const id of ['gesture-fx-panel', 'gesture-fx-title', 'gesture-fx-status']) {
+    assert.match(html, new RegExp(`id=["']${id}["']`));
+  }
+  for (const legacyId of ['delay-control-panel', 'delay-auto-toggle', 'delay-wet-slider', 'delay-level-label', 'delay-diagnostics', 'delay-distance-value', 'delay-level-value']) {
+    assert.doesNotMatch(html, new RegExp(`id=["']${legacyId}["']`));
+  }
+  assert.doesNotMatch(html, /AUTO DELAY|AUTO \/ L0|DELAY WET/);
+
+  for (const { control, effect, label } of [
+    { control: 'two-hand-distance', effect: 'filter', label: 'FILTER' },
+    { control: 'thumb-middle-pinch', effect: 'delay', label: 'DELAY' },
+    { control: 'thumb-ring-pinch', effect: 'glitch', label: 'GLITCH' },
+    { control: 'two-hand-rise', effect: 'reverb', label: 'REVERB BUILD' },
+    { control: 'two-hand-drop', effect: 'impact', label: 'DROP IMPACT' },
+  ]) {
+    assert.match(html, new RegExp(`data-control=["']${control}["'][^>]*data-effect=["']${effect}["'][\\s\\S]*?<dd>${label}<\\/dd>`));
+  }
+
+  assert.match(html, /GESTURE FX/);
+  assert.match(html, /LIVE \/ CONTINUOUS/);
+  assert.match(styles, /\.gesture-fx-card\s*\{[^}]*background:\s*#0c1518/s);
+  assert.match(styles, /\.gesture-fx-map\s*\{[^}]*display:\s*grid/s);
+  assert.doesNotMatch(styles, /\.delay-diagnostics/);
+});
+
 test('visual shell supports control deck, simple mode, and reduced motion', () => {
   assert.match(styles, /--cyan:\s*#80e7ec/i);
   assert.match(styles, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
@@ -89,7 +144,7 @@ test('editorial hierarchy remains restrained and semantic', () => {
   for (const className of ['hud-metric', 'operator-action__meta', 'guide-card__step', 'guide-card__notations']) {
     assert.match(html, new RegExp(`class=["'][^"']*${className}`));
   }
-  for (const id of ['guide-step', 'guide-notation-primary', 'guide-notation-secondary', 'delay-diagnostics']) {
+  for (const id of ['guide-step', 'guide-notation-primary', 'guide-notation-secondary']) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
   }
   assert.match(styles, /--text:\s*#f2efe8/i);
@@ -107,20 +162,25 @@ test('editorial hierarchy remains restrained and semantic', () => {
 test('recording controls remain visible, optional, and gesture-disableable', () => {
   for (const id of [
     'recording-primary', 'recording-dialog', 'recording-preview',
-    'recording-review-status', 'recording-review-wave',
+    'recording-review-status', 'recording-review-wave', 'recording-gesture-status',
     'recording-confirm', 'recording-rerecord', 'recording-download',
     'recording-cancel', 'recording-gestures-enabled',
-    'recording-status', 'recording-share', 'recording-qr',
+    'recording-status', 'recording-share', 'recording-qr', 'recording-share-qr',
     'recording-share-link', 'recording-share-expiry', 'recording-copy-link', 'recording-checkin',
-    'recording-photo', 'recording-photo-video', 'recording-photo-preview',
-    'recording-photo-countdown', 'recording-photo-skip',
+    'recording-photo-preview', 'recording-share-frame-fallback',
   ]) {
     assert.match(html, new RegExp(`id=["']${id}["']`));
+  }
+  for (const removedId of ['recording-photo', 'recording-photo-video', 'recording-photo-countdown', 'recording-photo-skip']) {
+    assert.doesNotMatch(html, new RegExp(`id=["']${removedId}["']`));
   }
   assert.match(main, /new RecordingController/);
   assert.match(main, /onUploadRequest:\s*\(blob\)\s*=>\s*uploadRecording\(blob\)/);
   assert.match(main, /getVideoSource:\s*\(\)\s*=>\s*game\.videoElement/);
   assert.match(main, /actionForThumbIntent/);
+  assert.match(main, /new GestureLatch\(\{ holdMs: 800, neutralMs: 500 \}\)/);
+  assert.match(main, /detail\.state\.phase === 'review'[\s\S]*recordingGestureLatch\.requireNeutral\(\)/);
+  assert.match(main, /recordingController\.setGestureFeedback/);
   assert.match(main, /guideController\.dialog\?\.open/);
   assert.match(recordingController, /结束并试听/);
   assert.match(styles, /\.recording-dialog/);
@@ -130,15 +190,40 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
   assert.match(html, /<audio id="recording-preview" preload="metadata" hidden><\/audio>/);
   assert.doesNotMatch(html, /id="recording-preview"[^>]*controls/);
   assert.match(styles, /\.recording-dialog\s*\{[^}]*max-height:\s*calc\(100dvh - 32px\)/s);
-  assert.match(styles, /\.recording-dialog\[data-phase="shared"\] \.recording-share\s*\{[^}]*grid-template-columns:\s*minmax\(280px,\s*\.8fr\) minmax\(0,\s*1\.2fr\)/s);
+  assert.match(styles, /\.recording-dialog\[data-phase="shared"\]\s*\{[^}]*width:\s*min\(1500px,/s);
+  assert.match(styles, /\.recording-dialog\[data-phase="shared"\] \.recording-share\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) 300px/s);
+  assert.match(styles, /\.recording-share__frame\s*\{[^}]*width:\s*100%[^}]*height:\s*auto/s);
+  assert.doesNotMatch(styles, /\.recording-dialog\[data-phase="shared"\] \.recording-share__qr\s*\{[^}]*width:/s);
   assert.match(styles, /\.recording-review-status\s*\{/);
+  assert.match(styles, /\.recording-gesture-status\s*\{/);
   assert.match(styles, /\.recording-review-wave\s*\{/);
   assert.match(styles, /\.recording-action\s*\{[^}]*min-height:\s*56px[^}]*font:\s*600 14px/s);
   assert.match(qr, /这是我的现场单曲/);
   assert.match(qr, /PLAYER/);
-  assert.match(html, /id="recording-qr"[^>]+width="1080"[^>]+height="1440"/);
+  assert.match(qr, /drawTechnicalTicket/);
+  assert.match(html, /id="recording-qr"[^>]+width="1200"[^>]+height="1080"[^>]+hidden/);
+  assert.match(html, /id="recording-photo-preview"[^>]+class="recording-share__frame"/);
   assert.doesNotMatch(styles, /\.recording-dialog\[data-phase="shared"\]\s*\{[^}]*overflow:\s*auto/s);
   assert.match(styles, /\.recording-share__copy\s*\{[^}]*color:\s*#102025/s);
+});
+
+test('advanced controls can disable drum-kit gesture switching without disabling manual selection', () => {
+  assert.match(html, /id=["']drum-kit-gestures-enabled["'][^>]*type=["']checkbox["'][^>]*checked/);
+  assert.match(html, /id=["']drum-kit-select["']/);
+  assert.match(main, /drumKitGestureToggle[\s\S]*game\.setDrumKitGesturesEnabled\(drumKitGestureToggle\.checked\)/);
+  assert.match(game, /this\.drumKitGesturesEnabled\s*=\s*true/);
+  assert.match(game, /setDrumKitGesturesEnabled[\s\S]*this\.rightKitGesture\.reset\(\)/);
+  assert.match(game, /interactionsEnabled\s*&&\s*_this1\.drumKitGesturesEnabled[\s\S]*rightKitGesture\.update/);
+});
+
+test('disabled recording gestures exit before the recording latch can recognize a gesture', () => {
+  const handframe = main.slice(
+    main.indexOf("renderDiv.addEventListener('handframe'"),
+    main.indexOf("const statusSync = container.get('statusSync')"),
+  );
+  assert.match(handframe, /guideController\.dialog\?\.open[\s\S]*recordingGestureLatch\.update[\s\S]*return/);
+  assert.match(handframe, /const gesturesEnabled[\s\S]*if \(!gesturesEnabled\)[\s\S]*recordingGestureLatch\.requireNeutral\(\)[\s\S]*return[\s\S]*recordingGestureLatch\.update/);
+  assert.match(main, /recordingGestureToggle[\s\S]*addEventListener\(['"]change['"][\s\S]*recordingGestureLatch\.requireNeutral\(\)/);
 });
 
 test('guide consumes thumbs gestures page by page and requires neutral rearming', () => {

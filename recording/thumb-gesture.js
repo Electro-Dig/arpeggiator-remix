@@ -82,6 +82,19 @@ export class GestureLatch {
     return intent;
   }
 
+  get isArmed() {
+    return this.armed;
+  }
+
+  get rearmProgress() {
+    if (this.armed) return 1;
+    if (!this.neutralSince) return 0;
+    return Math.max(0, Math.min(
+      1,
+      (this.lastNow - this.neutralSince) / this.neutralMs,
+    ));
+  }
+
   get progress() {
     if (this.candidate === 'neutral' || !this.armed) return 0;
     return Math.max(0, Math.min(1, (this.lastNow - this.since) / this.holdMs));

@@ -1,6 +1,11 @@
 import { Game } from './game.js';
 import { GuideController } from './GuideController.js';
 import { RecordingController } from './RecordingController.js';
+import {
+    capturePerformanceSnapshot,
+    createPerformanceMetadataSnapshot,
+    preloadPerformanceSnapshotRasterizer,
+} from './recording/performance-snapshot.js';
 import { uploadRecording, uploadRecordingPoster } from './share/recordings-client.js';
 import { audioBus } from './audio/AudioBus.js';
 import * as drumManager from './DrumManager.js';
@@ -65,6 +70,7 @@ class RealTimeStatusSync {
             synthName: status.synthName,
             tempo: status.tempo,
             rootNote: status.rootNote,
+            mixEffects: status.effectsLabel,
         });
         sync(musicManager.getStatus());
         return musicManager.onStatusChange(sync);
@@ -94,6 +100,7 @@ class RealTimeStatusSync {
             rhythmName: drumPreset.label,
             tempo: musicStatus.tempo,
             rootNote: musicStatus.rootNote,
+            mixEffects: musicStatus.effectsLabel,
         });
     }
 }
@@ -122,6 +129,7 @@ function initializeApp() {
     }
 
     errorHandler.safeExecute(() => {
+        preloadPerformanceSnapshotRasterizer().catch(() => undefined);
         // 注册服务
         registerServices();
 
@@ -132,10 +140,46 @@ function initializeApp() {
         const recordingController = new RecordingController({
             stream: audioBus.recordingStream,
             getVideoSource: () => game.videoElement,
+            getPhotoCaptureSource: () => capturePerformanceSnapshot({ root: renderDiv }),
+            getPhotoOverlays: () => game.renderer?.domElement ? [
+                {
+                    source: game.renderer.domElement,
+                    fit: 'contain',
+                    blendMode: 'screen',
+                    mirror: true,
+                },
+            ] : [],
+            getPerformanceMetadata: () => createPerformanceMetadataSnapshot({
+                musicStatus: game.musicManager.getStatus(),
+                rhythmStatus: drumManager.getCurrentGridCell(),
+            }),
             onUploadRequest: (blob) => uploadRecording(blob),
             onPosterUploadRequest: (token, blob) => uploadRecordingPoster(token, blob),
         });
-        const recordingGestureLatch = new GestureLatch({ holdMs: 800, neutralMs: 1000 });
+        const recordingGestureLatch = new GestureLatch({ holdMs: 800, neutralMs: 500 });
+        const recordingGestureToggle = document.getElementById('recording-gestures-enabled');
+        const drumKitGestureToggle = document.getElementById('drum-kit-gestures-enabled');
+
+        const syncDrumKitGestureSetting = () => {
+            if (!drumKitGestureToggle) return;
+            game.setDrumKitGesturesEnabled(drumKitGestureToggle.checked);
+        };
+        drumKitGestureToggle?.addEventListener('change', syncDrumKitGestureSetting);
+        syncDrumKitGestureSetting();
+
+        recordingGestureToggle?.addEventListener('change', () => {
+            if (recordingGestureToggle.checked) return;
+            recordingGestureLatch.requireNeutral();
+            game.setInteractionSuppressed(false);
+            recordingController.setGestureProgress(0);
+            recordingController.setGestureFeedback({
+                armed: false,
+                intent: 'neutral',
+                progress: 0,
+                enabled: false,
+            });
+        });
+
 
         // 注册核心服务
         container.register('game', () => game, { singleton: true });
@@ -152,8 +196,29 @@ function initializeApp() {
         window.errorHandler = errorHandler;
 
         const musicManager = game.musicManager;
+        const melodyTimbreSelect = document.getElementById('melody-timbre-select');
+        const melodyVolumeSlider = document.getElementById('melody-volume-slider');
+        const melodyVolumeValue = document.getElementById('melody-volume-value');
+        const syncMelodyVolume = (value) => {
+            const dB = Number(value);
+            if (!Number.isFinite(dB)) return;
+            if (melodyVolumeSlider && melodyVolumeSlider.value !== String(dB)) {
+                melodyVolumeSlider.value = String(dB);
+            }
+            if (melodyVolumeValue) melodyVolumeValue.textContent = `${dB} dB`;
+        };
+        syncMelodyVolume(musicManager.getStatus().melodyVolumeDb);
+        melodyVolumeSlider?.addEventListener('input', () => {
+            const dB = Number(melodyVolumeSlider.value);
+            musicManager.setMelodyVolume(dB);
+            syncMelodyVolume(dB);
+        });
+
         const sceneButtons = [...document.querySelectorAll('#scene-selector [data-scene]')];
-        const updateSceneControls = ({ sceneId }) => {
+        const updateSceneControls = ({ sceneId, timbreId }) => {
+            if (melodyTimbreSelect && timbreId && melodyTimbreSelect.value !== timbreId) {
+                melodyTimbreSelect.value = timbreId;
+            }
             for (const button of sceneButtons) {
                 if (button.dataset.scene === sceneId) button.setAttribute('aria-current', 'true');
                 else button.removeAttribute('aria-current');
@@ -161,6 +226,16 @@ function initializeApp() {
         };
         musicManager.onStatusChange(updateSceneControls);
         updateSceneControls(musicManager.getStatus());
+        melodyTimbreSelect?.addEventListener('change', async () => {
+            try {
+                await musicManager.start();
+                musicManager.setTimbre(melodyTimbreSelect.value);
+            } catch (error) {
+                errorHandler.logError('旋律音色切换失败', error);
+                updateSceneControls(musicManager.getStatus());
+            }
+        });
+
         for (const button of sceneButtons) {
             button.addEventListener('click', async () => {
                 const sceneId = button.dataset.scene;
@@ -214,6 +289,10 @@ function initializeApp() {
         };
         updateGuideAvailability(recordingController.state.phase);
         recordingController.addEventListener('statechange', ({ detail }) => {
+            if (detail.state.phase === 'review') {
+                recordingGestureLatch.requireNeutral();
+                recordingController.setGestureFeedback({ armed: false, intent: 'neutral', progress: 0 });
+            }
             updateGuideAvailability(detail.state.phase);
         });
 
@@ -230,10 +309,9 @@ function initializeApp() {
 
         renderDiv.addEventListener('handframe', ({ detail }) => {
             const intent = combineThumbPoses(detail.handsBySide);
-            const trigger = recordingGestureLatch.update(intent, detail.now);
-            recordingController.setGestureProgress(recordingGestureLatch.progress);
 
             if (guideController.dialog?.open) {
+                const trigger = recordingGestureLatch.update(intent, detail.now);
                 game.setInteractionSuppressed(true);
                 if (trigger === 'both-up') {
                     guideController.advanceFromGesture();
@@ -245,11 +323,32 @@ function initializeApp() {
                 return;
             }
 
-            const gesturesEnabled = document.getElementById('recording-gestures-enabled')?.checked;
-            const action = gesturesEnabled && trigger
+            const gesturesEnabled = recordingGestureToggle?.checked ?? true;
+            if (!gesturesEnabled) {
+                recordingGestureLatch.requireNeutral();
+                game.setInteractionSuppressed(false);
+                recordingController.setGestureProgress(0);
+                recordingController.setGestureFeedback({
+                    armed: false,
+                    intent: 'neutral',
+                    progress: 0,
+                    enabled: false,
+                });
+                return;
+            }
+
+            const trigger = recordingGestureLatch.update(intent, detail.now);
+            const action = trigger
                 ? actionForThumbIntent(recordingController.state.phase, trigger)
                 : null;
             game.setInteractionSuppressed(Boolean(action) || intent !== 'neutral');
+            recordingController.setGestureProgress(recordingGestureLatch.progress);
+            recordingController.setGestureFeedback({
+                armed: recordingGestureLatch.isArmed,
+                intent,
+                progress: recordingGestureLatch.progress,
+                enabled: true,
+            });
             if (action) recordingController.dispatch({ type: action });
         });
 

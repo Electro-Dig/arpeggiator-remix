@@ -12,6 +12,7 @@ export class StateManager extends EventTarget {
             drumKitName: 'ACOUSTIC',
             tempo: 120,
             rootNote: 'E3',
+            mixEffects: 'LP 100% · DLY 0% · GLT 0% · RVB 0%',
             isPlaying: false,
             handPosition: { left: null, right: null }
         };
@@ -112,6 +113,9 @@ export class StateManager extends EventTarget {
                     break;
                 case 'rootNote':
                     this.updateElement('current-root-note', changes[key].to);
+                    break;
+                case 'mixEffects':
+                    this.updateElement('current-mix-effects', changes[key].to);
                     break;
             }
         });

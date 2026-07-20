@@ -226,6 +226,12 @@ import { RhythmSpace } from './rhythm/RhythmSpace.js';
 import { RhythmZone } from './rhythm/RhythmZone.js';
 import { KitSwitchGesture } from './gesture/KitSwitchGesture.js';
 import { EdgeGesture, pinchVelocity } from './music/gesture-controls.js';
+import {
+    LowPassGestureController,
+    normalizedPalmDistance,
+    performanceEffectsFromHands
+} from './music/effect-controls.js';
+import { BroadcastGestureController } from './music/broadcast-gestures.js';
 export var Game = /*#__PURE__*/ function () {
     "use strict";
     function Game(renderDiv) {
@@ -238,6 +244,10 @@ export var Game = /*#__PURE__*/ function () {
         this.videoElement = null;
         this.handLandmarker = null;
         this.lastVideoTime = -1;
+        this.lastPerformanceEffectFrameAt = 0;
+        this.lowPassController = new LowPassGestureController({ timeConstantMs: 100 });
+        this.broadcastGestureController = new BroadcastGestureController();
+        this.lastBroadcastPhase = 'idle';
         this.hands = []; // Stores data about detected hands (landmarks, anchor position, line group)
         this.handsBySide = { Left: null, Right: null };
         this.interactionSuppressed = false;
@@ -265,6 +275,7 @@ export var Game = /*#__PURE__*/ function () {
         this.leftFistEdge = new EdgeGesture(700);
         this.leftFourFingerEdge = new EdgeGesture(700);
         this.rightKitGesture = new KitSwitchGesture();
+        this.drumKitGesturesEnabled = true;
         this.waveformVisualizer = null; // To be initialized
         // this.drumManager = new DrumManager(); // DrumManager is now a static module, no instance needed
         this.lastLandmarkPositions = [
@@ -337,24 +348,6 @@ export var Game = /*#__PURE__*/ function () {
         this.notificationTimeout = null;
         this.lastNotificationTime = 0;
         this.pendingNotification = null;
-
-        // Delay 控制状态（低开销）
-        this.delayCtrl = {
-            active: false,
-            auto: true,
-            baseline: 0,
-            buffer: [], // 最近 50 次采样（约 5 秒，100ms/次）
-            bufferSize: 50,
-            sampleIntervalMs: 100,
-            lastSampleTs: 0,
-            stdThreshold: 0.01,
-            maxRange: 0.35,
-            hysteresis: 0.03,
-            level: 0, // 0..4
-            lastUpdateTs: 0,
-            updateCooldownMs: 200,
-            baseWet: 0.18 // UI 滑杆（最大湿度，对应 Level4）
-        };
         // 简化模式：减少信息显示以提升性能
         this.simpleMode = false; // false = 详细模式，true = 简化模式
         // Initialize asynchronously
@@ -414,6 +407,7 @@ export var Game = /*#__PURE__*/ function () {
                 this.renderDiv.style.overflow = 'hidden';
                 this.renderDiv.style.background = '#111'; // Fallback background
                 this.videoElement = document.createElement('video');
+                this.videoElement.dataset.cameraFeed = 'true';
                 this.videoElement.style.position = 'absolute';
                 this.videoElement.style.top = '0';
                 this.videoElement.style.left = '0';
@@ -471,10 +465,12 @@ export var Game = /*#__PURE__*/ function () {
                 this.camera.position.z = 100; // Position along Z doesn't change scale in Ortho
                 this.renderer = new THREE.WebGLRenderer({
                     alpha: true,
-                    antialias: true
+                    antialias: true,
+                    preserveDrawingBuffer: true
                 });
                 this.renderer.setSize(width, height);
                 this.renderer.setPixelRatio(window.devicePixelRatio);
+                this.renderer.domElement.dataset.photoCaptureIgnore = 'true';
                 this.renderer.domElement.style.position = 'absolute';
                 this.renderer.domElement.style.top = '0';
                 this.renderer.domElement.style.left = '0';
@@ -1008,6 +1004,14 @@ export var Game = /*#__PURE__*/ function () {
             }
         },
         {
+            key: "_resetBroadcastEffects",
+            value: function _resetBroadcastEffects() {
+                this.broadcastGestureController.reset();
+                this.lastBroadcastPhase = 'idle';
+                this.musicManager.resetBroadcastEffects();
+            }
+        },
+        {
             key: "setInteractionSuppressed",
             value: function setInteractionSuppressed(value) {
                 var nextValue = Boolean(value);
@@ -1016,6 +1020,20 @@ export var Game = /*#__PURE__*/ function () {
                 if (nextValue) {
                     this.musicManager.stopArpeggio('Left');
                     drumManager.updateActiveDrums({});
+                    this.lowPassController.reset();
+                    this._resetBroadcastEffects();
+                    this.musicManager.setPerformanceEffects(performanceEffectsFromHands());
+                }
+            }
+        },
+        {
+            key: "setDrumKitGesturesEnabled",
+            value: function setDrumKitGesturesEnabled(value) {
+                var nextValue = Boolean(value);
+                if (nextValue === this.drumKitGesturesEnabled) return;
+                this.drumKitGesturesEnabled = nextValue;
+                if (!nextValue) {
+                    this.rightKitGesture.reset();
                 }
             }
         },
@@ -1027,6 +1045,16 @@ export var Game = /*#__PURE__*/ function () {
                 // 添加hands数组的安全检查
                 if (!this.handLandmarker || !this.videoElement.srcObject || this.videoElement.readyState < 2 ||
                     this.videoElement.videoWidth === 0 || !this.handsInitialized || !this.hands || this.hands.length < 2) {
+                    if (this.lastPerformanceEffectFrameAt > 0) {
+                        this.lastPerformanceEffectFrameAt = 0;
+                        this.handsBySide = {
+                            Left: null,
+                            Right: null
+                        };
+                        this.lowPassController.reset();
+                        this._resetBroadcastEffects();
+                        this.musicManager.setPerformanceEffects(performanceEffectsFromHands());
+                    }
                     if (!this.handsInitialized) {
                         console.debug('⏳ Hands尚未初始化，跳过更新');
                     }
@@ -1085,7 +1113,7 @@ export var Game = /*#__PURE__*/ function () {
                                         _this1.musicManager.setBrightness(1 - normX_visible);
                                         _this1.musicManager.updateArpeggioVolume('Left', velocity);
                                         if (_this1.leftFistEdge.update(isFistNow, now)) {
-                                            var toneName = _this1.musicManager.setToneVariant();
+                                            var toneName = _this1.musicManager.cycleTimbre();
                                             _this1._showPresetChangeNotification(`音色: ${toneName}`, 'music');
                                         }
                                         if (_this1.leftFourFingerEdge.update(fourFingersVerticalNow, now)) {
@@ -1125,7 +1153,7 @@ export var Game = /*#__PURE__*/ function () {
                                         return fingerStates[finger];
                                     });
                                     var kitGesture = { armed: false, triggered: false, suppressDrums: false };
-                                    if (interactionsEnabled) {
+                                    if (interactionsEnabled && _this1.drumKitGesturesEnabled) {
                                         kitGesture = _this1.rightKitGesture.update({
                                             isFist: isFist,
                                             isOpen: isOpen,
@@ -1181,7 +1209,17 @@ export var Game = /*#__PURE__*/ function () {
                             }
                         });
                         var videoParams = this._getVisibleVideoParameters();
-                        if (!videoParams) return;
+                        if (!videoParams) {
+                            this.lastPerformanceEffectFrameAt = 0;
+                            this.handsBySide = {
+                                Left: null,
+                                Right: null
+                            };
+                            this.lowPassController.reset();
+                            this._resetBroadcastEffects();
+                            this.musicManager.setPerformanceEffects(performanceEffectsFromHands());
+                            return;
+                        }
                         var canvasWidth = this.renderDiv.clientWidth;
                         var canvasHeight = this.renderDiv.clientHeight;
                         // 注意：现在使用MusicManager中的预设系统，这里的硬编码音阶已被移除
@@ -1194,6 +1232,35 @@ export var Game = /*#__PURE__*/ function () {
                                 side: 'Right', landmarks: this.hands[1].landmarks
                             } : null
                         };
+                        var effectOptions = {
+                            aspectRatio: videoParams.videoNaturalWidth / videoParams.videoNaturalHeight
+                        };
+                        var effects = performanceEffectsFromHands(this.handsBySide, effectOptions);
+                        var palmDistance = normalizedPalmDistance(this.handsBySide, effectOptions);
+                        effects.lowPass = this.lowPassController.updateDistance(palmDistance, {
+                            now: performance.now()
+                        });
+                        effects.percentages.lowPass = Math.round(effects.lowPass * 100);
+                        if (this.interactionSuppressed) {
+                            this.lowPassController.reset();
+                            this._resetBroadcastEffects();
+                            effects = performanceEffectsFromHands();
+                        } else {
+                            var broadcastGesture = this.broadcastGestureController.update(this.handsBySide, performance.now());
+                            effects.broadcastBuild = broadcastGesture.build;
+                            effects.percentages.broadcastBuild = Math.round(broadcastGesture.build * 100);
+                            if (broadcastGesture.phase !== this.lastBroadcastPhase && broadcastGesture.phase === 'armed') {
+                                this._showInfoTransient('BUILD READY ↑', 900);
+                            }
+                            if (broadcastGesture.impact) {
+                                this.musicManager.triggerBroadcastImpact(1);
+                                this._showInfoTransient('DROP IMPACT ↓', 1100);
+                            }
+                            this.lastBroadcastPhase = broadcastGesture.phase;
+                        }
+                        this.musicManager.setPerformanceEffects(effects);
+                        this.lastPerformanceEffectFrameAt = performance.now();
+
                         this.renderDiv.dispatchEvent(new CustomEvent('handframe', {
                             detail: {
                                 handsBySide: this.handsBySide,
@@ -1215,7 +1282,29 @@ export var Game = /*#__PURE__*/ function () {
                                 }
                             }
                         });
+                        this.lastPerformanceEffectFrameAt = 0;
+                        this.handsBySide = {
+                            Left: null,
+                            Right: null
+                        };
+                        this.lowPassController.reset();
+                        this._resetBroadcastEffects();
+                        this.musicManager.setPerformanceEffects(performanceEffectsFromHands());
                     }
+                }
+                if (this.lastPerformanceEffectFrameAt > 0 &&
+                    performance.now() - this.lastPerformanceEffectFrameAt > 350) {
+                    this.lastPerformanceEffectFrameAt = 0;
+                    this.handsBySide = {
+                        Left: null,
+                        Right: null
+                    };
+                    this.musicManager.stopArpeggio('Left');
+                    this.rightKitGesture.reset();
+                    drumManager.updateActiveDrums({});
+                    this.lowPassController.reset();
+                    this._resetBroadcastEffects();
+                    this.musicManager.setPerformanceEffects(performanceEffectsFromHands());
                 }
             }
         },
@@ -2144,7 +2233,7 @@ export var Game = /*#__PURE__*/ function () {
                         // Volume and Pitch labels
                         var note = controlData.note, velocity = controlData.velocity, isFist = controlData.isFist;
                         if (isFist) {
-                            var fistLabel = this._createTextSprite("SYNTH ".concat(this.musicManager.currentSynthIndex + 1), {
+                            var fistLabel = this._createTextSprite("SYNTH ".concat(this.musicManager.currentTimbreIndex + 1), {
                                 fontsize: 22,
                                 backgroundColor: this.labelColors.evaPurple,
                                 textColor: this.labelColors.evaGreen
@@ -2200,9 +2289,6 @@ export var Game = /*#__PURE__*/ function () {
                     if (this.waveformVisualizer) {
                         this.waveformVisualizer.update();
                     }
-                    // 低频率采样与更新（不会影响帧率）
-                    this._sampleDelayDistanceIfDue();
-                    this._updateDelayLevelIfDue();
                 }
                 this.renderer.render(this.scene, this.camera);
             }
@@ -2292,116 +2378,6 @@ export var Game = /*#__PURE__*/ function () {
 
                 // 窗口大小变化处理
                 window.addEventListener('resize', this._onResize.bind(this));
-
-                // 初始化 Delay 控制 UI
-                this._initDelayControlUI();
-            }
-        },
-        {
-            key: "_initDelayControlUI",
-            value: function _initDelayControlUI() {
-                var panel = document.getElementById('delay-control-panel');
-                if (!panel) return;
-                var autoToggle = document.getElementById('delay-auto-toggle');
-                var wetSlider = document.getElementById('delay-wet-slider');
-                var collapseBtn = document.getElementById('delay-collapse');
-                var levelLabel = document.getElementById('delay-level-label');
-                if (autoToggle) {
-                    autoToggle.checked = this.delayCtrl.auto;
-                    autoToggle.addEventListener('change', () => {
-                        this.delayCtrl.auto = !!autoToggle.checked;
-                    });
-                }
-                if (wetSlider) {
-                    var v = parseFloat(wetSlider.value);
-                    if (!isNaN(v)) this.delayCtrl.baseWet = v;
-                    wetSlider.addEventListener('input', () => {
-                        var val = Math.max(0, Math.min(1, parseFloat(wetSlider.value)));
-                        // 限制最大 0.7，与 HTML 属性一致
-                        val = Math.min(val, 0.7);
-                        this.delayCtrl.baseWet = val;
-                        // 立即应用当前湿度（不再随档位线性变化）
-                        var wet = this.delayCtrl.baseWet;
-                        if (window.game && this.musicManager && this.musicManager.setDelayWet) {
-                            this.musicManager.setDelayWet(wet);
-                        }
-                    });
-                }
-                if (collapseBtn) {
-                    collapseBtn.addEventListener('click', () => {
-                        var collapsed = panel.getAttribute('data-collapsed') === '1';
-                        if (!collapsed) {
-                            // 折叠除 Level/折叠按钮 以外的控件
-                            Array.from(panel.children).forEach((el) => {
-                                if (el.id !== 'delay-level-label' && el.id !== 'delay-collapse') {
-                                    el.style.display = 'none';
-                                }
-                            });
-                            panel.setAttribute('data-collapsed', '1');
-                            collapseBtn.textContent = '▸';
-                        } else {
-                            Array.from(panel.children).forEach((el) => {
-                                el.style.display = '';
-                            });
-                            panel.setAttribute('data-collapsed', '0');
-                            collapseBtn.textContent = '▾';
-                        }
-                    });
-                }
-                // 更新一次显示
-                if (levelLabel) levelLabel.textContent = 'Level: ' + this.delayCtrl.level;
-            }
-        },
-        {
-            key: "_sampleDelayDistanceIfDue",
-            value: function _sampleDelayDistanceIfDue() {
-                if (this.interactionSuppressed) return;
-                var now = performance.now();
-                if (now - (this.delayCtrl.lastSampleTs || 0) < this.delayCtrl.sampleIntervalMs) return;
-                this.delayCtrl.lastSampleTs = now;
-                // 两只手都存在才采样（不区分左右，只取两只手）
-                if (!this.hands || this.hands.length < 2) return;
-                var lmA = (this.hands[0] && this.hands[0].landmarks) ? this.hands[0].landmarks : null;
-                var lmB = (this.hands[1] && this.hands[1].landmarks) ? this.hands[1].landmarks : null;
-                if (!lmA || !lmB || lmA.length < 21 || lmB.length < 21) return;
-                var xA = (lmA && lmA[4]) ? lmA[4].x : undefined; // 拇指指尖
-                var xB = (lmB && lmB[4]) ? lmB[4].x : undefined;
-                if (typeof xA !== 'number' || typeof xB !== 'number') return;
-                var d = Math.abs(xA - xB);
-                this._updateDelayDiagnostics(d);
-                // 维护环形缓冲（最大 50）
-                var buf = this.delayCtrl.buffer;
-                buf.push(d);
-                if (buf.length > this.delayCtrl.bufferSize) buf.shift();
-                // 未进入模式，检查是否满足 5s 稳定
-                if (!this.delayCtrl.active && buf.length === this.delayCtrl.bufferSize) {
-                    var std = this._computeStd(buf);
-                    if (std < this.delayCtrl.stdThreshold) {
-                        // 标定基准为中位数，初始关闭
-                        this.delayCtrl.baseline = this._computeMedian(buf);
-                        this.delayCtrl.active = true;
-                        this.delayCtrl.level = 0;
-                        if (this.musicManager && this.musicManager.setDelayTimeBeats) this.musicManager.setDelayTimeBeats(0);
-                        // 不强制改动湿度，保持用户设置
-                        // 提示：Delay control ready
-                        this._showInfoTransient('🎚️ Delay control ready (hold both hands to adjust)', 2000);
-                        var label = document.getElementById('delay-level-label');
-                        if (label) label.textContent = 'Level: 0';
-                    }
-                }
-            }
-        },
-        {
-            key: "_updateDelayDiagnostics",
-            value: function _updateDelayDiagnostics(distance) {
-                var deck = document.getElementById('control-deck');
-                if (!deck || deck.hidden) return;
-                var level = this.delayCtrl && typeof this.delayCtrl.level === 'number' ? this.delayCtrl.level : 0;
-                var beats = [0, 0.25, 0.5, 0.75, 1][level] || 0;
-                var distanceValue = document.getElementById('delay-distance-value');
-                var levelValue = document.getElementById('delay-level-value');
-                if (distanceValue) distanceValue.textContent = Number(distance).toFixed(3);
-                if (levelValue) levelValue.textContent = `L${level} / ${beats.toFixed(2)}B`;
             }
         },
         {
@@ -2417,61 +2393,6 @@ export var Game = /*#__PURE__*/ function () {
                     statusElement.textContent = prev || '';
                     statusElement.style.color = prevColor || '#FFFFFF';
                 }, Math.max(1000, durationMs || 2000));
-            }
-        },
-        {
-            key: "_updateDelayLevelIfDue",
-            value: function _updateDelayLevelIfDue() {
-                if (this.interactionSuppressed) return;
-                if (!this.delayCtrl.active || !this.delayCtrl.auto) return;
-                var now = performance.now();
-                if (now - (this.delayCtrl.lastUpdateTs || 0) < this.delayCtrl.updateCooldownMs) return;
-                // 取最近一次样本
-                var buf = this.delayCtrl.buffer;
-                if (!buf || buf.length === 0) return;
-                var d = buf[buf.length - 1];
-                var delta = Math.max(0, Math.min(this.delayCtrl.maxRange, d - this.delayCtrl.baseline));
-                var norm = this.delayCtrl.maxRange > 0 ? (delta / this.delayCtrl.maxRange) : 0;
-                var thresholds = [0.25, 0.5, 0.75, 1.0];
-                var target = 0;
-                for (var i = 0; i < thresholds.length; i++) {
-                    if (norm >= thresholds[i] - this.delayCtrl.hysteresis) target = i + 1;
-                }
-                if (target === this.delayCtrl.level) return;
-                // 应用
-                this.delayCtrl.level = target;
-                this.delayCtrl.lastUpdateTs = now;
-                var beatsMap = [0, 0.25, 0.5, 0.75, 1.0];
-                var beats = beatsMap[target];
-                if (this.musicManager && this.musicManager.setDelayTimeBeats) this.musicManager.setDelayTimeBeats(beats);
-                // 湿度随档位线性增加（不高）：Level/N * baseWet
-                // 湿度不再自动随档位变化，由用户滑杆控制
-                var label = document.getElementById('delay-level-label');
-                if (label) label.textContent = 'Level: ' + target;
-            }
-        },
-        {
-            key: "_computeMedian",
-            value: function _computeMedian(arr) {
-                if (!arr || arr.length === 0) return 0;
-                var a = arr.slice().sort(function (x, y) { return x - y; });
-                var mid = Math.floor(a.length / 2);
-                return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
-            }
-        },
-        {
-            key: "_computeStd",
-            value: function _computeStd(arr) {
-                if (!arr || arr.length === 0) return 0;
-                var mean = 0;
-                for (var i = 0; i < arr.length; i++) mean += arr[i];
-                mean /= arr.length;
-                var sum = 0;
-                for (var j = 0; j < arr.length; j++) {
-                    var d = arr[j] - mean;
-                    sum += d * d;
-                }
-                return Math.sqrt(sum / arr.length);
             }
         },
         {

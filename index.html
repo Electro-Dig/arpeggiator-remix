@@ -39,13 +39,19 @@
         <time id="recording-timer">00:00</time>
       </section>
 
-      <dl class="performance-status">
+      <section id="performance-hud" class="performance-hud" aria-label="演奏参数与混音效果">
+        <dl class="performance-status">
         <div class="hud-metric" data-index="01"><dt>SCENE</dt><dd id="current-music-preset">GROOVE PULSE</dd></div>
         <div class="hud-metric" data-index="02"><dt>SYNTH</dt><dd id="current-synth">DX7 E.PIANO</dd></div>
         <div class="hud-metric" data-index="03"><dt>RHYTHM</dt><dd id="current-drum-preset">STEADY / FULL</dd></div>
         <div class="hud-metric" data-index="04"><dt>BPM</dt><dd id="current-tempo">115</dd></div>
         <div class="hud-metric" data-index="05"><dt>ROOT</dt><dd id="current-root-note">E3</dd></div>
-      </dl>
+        </dl>
+        <div id="effects-strip" class="effects-strip">
+          <span>MIX FX</span>
+          <output id="current-mix-effects" aria-live="polite" aria-atomic="true">LP 100% &middot; DLY 0% &middot; GLT 0% &middot; RVB 0%</output>
+        </div>
+      </section>
 
       <nav class="operator-actions" aria-label="现场操作">
         <button id="recording-primary" class="operator-action operator-action--record" type="button" data-phase="idle">
@@ -69,15 +75,54 @@
         <label><input id="recording-gestures-enabled" type="checkbox" checked> 录音手势</label>
         <p>双手 👍 保持 0.8 秒确认；双手 👎 取消录制或放弃试听。按钮始终可用。</p>
       </section>
-      <section id="delay-control-panel" class="control-section">
-        <label><input id="delay-auto-toggle" type="checkbox" checked> AUTO DELAY</label>
-        <label>DELAY WET
-          <input id="delay-wet-slider" type="range" min="0" max="0.7" step="0.01" value="0.18">
+      <section id="melody-timbre-panel" class="control-section">
+        <label for="melody-timbre-select">MELODY TIMBRE</label>
+        <select id="melody-timbre-select" aria-label="旋律音色">
+          <option value="dx7-e-piano">DX7 E.PIANO</option>
+          <option value="dx7-brass">DX7 BRASS</option>
+          <option value="dx7-marimba">DX7 MARIMBA</option>
+          <option value="neon-pluck">NEON PLUCK</option>
+          <option value="neon-lead">NEON LEAD</option>
+          <option value="arcade-pulse">ARCADE PULSE</option>
+          <option value="arcade-crystal">ARCADE CRYSTAL</option>
+          <option value="afterglow-pad">AFTERGLOW PAD</option>
+          <option value="coastal-pluck">COASTAL PLUCK</option>
+          <option value="blue-hour-keys">BLUE HOUR KEYS</option>
+          <option value="tape-choir">TAPE CHOIR</option>
+        </select>
+      </section>
+
+      <section id="melody-volume-panel" class="control-section">
+        <label class="control-range" for="melody-volume-slider">
+          <span>MELODY VOLUME</span>
+          <span class="control-range__field">
+            <input id="melody-volume-slider" type="range" min="-36" max="0" step="1" value="-14">
+            <output id="melody-volume-value" for="melody-volume-slider" aria-live="polite">-14 dB</output>
+          </span>
         </label>
-        <span id="delay-level-label">LEVEL 0</span>
-        <dl id="delay-diagnostics" class="delay-diagnostics">
-          <div><dt>DISTANCE</dt><dd id="delay-distance-value">--</dd></div>
-          <div><dt>DELAY</dt><dd id="delay-level-value">L0 / 0.00B</dd></div>
+      </section>
+
+      <section id="gesture-fx-panel" class="control-section gesture-fx-card" aria-labelledby="gesture-fx-title">
+        <header class="gesture-fx-card__header">
+          <h2 id="gesture-fx-title">GESTURE FX</h2>
+          <p id="gesture-fx-status" class="gesture-fx-status"><span aria-hidden="true"></span>LIVE / CONTINUOUS</p>
+        </header>
+        <dl class="gesture-fx-map" aria-label="Continuous gesture effect mappings">
+          <div data-control="two-hand-distance" data-effect="filter">
+            <dt>&#20004;&#25163;&#36317;&#31163;</dt><dd>FILTER</dd>
+          </div>
+          <div data-control="thumb-middle-pinch" data-effect="delay">
+            <dt>&#25287;&#25351; + &#20013;&#25351;</dt><dd>DELAY</dd>
+          </div>
+          <div data-control="thumb-ring-pinch" data-effect="glitch">
+            <dt>&#25287;&#25351; + &#26080;&#21517;&#25351;</dt><dd>GLITCH</dd>
+          </div>
+          <div data-control="two-hand-rise" data-effect="reverb">
+            <dt>&#21452;&#25163;&#21516;&#27493;&#19978;&#20030;</dt><dd>REVERB BUILD</dd>
+          </div>
+          <div data-control="two-hand-drop" data-effect="impact">
+            <dt>&#19978;&#20030;&#21518;&#24555;&#36895;&#19979;&#21387;</dt><dd>DROP IMPACT</dd>
+          </div>
         </dl>
       </section>
       <section id="drum-volume-panel" class="control-section">
@@ -87,6 +132,9 @@
             <option value="electronic">ELECTRONIC</option>
             <option value="synthwave">SYNTHWAVE</option>
           </select>
+        </label>
+        <label>
+          <input id="drum-kit-gestures-enabled" type="checkbox" checked> <span>&#40723;&#32452;&#25163;&#21183;&#20999;&#25442;</span>
         </label>
         <button id="drum-volume-toggle" type="button" aria-expanded="true">DRUM MIX</button>
         <div id="drum-volume-sliders">
@@ -101,6 +149,8 @@
 
     <nav class="social-links" aria-label="创作者链接">
       <a href="https://github.com/Electro-Dig" target="_blank" rel="noopener noreferrer">GITHUB</a>
+      <a href="https://space.bilibili.com/52370877?spm_id_from=333.1007.0.0"
+        target="_blank" rel="noopener noreferrer" aria-label="Bilibili creator page">BILIBILI</a>
       <a href="https://www.xiaohongshu.com/user/profile/6070457c000000000101efac"
         target="_blank" rel="noopener noreferrer">小红书</a>
     </nav>
@@ -181,34 +231,32 @@
               </div>
               <div>
                 <strong>录音已保存</strong>
-                <span>请选择生成二维码、重录或放弃</span>
+                <span>试听后可直接生成海报，也可以重新录制</span>
+                <p id="recording-gesture-status" class="recording-gesture-status" data-state="rearming" aria-live="polite">先放下双手，0.5 秒后再点赞确认</p>
               </div>
-            </section>
-            <section id="recording-photo" class="recording-photo" hidden aria-label="现场封面拍照">
-              <div class="recording-photo__viewport">
-                <video id="recording-photo-video" autoplay muted playsinline hidden></video>
-                <canvas id="recording-photo-preview" width="900" height="1125" hidden></canvas>
-                <span class="recording-photo__frame" aria-hidden="true"></span>
-                <strong id="recording-photo-countdown" class="recording-photo__countdown" hidden>3</strong>
-              </div>
-              <p class="recording-photo__privacy">原始照片仅在当前浏览器内处理，不会上传。</p>
             </section>
             <audio id="recording-preview" preload="metadata" hidden></audio>
             <section id="recording-share" class="recording-share" hidden aria-label="录音分享">
-              <canvas id="recording-qr" class="recording-share__qr" width="1080" height="1440"></canvas>
+              <div class="recording-share__visual">
+                <canvas id="recording-photo-preview" class="recording-share__frame" width="1200" height="675" hidden aria-label="录音开始时的完整现场画面"></canvas>
+                <div id="recording-share-frame-fallback" class="recording-share__frame-fallback" hidden>未捕获到现场首帧，本次分享仍可扫码试听。</div>
+              </div>
               <div class="recording-share__details">
+                <canvas id="recording-share-qr" class="recording-share__code" width="216" height="216" aria-label="录音分享二维码"></canvas>
                 <p id="recording-checkin" class="recording-share__checkin"></p>
+                <p class="recording-share__eyebrow">LIVE TAKE READY</p>
+                <p class="recording-share__note">左侧直接显示录音开始时的完整现场画面；分享海报已在后台独立生成。</p>
                 <a id="recording-share-link" class="recording-share__link" target="_blank" rel="noreferrer"></a>
                 <p id="recording-share-expiry" class="recording-share__expiry"></p>
                 <button id="recording-copy-link" class="recording-share__copy" type="button">复制链接</button>
               </div>
+              <canvas id="recording-qr" width="1200" height="1080" hidden aria-hidden="true"></canvas>
             </section>
           </div>
         </section>
         <footer class="recording-actions">
-          <button id="recording-confirm" class="recording-action recording-action--primary" type="button" hidden>确认并拍照</button>
+          <button id="recording-confirm" class="recording-action recording-action--primary" type="button" hidden>确认并生成海报</button>
           <button id="recording-rerecord" class="recording-action" type="button" hidden>重新录制</button>
-          <button id="recording-photo-skip" class="recording-action recording-action--quiet" type="button" hidden>无照片继续</button>
           <button id="recording-download" class="recording-action" type="button" hidden>下载到这台电脑</button>
           <button id="recording-cancel" class="recording-action recording-action--danger" type="button"><span aria-hidden="true">👎👎</span><span id="recording-cancel-label">取消</span></button>
         </footer>
