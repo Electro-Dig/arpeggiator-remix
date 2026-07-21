@@ -67,8 +67,6 @@
         <h3>🔍 调试信息</h3>
         <div>
             <button onclick="checkTone()">检查 Tone.js</button>
-            <button onclick="checkArpeggio()">检查琶音编辑器</button>
-            <button onclick="checkEvents()">检查事件</button>
             <button onclick="clearLog()">清空日志</button>
         </div>
         <div id="debugLog"></div>
@@ -106,61 +104,6 @@
                 addDebugLog(`🎵 音频上下文状态: ${Tone.context.state}`, 'success');
             } else {
                 addDebugLog('❌ Tone.js 未加载', 'error');
-            }
-        }
-        
-        function checkArpeggio() {
-            addDebugLog('=== 检查琶音编辑器 ===');
-            
-            if (window.arpeggioEditor) {
-                addDebugLog('✅ 琶音编辑器已加载', 'success');
-                
-                // 检查关键方法
-                const methods = ['playDragNote', 'updateDrag', 'startDrag', 'noteToMidi', 'midiToNote'];
-                methods.forEach(method => {
-                    if (typeof window.arpeggioEditor[method] === 'function') {
-                        addDebugLog(`✅ 方法 ${method} 存在`, 'success');
-                    } else {
-                        addDebugLog(`❌ 方法 ${method} 不存在`, 'error');
-                    }
-                });
-                
-                // 检查属性
-                addDebugLog(`🎵 根音符: ${window.arpeggioEditor.rootNote}${window.arpeggioEditor.octave}`, 'info');
-                addDebugLog(`🎵 BPM: ${window.arpeggioEditor.bpm}`, 'info');
-                
-            } else {
-                addDebugLog('❌ 琶音编辑器未加载', 'error');
-            }
-        }
-        
-        function checkEvents() {
-            addDebugLog('=== 检查事件监听器 ===');
-            
-            // 检查琶音编辑器按钮
-            const arpeggioBtn = document.querySelector('[onclick*="arpeggioEditor"]');
-            if (arpeggioBtn) {
-                addDebugLog('✅ 琶音编辑器按钮找到', 'success');
-            } else {
-                addDebugLog('❌ 琶音编辑器按钮未找到', 'error');
-            }
-            
-            // 检查模态框
-            const modal = document.getElementById('arpeggio-editor-modal');
-            if (modal) {
-                addDebugLog('✅ 琶音编辑器模态框找到', 'success');
-            } else {
-                addDebugLog('❌ 琶音编辑器模态框未找到', 'error');
-            }
-            
-            // 检查序列点容器
-            const container = document.getElementById('sequencePointsContainer');
-            if (container) {
-                addDebugLog('✅ 序列点容器找到', 'success');
-                const points = container.querySelectorAll('.sequence-point');
-                addDebugLog(`🎯 序列点数量: ${points.length}`, 'info');
-            } else {
-                addDebugLog('❌ 序列点容器未找到', 'error');
             }
         }
         
@@ -206,18 +149,6 @@
             }, 100);
         });
         
-        // 模拟主页面的初始化
-        setTimeout(() => {
-            addDebugLog('🔄 尝试访问主页面对象...');
-            
-            if (window.parent && window.parent !== window) {
-                // 在iframe中
-                if (window.parent.arpeggioEditor) {
-                    window.arpeggioEditor = window.parent.arpeggioEditor;
-                    addDebugLog('✅ 从父窗口获取琶音编辑器', 'success');
-                }
-            }
-        }, 1000);
     </script>
 </body>
 </html>
