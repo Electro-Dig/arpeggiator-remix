@@ -29,6 +29,10 @@ export default async (request, context) => {
     );
   }
 
+  if (getEnv('PUBLIC_ACCESS') === 'true') {
+    return withSecurityHeaders(await context.next());
+  }
+
   if (
     url.pathname === '/r'
     || url.pathname.startsWith('/r/')

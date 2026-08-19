@@ -68,6 +68,8 @@ test('public page stays lightweight and includes playback, download and noindex'
   assert.match(html, /id="recording-expiry"/);
   assert.match(html, /id="share-checkin"/);
   assert.match(html, /name="robots" content="noindex,nofollow,noarchive"/);
+  assert.match(html, /<a href="\/"[^>]*>WAIC 双手乐队<\/a>/);
+  assert.doesNotMatch(html, /arpeggiator-remix-2\.netlify\.app/);
   assert.doesNotMatch(html, /MediaPipe|Tone\.js|mediapipe|main\.js|camera/i);
   assert.match(css, /\[hidden\]\s*\{\s*display:\s*none\s*!important/);
   const script = await readFile(new URL('../r/share-page.js', import.meta.url), 'utf8');

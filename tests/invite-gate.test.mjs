@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+let publicAccess = '';
+
 globalThis.Netlify = {
   env: {
     get(name) {
+      if (name === 'PUBLIC_ACCESS') return publicAccess;
       if (name === 'INVITE_CODE') return 'ARP-TEST';
       if (name === 'INVITE_SECRET') return 'test-secret';
       return '';
@@ -12,6 +15,27 @@ globalThis.Netlify = {
 };
 
 const { default: inviteGate } = await import('../netlify/edge-functions/invite-gate.js');
+
+test('public access bypasses the invite boundary only for the exact true value', async () => {
+  const next = () => new Response('app');
+  publicAccess = 'true';
+  try {
+    const response = await inviteGate(new Request('https://example.test/'), { next });
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), 'app');
+  } finally {
+    publicAccess = '';
+  }
+
+  publicAccess = 'TRUE';
+  try {
+    const response = await inviteGate(new Request('https://example.test/'), { next });
+    assert.equal(response.status, 303);
+    assert.match(response.headers.get('location'), /\/__invite/);
+  } finally {
+    publicAccess = '';
+  }
+});
 
 test('valid invite submission redirects and sets the auth cookie', async () => {
   const request = new Request('https://example.test/__invite', {
