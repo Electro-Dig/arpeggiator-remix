@@ -4,7 +4,7 @@ const MAX_POSTER_BYTES = 2 * 1024 * 1024;
 
 function createUploadError(status, cause) {
   let message = '云端暂时不可用，请重试或下载到本机';
-  if (status === 413) message = '录音文件超过 5 MB，请缩短录制时间';
+  if (status === 413) message = '录音文件过大，请缩短录制时间';
   if (status === 415) message = '当前录音格式无法上传，请下载到本机';
 
   return Object.assign(new Error(message), { status, cause });

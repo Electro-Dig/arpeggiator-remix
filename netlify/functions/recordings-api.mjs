@@ -1,6 +1,8 @@
 import { signRecordingRequest } from '../recording-signature.js';
+import { handleBlobRecordingRequest } from '../blob-recording-backend.mjs';
 
-const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
+const MAX_BLOB_AUDIO_BYTES = 4 * 1024 * 1024;
+const MAX_LEGACY_AUDIO_BYTES = 5 * 1024 * 1024;
 const MAX_POSTER_BYTES = 2 * 1024 * 1024;
 const AUDIO_TYPES = new Set(['audio/mp4', 'audio/webm', 'audio/ogg']);
 const POSTER_TYPES = new Set(['image/webp', 'image/jpeg']);
@@ -10,7 +12,7 @@ function tokenAfter(pathname, prefix) {
   return pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '';
 }
 
-export async function handleRecordingProxy(request, env, fetchImpl = fetch) {
+export async function handleRecordingProxy(request, env, fetchImpl = fetch, dependencies = {}) {
   const url = new URL(request.url);
   const isAudioUpload = url.pathname === '/recordings-api/upload' && request.method === 'POST';
   const posterUploadToken = request.method === 'POST'
@@ -35,7 +37,11 @@ export async function handleRecordingProxy(request, env, fetchImpl = fetch) {
   const mime = (request.headers.get('content-type') || '')
     .split(';')[0]
     .toLowerCase();
-  const maxBytes = isPosterUpload ? MAX_POSTER_BYTES : MAX_AUDIO_BYTES;
+  const maxBytes = isPosterUpload
+    ? MAX_POSTER_BYTES
+    : env.RECORDINGS_BACKEND === 'blobs'
+      ? MAX_BLOB_AUDIO_BYTES
+      : MAX_LEGACY_AUDIO_BYTES;
   if (isBodyUpload && body.byteLength > maxBytes) {
     return new Response(isPosterUpload ? 'Poster too large' : 'Recording too large', { status: 413 });
   }
@@ -47,6 +53,38 @@ export async function handleRecordingProxy(request, env, fetchImpl = fetch) {
   }
   if (isPosterUpload && !POSTER_TYPES.has(mime)) {
     return new Response('Unsupported poster type', { status: 415 });
+  }
+
+  if (env.RECORDINGS_BACKEND === 'blobs') {
+    let blobStore = dependencies.blobStore;
+    if (!blobStore) {
+      const { getStore } = await import('@netlify/blobs');
+      blobStore = getStore({
+        name: env.RECORDINGS_BLOB_STORE || 'arpeggiator-recordings',
+        consistency: 'strong',
+      });
+    }
+    try {
+      return await handleBlobRecordingRequest({
+        request,
+        store: blobStore,
+        now: dependencies.now || Date.now,
+        body,
+        mime,
+        isAudioUpload,
+        posterUploadToken: isPosterUpload ? posterUploadToken : '',
+        audioDownloadToken: isAudioDownload ? audioDownloadToken : '',
+        posterDownloadToken: isPosterDownload ? posterDownloadToken : '',
+      });
+    } catch (error) {
+      return new Response('Recording storage unavailable', {
+        status: Number.isSafeInteger(error?.status) ? error.status : 503,
+        headers: {
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+        },
+      });
+    }
   }
 
   const upstreamPath = isAudioUpload
@@ -108,6 +146,8 @@ export async function handleRecordingProxy(request, env, fetchImpl = fetch) {
 }
 
 export default (request) => handleRecordingProxy(request, {
+  RECORDINGS_BACKEND: Netlify.env.get('RECORDINGS_BACKEND'),
+  RECORDINGS_BLOB_STORE: Netlify.env.get('RECORDINGS_BLOB_STORE'),
   RECORDINGS_ORIGIN: Netlify.env.get('RECORDINGS_ORIGIN'),
   RECORDINGS_PROXY_SECRET: Netlify.env.get('RECORDINGS_PROXY_SECRET'),
 });

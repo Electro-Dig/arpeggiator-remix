@@ -33,7 +33,7 @@ test('uploads the native Blob and returns a same-origin share URL', async () => 
 
 test('maps upload failures to actionable Chinese messages without replacing the Blob', async () => {
   const cases = [
-    [413, /5 MB/],
+    [413, /文件过大/],
     [415, /格式/],
     [503, /云端暂时不可用/],
   ];
