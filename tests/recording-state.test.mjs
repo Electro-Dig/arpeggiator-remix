@@ -98,6 +98,6 @@ test('approved two-thumb intents map only in actionable phases', () => {
   assert.equal(actionForThumbIntent('review', 'both-down'), 'DISCARD_REQUEST');
   assert.equal(actionForThumbIntent('photo-review', 'both-up'), null);
   assert.equal(actionForThumbIntent('uploading', 'both-up'), null);
-  assert.equal(actionForThumbIntent('shared', 'both-down'), null);
+  assert.equal(actionForThumbIntent('shared', 'both-down'), 'DISCARD_REQUEST');
   assert.equal(actionForThumbIntent('idle', 'neutral'), null);
 });

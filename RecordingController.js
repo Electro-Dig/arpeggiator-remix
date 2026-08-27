@@ -690,7 +690,9 @@ export class RecordingController extends EventTarget {
         ? '取消'
         : phase === 'recording'
           ? '结束并试听'
-          : '放弃这段';
+          : phase === 'shared'
+            ? '关闭'
+            : '放弃这段';
       if (this.elements.cancelLabel) this.elements.cancelLabel.textContent = label;
       else this.elements.cancel.textContent = label;
     }

@@ -72,6 +72,10 @@ test('public page stays lightweight and includes playback, download and noindex'
   assert.doesNotMatch(html, /arpeggiator-remix-2\.netlify\.app/);
   assert.doesNotMatch(html, /MediaPipe|Tone\.js|mediapipe|main\.js|camera/i);
   assert.match(css, /\[hidden\]\s*\{\s*display:\s*none\s*!important/);
+  const posterRule = css.match(/\.share-poster\s*\{([^}]*)\}/)?.[1] || '';
+  assert.match(posterRule, /height:\s*auto/);
+  assert.doesNotMatch(posterRule, /aspect-ratio/);
+  assert.doesNotMatch(posterRule, /object-fit:\s*cover/);
   const script = await readFile(new URL('../r/share-page.js', import.meta.url), 'utf8');
   assert.doesNotMatch(script, /response\.blob\(|URL\.createObjectURL/);
   assert.match(script, /downloadPoster/);

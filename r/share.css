@@ -133,8 +133,7 @@ h1 {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
+  object-fit: contain;
   background: #dce9e5;
 }
 
@@ -188,6 +187,17 @@ audio {
 }
 
 @media (max-width: 520px) {
-  .share-shell { padding: 12px; }
+  .share-shell {
+    align-items: start;
+    padding: 8px;
+  }
+  .recording-card { border-radius: 12px; }
+  .recording-card__header { padding-inline: 14px; }
+  .recording-card__body { padding: 30px 14px 34px; }
+  .share-status { margin-bottom: 22px; }
+  .share-poster-frame {
+    margin-bottom: 20px;
+    padding: 6px;
+  }
   .recording-card__footer { grid-template-columns: 1fr; gap: 6px; padding-block: 14px; }
 }

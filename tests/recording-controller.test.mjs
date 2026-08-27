@@ -306,6 +306,7 @@ test('successful upload shows the captured frame directly while keeping the post
   assert.equal(harness.elements['recording-qr'].hidden, true);
   assert.equal(harness.elements['recording-photo-preview'].hidden, false);
   assert.equal(harness.elements['recording-share-frame-fallback'].hidden, true);
+  assert.equal(harness.elements['recording-cancel-label'].textContent, '关闭');
   assert.equal(harness.qrRenders[0].options.durationMs, harness.controller.takeDurationMs);
   assert.deepEqual(harness.qrRenders[0].options.metadata, performanceMetadata);
   assert.equal(harness.posterUploads.length, 1);

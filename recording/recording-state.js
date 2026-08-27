@@ -59,6 +59,7 @@ export function actionForThumbIntent(phase, intent) {
       countdown: 'CANCEL_REQUEST',
       recording: 'CANCEL_REQUEST',
       review: 'DISCARD_REQUEST',
+      shared: 'DISCARD_REQUEST',
     })[phase] || null;
   }
   return null;

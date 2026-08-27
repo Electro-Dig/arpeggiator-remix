@@ -1,6 +1,6 @@
-export const POSTER_SIZE = Object.freeze({ width: 1200, height: 1080 });
-export const STAGE_RECT = Object.freeze({ x: 40, y: 118, width: 1120, height: 700 });
-export const QR_RECT = Object.freeze({ x: 936, y: 842, size: 216 });
+export const POSTER_SIZE = Object.freeze({ width: 1080, height: 1350 });
+export const STAGE_RECT = Object.freeze({ x: 40, y: 116, width: 1000, height: 625 });
+export const QR_RECT = Object.freeze({ x: 744, y: 940, size: 280 });
 
 function sourceDimensions(source) {
   return {
@@ -155,8 +155,10 @@ export function drawTechnicalTicket(context, {
   context.fillStyle = '#17636a';
   context.fillRect(0, 0, POSTER_SIZE.width, 18);
   context.fillStyle = '#e86d4c';
-  context.fillRect(40, 832, 1120, 10);
+  context.fillRect(40, 780, 1000, 10);
 
+  context.fillStyle = '#102025';
+  context.fillRect(STAGE_RECT.x, STAGE_RECT.y, STAGE_RECT.width, STAGE_RECT.height);
   let stageRect = drawImageContained(context, photo, STAGE_RECT);
   if (!stageRect) {
     stageRect = STAGE_RECT;
@@ -171,22 +173,31 @@ export function drawTechnicalTicket(context, {
   context.fillStyle = '#102025';
   context.textAlign = 'left';
   context.textBaseline = 'alphabetic';
-  context.font = '700 25px "Cascadia Mono", Consolas, monospace';
-  context.fillText('WAIC 双手乐队 / LIVE PERFORMANCE TICKET', 56, 86);
+  context.font = '700 21px "Cascadia Mono", Consolas, monospace';
+  context.fillText('WAIC 双手乐队 / LIVE PERFORMANCE TICKET', 48, 78);
   context.textAlign = 'right';
-  context.fillText(`PLAYER ${formattedNumber} / TAKE ${formattedNumber} / ${duration} SEC`, POSTER_SIZE.width - 40, 86);
+  context.fillText(`PLAYER ${formattedNumber} / TAKE ${formattedNumber} / ${duration} SEC`, POSTER_SIZE.width - 40, 78);
   context.textAlign = 'left';
   context.fillStyle = '#80e7ec';
   context.font = '700 18px "Cascadia Mono", Consolas, monospace';
   context.fillText('PERFORMANCE TRACE / PARAMETRIC', stageRect.x + 40, stageRect.y + 58);
 
-  context.save();
-  context.translate(-16, -212);
   context.fillStyle = '#17636a';
-  context.font = '650 44px "Microsoft YaHei", "PingFang SC", sans-serif';
-  context.fillText(`本场第 ${formattedNumber} 位音乐玩家`, 56, 1120);
+  context.font = '650 46px "Microsoft YaHei", "PingFang SC", sans-serif';
+  context.fillText(`本场第 ${formattedNumber} 位音乐玩家`, 56, 862);
+  context.fillStyle = '#102025';
+  context.font = '700 28px "Microsoft YaHei", "PingFang SC", sans-serif';
+  context.fillText('扫码带走你的现场录音', 56, 930);
   context.fillStyle = '#5e7477';
-  context.font = '600 21px "Microsoft YaHei", "PingFang SC", sans-serif';
-  context.fillText('扫码试听与下载 · 24H · 本地首帧生成', 56, 1190);
-  context.restore();
+  context.font = '600 22px "Microsoft YaHei", "PingFang SC", sans-serif';
+  context.fillText('试听、下载录音与分享海报', 56, 980);
+  context.fillText('链接 24 小时内有效', 56, 1024);
+  context.fillStyle = '#e86d4c';
+  context.font = '700 22px "Cascadia Mono", Consolas, monospace';
+  context.fillText(`TAKE ${formattedNumber} · ${duration} SEC`, 56, 1090);
+  context.fillStyle = '#5e7477';
+  context.font = '600 18px "Microsoft YaHei", "PingFang SC", sans-serif';
+  context.textAlign = 'center';
+  context.fillText('扫码试听与下载', QR_RECT.x + QR_RECT.size / 2, 1258);
+  context.textAlign = 'left';
 }

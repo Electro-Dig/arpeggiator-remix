@@ -72,12 +72,12 @@ test('renders a participant photo as a live single cover with a ticket QR', asyn
     metadata,
   });
 
-  assert.deepEqual(POSTER_SIZE, { width: 1200, height: 1080 });
-  assert.equal(harness.canvas.width, 1200);
-  assert.equal(harness.canvas.height, 1080);
+  assert.deepEqual(POSTER_SIZE, { width: 1080, height: 1350 });
+  assert.equal(harness.canvas.width, 1080);
+  assert.equal(harness.canvas.height, 1350);
   assert.deepEqual(harness.drawCalls.find((call) => call[0] === photo), [
     photo, 0, 0, 1440, 900,
-    40, 118, 1120, 700,
+    40, 116, 1000, 625,
   ]);
   assert.deepEqual(harness.drawCalls.at(-1), [
     harness.qrCanvas,
@@ -103,8 +103,8 @@ test('renders a participant photo as a live single cover with a ticket QR', asyn
   for (const prefix of ['SCENE /', 'SYNTH /', 'RHYTHM /', 'BPM /', 'ROOT /', 'FX /'])
     assert.ok(!labels.some((label) => label.startsWith(prefix)), prefix);
   assert.ok(harness.lineCalls.length > 4);
-  assert.deepEqual(STAGE_RECT, { x: 40, y: 118, width: 1120, height: 700 });
-  assert.deepEqual(QR_RECT, { x: 936, y: 842, size: 216 });
+  assert.deepEqual(STAGE_RECT, { x: 40, y: 116, width: 1000, height: 625 });
+  assert.deepEqual(QR_RECT, { x: 744, y: 940, size: 280 });
 });
 
 test('renders the visible QR into a dedicated preview canvas while keeping the poster separate', async () => {
@@ -128,13 +128,13 @@ test('renders the visible QR into a dedicated preview canvas while keeping the p
 
 test('fits complete browser frames inside the poster without cropping', () => {
   assert.deepEqual(fitSourceWithinRect({ width: 1440, height: 900 }, STAGE_RECT), {
-    x: 40, y: 118, width: 1120, height: 700,
+    x: 40, y: 116, width: 1000, height: 625,
   });
   assert.deepEqual(fitSourceWithinRect({ width: 1920, height: 1080 }, STAGE_RECT), {
-    x: 40, y: 153, width: 1120, height: 630,
+    x: 40, y: 147, width: 1000, height: 563,
   });
   assert.deepEqual(fitSourceWithinRect({ width: 1200, height: 900 }, STAGE_RECT), {
-    x: 134, y: 118, width: 933, height: 700,
+    x: 124, y: 116, width: 833, height: 625,
   });
 });
 

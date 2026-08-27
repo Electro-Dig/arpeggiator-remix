@@ -201,7 +201,7 @@ test('recording controls remain visible, optional, and gesture-disableable', () 
   assert.match(qr, /这是我的现场单曲/);
   assert.match(qr, /PLAYER/);
   assert.match(qr, /drawTechnicalTicket/);
-  assert.match(html, /id="recording-qr"[^>]+width="1200"[^>]+height="1080"[^>]+hidden/);
+  assert.match(html, /id="recording-qr"[^>]+width="1080"[^>]+height="1350"[^>]+hidden/);
   assert.match(html, /id="recording-photo-preview"[^>]+class="recording-share__frame"/);
   assert.doesNotMatch(styles, /\.recording-dialog\[data-phase="shared"\]\s*\{[^}]*overflow:\s*auto/s);
   assert.match(styles, /\.recording-share__copy\s*\{[^}]*color:\s*#102025/s);
