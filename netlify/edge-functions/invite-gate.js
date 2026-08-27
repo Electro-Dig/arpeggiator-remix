@@ -12,6 +12,7 @@ const LOGOUT_PATH = '/__invite/logout';
 const ROBOTS_PATH = '/robots.txt';
 const PUBLIC_SHARE_ASSETS = new Set([
   '/share/qr.js',
+  '/share/poster-ticket.js',
   '/assets/qr-share-template-waic-mint.webp',
 ]);
 

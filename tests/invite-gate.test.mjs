@@ -70,6 +70,10 @@ test('public share routes bypass invite while upload remains protected', async (
     { next },
   )).status, 200);
   assert.equal((await inviteGate(
+    new Request('https://example.test/share/poster-ticket.js'),
+    { next },
+  )).status, 200);
+  assert.equal((await inviteGate(
     new Request('https://example.test/assets/qr-share-template-waic-mint.webp'),
     { next },
   )).status, 200);
