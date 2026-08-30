@@ -22,3 +22,8 @@ test('recording captures the full performance surface and preserves the WebGL mu
   assert.match(game, /videoElement\.dataset\.cameraFeed\s*=\s*['"]true['"]/);
   assert.match(game, /renderer\.domElement\.dataset\.photoCaptureIgnore\s*=\s*['"]true['"]/);
 });
+
+test('camera preview preserves the source colors without a grayscale filter', () => {
+  assert.match(game, /videoElement\.style\.filter\s*=\s*['"]none['"]/);
+  assert.doesNotMatch(game, /videoElement\.style\.filter\s*=\s*['"]grayscale\(/);
+});
