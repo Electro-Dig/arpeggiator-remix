@@ -57,6 +57,7 @@ class AudioBus extends EventTarget {
     super();
     this.ready = false;
     this.startPromise = null;
+    this.effectEnabled = { delay: false, glitch: false };
 
     this.input = new Tone.Gain(1);
     this.lowPassFilter = new Tone.Filter({
@@ -117,8 +118,8 @@ class AudioBus extends EventTarget {
     const previous = this.effectState;
     const amounts = {
       lowPass: clampAmount(effects.lowPass, previous.lowPass.amount),
-      delay: clampAmount(effects.delay, previous.delay.amount),
-      glitch: clampAmount(effects.glitch, previous.glitch.amount),
+      delay: this.effectEnabled.delay ? clampAmount(effects.delay, previous.delay.amount) : 0,
+      glitch: this.effectEnabled.glitch ? clampAmount(effects.glitch, previous.glitch.amount) : 0,
       broadcastBuild: clampAmount(effects.broadcastBuild, previous.broadcastBuild.amount),
     };
     const changed = amounts.lowPass !== previous.lowPass.amount
@@ -139,6 +140,13 @@ class AudioBus extends EventTarget {
     this.effectState = next;
     if (statusChanged) this.emitEffectChange();
     return this.getEffectState();
+  }
+
+  setEffectEnabled(effect, enabled) {
+    if (!Object.hasOwn(this.effectEnabled, effect)) return;
+    this.effectEnabled[effect] = Boolean(enabled);
+    // Apply immediately, including while tracking is paused or a dialog is open.
+    return this.setPerformanceEffects({});
   }
 
   setLowPassAmount(amount) {

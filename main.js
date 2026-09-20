@@ -159,6 +159,22 @@ function initializeApp() {
         const recordingGestureLatch = new GestureLatch({ holdMs: 800, neutralMs: 500 });
         const recordingGestureToggle = document.getElementById('recording-gestures-enabled');
         const drumKitGestureToggle = document.getElementById('drum-kit-gestures-enabled');
+        for (const effect of ['delay', 'glitch']) {
+            const toggle = document.getElementById(`${effect}-enabled`);
+            if (!toggle) continue;
+            toggle.checked = false;
+            audioBus.setEffectEnabled(effect, false);
+            toggle.addEventListener('change', () => audioBus.setEffectEnabled(effect, toggle.checked));
+        }
+        const socialLinksToggle = document.getElementById('social-links-enabled');
+        const socialLinks = document.querySelector('.social-links');
+        if (socialLinksToggle && socialLinks) {
+            socialLinksToggle.checked = false;
+            socialLinks.hidden = true;
+            socialLinksToggle.addEventListener('change', () => {
+                socialLinks.hidden = !socialLinksToggle.checked;
+            });
+        }
 
         const syncDrumKitGestureSetting = () => {
             if (!drumKitGestureToggle) return;

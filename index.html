@@ -71,6 +71,9 @@
 
     <aside id="control-deck" class="control-deck" hidden aria-label="高级控制">
       <p class="control-deck__title">CONTROL DECK</p>
+      <section class="control-section" aria-label="展示设置">
+        <label><input id="social-links-enabled" type="checkbox"> 显示左下角外链</label>
+      </section>
       <section class="control-section control-section--recording">
         <label><input id="recording-gestures-enabled" type="checkbox" checked> 录音手势</label>
         <p>双手 👍 保持 0.8 秒确认；双手 👎 可取消录制、放弃试听或关闭分享界面。按钮始终可用。</p>
@@ -107,6 +110,9 @@
           <h2 id="gesture-fx-title">GESTURE FX</h2>
           <p id="gesture-fx-status" class="gesture-fx-status"><span aria-hidden="true"></span>LIVE / CONTINUOUS</p>
         </header>
+        <label><input id="delay-enabled" type="checkbox"> 开启 Delay 混音</label>
+        <label><input id="glitch-enabled" type="checkbox"> 开启 Glitch 混音</label>
+        <p>默认关闭；开启后由对应手指手势控制，关闭后立即停止该混音。</p>
         <dl class="gesture-fx-map" aria-label="Continuous gesture effect mappings">
           <div data-control="two-hand-distance" data-effect="filter">
             <dt>&#20004;&#25163;&#36317;&#31163;</dt><dd>FILTER</dd>
@@ -147,7 +153,7 @@
       </section>
     </aside>
 
-    <nav class="social-links" aria-label="创作者链接">
+    <nav class="social-links" aria-label="创作者链接" hidden>
       <a href="https://github.com/Electro-Dig" target="_blank" rel="noopener noreferrer">GITHUB</a>
       <a href="https://space.bilibili.com/52370877?spm_id_from=333.1007.0.0"
         target="_blank" rel="noopener noreferrer" aria-label="Bilibili creator page">BILIBILI</a>
