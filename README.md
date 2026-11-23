@@ -1,174 +1,90 @@
-# 🎵 Arpeggiator Remix - 手势控制音乐创作系统
+# Arpeggiator Remix
 
-一个基于手势识别的实时音乐创作工具，支持左右手协同控制琶音与鼓机。
+在摄像头前用双手演奏的音视频乐器：左手弹琶音旋律，右手推动鼓机节奏，双手手势控制混音效果。
 
-## ✨ 功能特色
+**在线体验：** https://arpeggiator-remix.netlify.app/
 
-- **实时手势识别**：使用 MediaPipe 进行精确的手部跟踪
-- **双手控制**：左手控制琶音（音高、音量、音色），右手控制鼓机节拍
-- **实时波形显示**：可视化音频输出
-- **预设管理**：内置多种音乐风格预设
+该项目受邀参展 2026 WAIC 世界人工智能大会。
 
-## 🎮 操作指南
+## 玩法
 
-### 左手控制（琶音）
-- **手掌高度**：控制音高（上高下低）
-- **拇指与食指捏合**：控制音量（捏紧音量小，张开音量大）
-- **握拳**：切换音色预设
+站在屏幕正前方，让双手完整进入画面。
 
-### 右手控制（鼓机）
-- **手指伸展**：不同手指对应不同鼓点（食指=踢鼓，中指=军鼓，无名指=踩镲，小指=拍手）
-- **4指紧贴**：4个手指（食指、中指、无名指、小指）伸直并紧贴，切换琶音风格
-- **握拳**：切换鼓组预设
+| 手 | 动作 | 控制 |
+|---|---|---|
+| 左手 | 上下移动 | 琶音根音（HUD 上的 ROOT） |
+| 左手 | 左右移动 | 音色明暗 |
+| 左手 | 拇指与食指捏合 | 旋律音量 |
+| 左手 | 拇指与中指捏合 | Delay |
+| 左手 | 拇指与无名指捏合 | Glitch |
+| 左手 | 握拳 | 切换旋律音色 |
+| 左手 | 四指并拢竖直 | 切换音乐场景 |
+| 右手 | 在画面中移动 | 二维节奏空间：横向 STRAIGHT → BROKEN，纵向 MINIMAL → ENERGY |
+| 右手 | 五根手指开合 | 拇指 Open Hat、食指 Kick、中指 Snare、无名指 Hi-hat、小指 Clap |
+| 右手 | 握拳约 0.5 秒后张开 | 切换鼓组（Acoustic / Electronic / Synthwave） |
+| 双手 | 两手间距 | 低通滤波，靠近变闷 |
+| 双手 | 同步上举 | Reverb 渐强 |
+| 双手 | 上举后快速下压 | Drop |
+| 双手 | 大拇指向上 / 向下，保持 0.8 秒 | 录音的开始、停止、确认 / 取消 |
 
-## 🔧 技术架构
+界面底部也可以直接点选六个音乐场景：Minimal Groove、Groove Pulse、Neon Drive、Arcade Horizon、Afterglow Coast、Blue Hour Drift。右上角的「高级控制」里可以选旋律音色、鼓组和各路鼓的音量，也可以关闭录音手势或鼓组切换手势。
 
-- **前端**：HTML5, CSS3, JavaScript (ES6+)
-- **音频引擎**：Tone.js
-- **手势识别**：MediaPipe
-- **3D 可视化**：Three.js
-- **实时处理**：Web Audio API
+### 录音与分享
 
-## 🚀 启动方式
+每次最长录 60 秒，录完可以试听、重录或下载。上传后会生成带二维码的分享海报，扫码打开 `/r/<token>` 页面就能播放。服务端不保存参与者身份，录音 24 小时后自动删除，单个文件上限 5 MB。
 
-1. 使用 Live Server 或任何本地服务器启动项目
-2. 允许摄像头访问权限
-3. 将手放在摄像头前开始创作音乐
-
-## ⚠️ 注意事项
-
-- 需要良好的光线条件以确保手势识别准确性
-- 建议使用支持 WebRTC 的现代浏览器
-- 首次使用需要一些时间来熟悉手势控制
-
-## 🐛 故障排除
-
-### 手势识别不流畅
-- 检查光线是否充足
-- 确保手部在摄像头视野内
-- 尝试调整手部与摄像头的距离
-
-### 音频延迟
-- 使用有线耳机减少音频延迟
-- 关闭其他占用音频资源的应用
-
-## 📝 更新日志
-
-### v1.2.0 (最新)
-- ✅ 修复初始化错误
-- ✅ 优化手势识别平滑度
-- ✅ 解决通知显示重叠问题
-- ✅ 增强错误处理机制
-
-### v1.1.0
-- 🔧 优化性能
-
-### v1.0.0
-- 🎉 基础手势控制功能
-- 🎵 琶音与鼓机系统
-- 📊 实时波形显示
-
----
-
-**享受你的音乐创作之旅！** 🎶
-
-# Hand Gesture Arpeggiator
-
-Hand-controlled arpeggiator, drum machine, and audio reactive visualizer. Raise your hands to raise the roof!
-
-An interactive web app built with threejs, mediapipe computer vision, rosebud AI, and tone.js.
-
-- Hand #1 controls the arpeggios (raise hand to raise pitch, pinch to change volume)
-- Hand #2 controls the drums (raise different fingers to change the pattern)
-
-[Video](https://youtu.be/JepIs-DTBgk?si=4Y-FrQDF6KNy662C) | [Live Demo](https://collidingscopes.github.io/arpeggiator/) | [More Code & Tutorials](https://funwithcomputervision.com/)
-
-<img src="assets/demo.png">
-
-## Requirements
-
-- Modern web browser with WebGL support
-- Camera access enabled for hand tracking
-
-## Technologies
-
-- **MediaPipe** for hand tracking and gesture recognition
-- **Three.js** for audio reactive visual rendering
-- **Tone.js** for synthesizer sounds
-- **HTML5 Canvas** for visual feedback
-- **JavaScript** for real-time interaction
-
-## Setup for Development
+## 本地运行
 
 ```bash
-# Clone this repository
-git clone https://github.com/collidingScopes/arpeggiator
-
-# Navigate to the project directory
-cd arpeggiator
-
-# Serve with your preferred method (example using Python)
-python -m http.server
+npm install
+npm start
 ```
 
-Then navigate to `http://localhost:8000` in your browser.
+然后打开 http://localhost:8000/ 。不装依赖也可以用任意静态服务器，例如 `python -m http.server 8000`。
 
-## Exhibition V2 — Visual refinement checkpoint
+- 摄像头只在 `localhost` 或 HTTPS 下可用，推荐 Chrome 或 Edge，戴耳机效果更好。
+- 录音上传和分享页依赖 Netlify 函数与录音服务，本地运行时只能下载录音。
+- 运行测试：`npm test`（Node.js 自带测试运行器）。
 
-- The archived first visual shell remains available at Git tag `exhibition-v2-ui-v1`.
-- The current HUD keeps the original camera-first layout while refining typography, contrast, status hierarchy, operator controls, and social links.
-- The three guide cards use an asymmetric step/content layout with concise action notation and no emoji.
-- The face-obscuring Delay line and NoteLen sprite were removed; diagnostics now update inside Control Deck at the existing 100 ms sampling interval.
-- The main 2048×1055 exhibition view was reviewed from a live local-camera screenshot and accepted as a clear improvement.
-- Production deployment remains prohibited until explicit final approval.
+## 目录结构
 
-## Exhibition V2 — Batch 3 checkpoint
+| 路径 | 内容 |
+|---|---|
+| `index.html`、`styles.css`、`main.js` | 页面、HUD 样式和启动入口 |
+| `game.js` | 手部追踪、Three.js 画面与主循环 |
+| `MusicManager.js`、`DrumManager.js` | 琶音合成与鼓机（Tone.js） |
+| `music/` | 音乐场景、音色、手势到效果的映射 |
+| `rhythm/` | 二维节奏空间与节奏型 |
+| `drums/`、`assets/drums/` | 鼓组定义与采样 |
+| `gesture/`、`recording/` | 鼓组切换手势、录音状态与拇指手势 |
+| `guide/`、`assets/guide/` | 开场三步操作指引 |
+| `share/`、`r/` | 二维码海报与分享页 |
+| `netlify/` | 边缘函数（邀请码门禁）和录音代理函数 |
+| `services/recordings-api/`、`ops/recordings/` | 录音存储服务及其服务器配置 |
+| `scripts/` | 鼓组、节奏网格的生成脚本和冒烟测试 |
+| `tests/` | 单元测试与契约测试 |
+| `docs/` | 设计文档与开发计划 |
 
-- Public URL shape: `/r/<192-bit-token>`; no participant identity, title, or account is stored.
-- Maximum upload: 5 MB; allowed formats are MP4/M4A, WebM/Opus, and OGG/Opus.
-- Retention: 24 hours, enforced on read and by an hourly cleanup timer.
-- Browser requests pass through a same-origin Netlify proxy; cloud requests carry a time-bounded HMAC signature.
-- The cloud API rejects unsigned requests and binds its Node service to `127.0.0.1:8787`.
-- The recording Blob remains available for retry or manual download during outages.
-- The server deployment is isolated under `/srv/arpeggiator-recordings`; it does not use the podcast workspace.
-- Only a Netlify draft deploy may be used until production replacement is explicitly approved.
+## 部署
+
+站点托管在 Netlify，配置见 `netlify.toml`，环境变量示例见 `.env.example`。
+
+- `netlify/edge-functions/invite-gate.js` 是邀请码门禁，需要 `INVITE_SECRET` 和 `INVITE_CODE`（或 `INVITE_CODES`）。站点设置 `PUBLIC_ACCESS=true` 时跳过门禁，直接公开访问。
+- `/recordings-api/*` 由 `netlify/functions/recordings-api.mjs` 转发到录音服务，需要 `RECORDINGS_ORIGIN` 和 `RECORDINGS_PROXY_SECRET`。
+- 录音服务部署在独立服务器上，systemd 与 Nginx 配置在 `ops/recordings/`。
+
+## 致谢
+
+本项目改编自 Alan（[collidingScopes](https://github.com/collidingScopes)）的开源项目 [Hand Gesture Arpeggiator](https://github.com/collidingScopes/arpeggiator)（MIT License），在其基础上重做了音乐系统、节奏空间、手势效果、录音分享和展陈界面。
+
+- 手部追踪：[MediaPipe](https://ai.google.dev/edge/mediapipe)
+- 画面：[Three.js](https://threejs.org/)
+- 声音：[Tone.js](https://tonejs.github.io/)
+
+## 作者
+
+Built by [Electro-Dig](https://github.com/Electro-Dig) · [Instagram](https://www.instagram.com/yunlonggong1/) · [哔哩哔哩](https://space.bilibili.com/52370877) · [小红书 · 电子音乐考古小分队](https://www.xiaohongshu.com/search_result?keyword=%E7%94%B5%E5%AD%90%E9%9F%B3%E4%B9%90%E8%80%83%E5%8F%A4%E5%B0%8F%E5%88%86%E9%98%9F)
 
 ## License
 
-MIT License
-
-## Credits
-
-- Three.js - https://threejs.org/
-- MediaPipe - https://mediapipe.dev/
-- Rosebud AI - https://rosebud.ai/
-- Tone.js - https://tonejs.github.io/
-
-## Related Projects
-
-I've released several computer vision projects (with code + tutorials) here:
-[Fun With Computer Vision](https://www.funwithcomputervision.com/)
-
-You can purchase lifetime access and receive the full project files and tutorials. I'm adding more content regularly 🪬
-
-You might also like some of my other open source projects:
-
-- [3D Model Playground](https://collidingScopes.github.io/3d-model-playground) - control 3D models with voice and hand gestures
-- [Threejs hand tracking tutorial](https://collidingScopes.github.io/threejs-handtracking-101) - Basic hand tracking setup with threejs and MediaPipe computer vision
-- [Particular Drift](https://collidingScopes.github.io/particular-drift) - Turn photos into flowing particle animations
-- [Video-to-ASCII](https://collidingScopes.github.io/ascii) - Convert videos into ASCII pixel art
-
-## Contact
-
-- Instagram: [@stereo.drift](https://www.instagram.com/stereo.drift/)
-- Twitter/X: [@measure_plan](https://x.com/measure_plan)
-- Email: [stereodriftvisuals@gmail.com](mailto:stereodriftvisuals@gmail.com)
-- GitHub: [collidingScopes](https://github.com/collidingScopes)
-
-## Donations
-
-If you found this tool useful, feel free to buy me a coffee. 
-
-My name is Alan, and I enjoy building open source software for computer vision, games, and more. This would be much appreciated during late-night coding sessions!
-
-[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/stereoDrift)
+MIT
