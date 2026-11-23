@@ -285,6 +285,148 @@ dt,
   letter-spacing: 0.16em;
 }
 
+.about {
+  position: relative;
+  pointer-events: auto;
+}
+
+.operator-action.about__toggle {
+  min-width: 0;
+  width: 42px;
+  height: 100%;
+  place-items: center;
+  padding: 8px 0 6px;
+  color: var(--body-text);
+}
+
+.about__toggle svg {
+  display: block;
+}
+
+.about.is-open .about__toggle {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.about__card {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 40;
+  display: none;
+  padding-top: 8px;
+}
+
+.about.is-open .about__card {
+  display: block;
+}
+
+@media (hover: hover) {
+  .about:hover .about__card,
+  .about:focus-within .about__card {
+    display: block;
+  }
+
+  .about:hover .about__toggle {
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+}
+
+.about__inner {
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--cyan);
+  background: var(--panel);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+}
+
+.about__by {
+  margin: 0;
+  color: var(--text);
+  font: 600 11px/1.2 var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.about__note {
+  margin: 8px 0 0;
+  color: var(--body-text);
+  font: 500 12px/1.5 var(--ui);
+}
+
+.about__repo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--body-text);
+  font: 600 11px/1.3 "Bahnschrift", "DIN Alternate", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+
+.about__repo:hover,
+.about__repo:focus-visible {
+  color: var(--cyan);
+}
+
+.about__repo-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid rgba(242, 239, 232, 0.5);
+  border-radius: 50%;
+  background: #181717;
+}
+
+.about__soc {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.about__soc a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid rgba(242, 239, 232, 0.5);
+  border-radius: 50%;
+  overflow: hidden;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+
+.about__soc a:hover,
+.about__soc a:focus-visible {
+  border-color: var(--text);
+  transform: translateY(-2px);
+}
+
+.about__soc a.ig { background: #d6249f; }
+.about__soc a.ig svg { display: block; width: 100%; height: 100%; }
+.about__soc a.gh { background: #181717; }
+.about__soc a.bili { background: #00AEEC; }
+
+.about__soc a.xhs {
+  background: #FF2442;
+  color: #fff;
+  font: 800 8.5px/1 "PingFang SC", "Microsoft YaHei", sans-serif;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#nl-badge-frame {
+  display: none !important;
+}
+
 .social-links {
   position: absolute;
   bottom: 22px;
@@ -1466,10 +1608,15 @@ dt,
   .operator-actions {
     grid-column: 1 / -1;
     justify-content: flex-end;
+    gap: 8px;
   }
 
   .operator-action {
     min-width: 66px;
+  }
+
+  .operator-action.about__toggle {
+    width: 34px;
   }
 
   .guide-dialog {
